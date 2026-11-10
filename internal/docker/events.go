@@ -47,7 +47,7 @@ func (c *Client) followEvents(ctx context.Context, actions []events.Action, resy
 				return
 			case m := <-ev.Messages:
 				handle(m)
-			case <-ev.Err:
+			case <-ev.Err: //nolint:errcheck // any error means resubscribe
 				cancel()
 				for delay := resubscribeDelay; ; delay = min(2*delay, maxResubscribeDelay) {
 					select {

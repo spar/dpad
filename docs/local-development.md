@@ -118,6 +118,8 @@ demonstrates and a step-by-step feature tour.
 ```sh
 make test      # unit tests: stats math, sorting, formatting, log-level detection
 make vet
+make lint      # golangci-lint, pinned in the Makefile; nothing to install
+make vuln      # govulncheck
 make build && ./bin/dockernext stats
 ```
 

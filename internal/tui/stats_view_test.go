@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -12,7 +13,7 @@ import (
 )
 
 func TestStatsSelectedMatchesHighlight(t *testing.T) {
-	v := NewStatsView(nil, nil, sortx.Name, false)
+	v := NewStatsView(context.Background(), nil, sortx.Name, false)
 	v.Update(statsStartedMsg{})
 	v.Update(statsBatchMsg{
 		{Stats: docker.Stats{ID: "a", Name: "alpha"}},
@@ -47,7 +48,7 @@ func TestWaitStatsBatchesUpdates(t *testing.T) {
 }
 
 func TestStatsWatchStartsOnFirstFocus(t *testing.T) {
-	v := NewStatsView(nil, nil, sortx.CPU, false)
+	v := NewStatsView(context.Background(), nil, sortx.CPU, false)
 	if v.Init() != nil {
 		t.Error("Init should not start watching stats")
 	}

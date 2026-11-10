@@ -79,6 +79,8 @@ docs/                 guides
 ```sh
 make test                          # unit tests: stats math, sorting, formatting, level detection
 make vet
+make lint                          # golangci-lint (config in .golangci.yml)
+make vuln                          # govulncheck
 make run ARGS="ps -a"              # run from source
 ```
 See [docs/local-development.md](docs/local-development.md#5-development-loop).

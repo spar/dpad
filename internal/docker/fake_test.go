@@ -68,7 +68,7 @@ func (f *fakeEngine) ContainerStats(ctx context.Context, id string, _ client.Con
 	f.mu.Unlock()
 	pr, pw := io.Pipe()
 	go func() {
-		json.NewEncoder(pw).Encode(container.StatsResponse{PidsStats: container.PidsStats{Current: 1}})
+		_ = json.NewEncoder(pw).Encode(container.StatsResponse{PidsStats: container.PidsStats{Current: 1}})
 		<-ctx.Done()
 		if hold != nil {
 			<-hold

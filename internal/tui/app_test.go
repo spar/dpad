@@ -16,7 +16,7 @@ import (
 
 func newTestApp() *App {
 	a := &App{
-		tabs:   []tab{NewContainersView(nil, nil), NewImagesView(nil, nil), NewStatsView(nil, nil, sortx.CPU, false)},
+		tabs:   []tab{NewContainersView(context.Background(), nil), NewImagesView(context.Background(), nil), NewStatsView(context.Background(), nil, sortx.CPU, false)},
 		filter: textinput.New(),
 	}
 	a.resize(120, 30)

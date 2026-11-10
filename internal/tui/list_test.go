@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -15,7 +16,7 @@ import (
 )
 
 func TestContainersNavigateAndSelect(t *testing.T) {
-	v := NewContainersView(nil, nil)
+	v := NewContainersView(context.Background(), nil)
 	v.Update(containersMsg{items: []container.Summary{
 		{ID: "1", Names: []string{"/web"}, State: "running"},
 		{ID: "2", Names: []string{"/db"}, State: "running"},
@@ -46,7 +47,7 @@ func TestContainersNavigateAndSelect(t *testing.T) {
 }
 
 func TestImagesAreNotSelectable(t *testing.T) {
-	v := NewImagesView(nil, nil)
+	v := NewImagesView(context.Background(), nil)
 	v.Update(imagesMsg{items: []image.Summary{{ID: "sha256:abc", RepoTags: []string{"a:1", "a:2"}}}})
 	v.SetSize(120, 10)
 	out := ansi.Strip(v.View())
@@ -67,7 +68,7 @@ func BenchmarkContainersView(b *testing.B) {
 		items[i] = container.Summary{ID: fmt.Sprintf("%064d", i), Names: []string{fmt.Sprintf("/svc-%d", i)},
 			Image: "nginx:1.27-alpine", State: "running", Status: "Up 3 hours (healthy)"}
 	}
-	v := NewContainersView(nil, nil)
+	v := NewContainersView(context.Background(), nil)
 	v.Update(containersMsg{items: items})
 	v.SetSize(160, 40)
 	b.Run("view", func(b *testing.B) {
@@ -85,7 +86,7 @@ func BenchmarkContainersView(b *testing.B) {
 
 func TestContainersReloadOnChange(t *testing.T) {
 	f := &fakeClient{containers: []container.Summary{{ID: "1", Names: []string{"/web"}}}}
-	v := NewContainersView(nil, f)
+	v := NewContainersView(context.Background(), f)
 	ch := make(chan struct{}, 1)
 	ch <- struct{}{}
 	cmd := v.Update(containersWatchMsg{ch: ch})

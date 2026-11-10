@@ -7,7 +7,10 @@ LDFLAGS := -s -w -X dockernext/cmd.version=$(VERSION)
 COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo docker-compose)
 DEMO    := $(COMPOSE) -f testenv/compose.yaml
 
-.PHONY: build install uninstall run test vet clean demo-up demo-extras demo-down demo-status
+GOLANGCI_LINT ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+GOVULNCHECK   ?= golang.org/x/vuln/cmd/govulncheck@v1.9.0
+
+.PHONY: build install uninstall run test vet lint vuln clean demo-up demo-extras demo-down demo-status
 
 # Static, reproducible build: no cgo, no local paths in the binary.
 build:
@@ -31,6 +34,12 @@ test:
 
 vet:
 	go vet ./...
+
+lint:
+	go run $(GOLANGCI_LINT) run ./...
+
+vuln:
+	go run $(GOVULNCHECK) ./...
 
 clean:
 	rm -rf bin
