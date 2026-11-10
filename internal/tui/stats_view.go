@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -50,8 +51,13 @@ func (v *StatsView) Init() tea.Cmd {
 	}
 }
 
-// waitStats blocks for the next update, then drains whatever else is queued
-// so a burst of samples costs one re-render.
+// statsFlushInterval is how long waitStats collects updates before handing
+// them over. Every container reports about once a second, each at its own
+// moment, so collecting for a second turns N redraws a second into one.
+const statsFlushInterval = time.Second
+
+// waitStats blocks for the next update, then collects everything else that
+// arrives within statsFlushInterval so the batch costs one re-render.
 func waitStats(ch <-chan docker.StatsUpdate) tea.Cmd {
 	return func() tea.Msg {
 		u, ok := <-ch
@@ -59,18 +65,18 @@ func waitStats(ch <-chan docker.StatsUpdate) tea.Cmd {
 			return nil
 		}
 		batch := statsBatchMsg{u}
-		for len(batch) < 256 {
+		flush := time.After(statsFlushInterval)
+		for {
 			select {
 			case u, ok := <-ch:
 				if !ok {
 					return batch
 				}
 				batch = append(batch, u)
-			default:
+			case <-flush:
 				return batch
 			}
 		}
-		return batch
 	}
 }
 
