@@ -19,6 +19,9 @@ const refreshInterval = 2 * time.Second
 type tab interface {
 	Title() string
 	Init() tea.Cmd
+	// Focus is called whenever the tab becomes active, so expensive work can
+	// wait until the tab is first shown.
+	Focus() tea.Cmd
 	// Update handles data messages; every tab sees every non-key message.
 	Update(msg tea.Msg) tea.Cmd
 	// HandleKey handles keys when the tab is active; returns false if unhandled.

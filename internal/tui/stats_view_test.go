@@ -40,3 +40,16 @@ func TestWaitStatsBatchesUpdates(t *testing.T) {
 		t.Errorf("waitStats returned %v, want one batch of 3 staggered updates", batch)
 	}
 }
+
+func TestStatsWatchStartsOnFirstFocus(t *testing.T) {
+	v := NewStatsView(nil, nil, "cpu", false)
+	if v.Init() != nil {
+		t.Error("Init should not start watching stats")
+	}
+	if v.Focus() == nil {
+		t.Error("first Focus should start watching stats")
+	}
+	if v.Focus() != nil {
+		t.Error("later Focus calls should not start another watch")
+	}
+}

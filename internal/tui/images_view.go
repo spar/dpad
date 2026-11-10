@@ -47,6 +47,8 @@ func (v *ImagesView) load() tea.Cmd {
 // Images change rarely, so they reload only on demand (refreshMsg), not on a timer.
 func (v *ImagesView) Init() tea.Cmd { return v.load() }
 
+func (v *ImagesView) Focus() tea.Cmd { return nil }
+
 func (v *ImagesView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case imagesMsg:

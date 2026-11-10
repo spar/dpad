@@ -21,18 +21,19 @@ type (
 
 // StatsView shows live, sortable resource usage for running containers.
 type StatsView struct {
-	ctx     context.Context
-	client  *docker.Client
-	ch      <-chan docker.StatsUpdate
-	data    map[string]docker.Stats
-	key     string
-	reverse bool
-	cur     cursor
-	page    int
-	filter  string // last filter passed to View, for navigation
-	started bool
-	noSel   bool // hide the row highlight (standalone `dn stats`)
-	err     error
+	ctx      context.Context
+	client   *docker.Client
+	ch       <-chan docker.StatsUpdate
+	data     map[string]docker.Stats
+	key      string
+	reverse  bool
+	cur      cursor
+	page     int
+	filter   string // last filter passed to View, for navigation
+	watching bool   // WatchStats requested
+	started  bool
+	noSel    bool // hide the row highlight (standalone `dn stats`)
+	err      error
 }
 
 func NewStatsView(ctx context.Context, c *docker.Client, key string, reverse bool) *StatsView {
@@ -41,7 +42,15 @@ func NewStatsView(ctx context.Context, c *docker.Client, key string, reverse boo
 
 func (v *StatsView) Title() string { return "Stats" }
 
-func (v *StatsView) Init() tea.Cmd {
+func (v *StatsView) Init() tea.Cmd { return nil }
+
+// Focus starts watching stats the first time the tab is shown: that opens one
+// stream per running container, which isn't worth it if the tab never is.
+func (v *StatsView) Focus() tea.Cmd {
+	if v.watching {
+		return nil
+	}
+	v.watching = true
 	return func() tea.Msg {
 		ch, err := v.client.WatchStats(v.ctx)
 		if err != nil {
@@ -211,7 +220,7 @@ func RunStats(ctx context.Context, c *docker.Client, key string, reverse bool) e
 	return err
 }
 
-func (p statsProgram) Init() tea.Cmd { return p.v.Init() }
+func (p statsProgram) Init() tea.Cmd { return p.v.Focus() }
 
 func (p statsProgram) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {

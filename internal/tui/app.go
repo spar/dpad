@@ -70,11 +70,11 @@ func Run(ctx context.Context, c *docker.Client) error {
 }
 
 func (a *App) Init() tea.Cmd {
-	cmds := make([]tea.Cmd, len(a.tabs))
-	for i, t := range a.tabs {
-		cmds[i] = t.Init()
+	cmds := make([]tea.Cmd, 0, len(a.tabs)+1)
+	for _, t := range a.tabs {
+		cmds = append(cmds, t.Init())
 	}
-	return tea.Batch(cmds...)
+	return tea.Batch(append(cmds, a.tabs[a.active].Focus())...)
 }
 
 func (a *App) bodyHeight() int { return max(a.height-3, 1) }
@@ -157,11 +157,11 @@ func (a *App) handleKey(msg tea.KeyMsg) tea.Cmd {
 	case "q":
 		return tea.Quit
 	case "tab", "right", "l":
-		a.switchTab((a.active + 1) % len(a.tabs))
+		return a.switchTab((a.active + 1) % len(a.tabs))
 	case "shift+tab", "left", "h":
-		a.switchTab((a.active + len(a.tabs) - 1) % len(a.tabs))
+		return a.switchTab((a.active + len(a.tabs) - 1) % len(a.tabs))
 	case "1", "2", "3":
-		a.switchTab(int(key[0] - '1'))
+		return a.switchTab(int(key[0] - '1'))
 	case "/":
 		a.filtering = true
 		return a.filter.Focus()
@@ -190,10 +190,11 @@ func (a *App) handleKey(msg tea.KeyMsg) tea.Cmd {
 	return nil
 }
 
-func (a *App) switchTab(i int) {
+func (a *App) switchTab(i int) tea.Cmd {
 	a.filters[a.active] = a.filter.Value()
 	a.active = i
 	a.filter.SetValue(a.filters[i])
+	return a.tabs[i].Focus()
 }
 
 func (a *App) ask(verb string, run func(context.Context, string) error) {
