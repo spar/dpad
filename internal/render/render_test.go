@@ -147,3 +147,16 @@ func BenchmarkTableWindow(b *testing.B) {
 		_ = tbl.Window(100, 40)
 	}
 }
+
+func TestTableTrimsStyledEmptyCells(t *testing.T) {
+	prev := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	t.Cleanup(func() { lipgloss.SetColorProfile(prev) })
+	tbl := Table{
+		Columns: []Column{{Header: "NAME"}, {Header: "PORTS"}},
+		Rows:    [][]string{{"web", fg(Cyan).Render("")}},
+	}
+	if got := ansi.Strip(strings.Split(tbl.String(), "\n")[1]); got != "web" {
+		t.Errorf("row = %q, want trailing padding trimmed", got)
+	}
+}

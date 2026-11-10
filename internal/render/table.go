@@ -64,6 +64,9 @@ func (t Table) lines(selected, start, end int) []string {
 		cells[r], cellW[r] = make([]string, n), make([]int, n)
 		for i := range min(n, len(row)) {
 			s, w := row[i], ansi.StringWidth(row[i])
+			if w == 0 {
+				s = "" // a styled empty cell would stop trailing padding being trimmed
+			}
 			if m := t.Columns[i].Max; m > 0 && w > m {
 				s = ansi.Truncate(s, m, "…")
 				w = ansi.StringWidth(s)
