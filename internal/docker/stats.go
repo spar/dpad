@@ -116,27 +116,37 @@ func (c *Client) StatsSnapshot(ctx context.Context) ([]Stats, error) {
 func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 	out := make(chan StatsUpdate, 64)
 	var (
-		mu      sync.Mutex
-		cancels = map[string]context.CancelFunc{}
+		mu sync.Mutex
+		// streams maps a container ID to its live stream. A restart replaces
+		// the entry while the old stream may still be shutting down, so each
+		// stream compares against its own handle before touching the entry.
+		streams = map[string]*statsStream{}
 		wg      sync.WaitGroup
 	)
 
 	start := func(id, name string) {
 		mu.Lock()
 		defer mu.Unlock()
-		if _, ok := cancels[id]; ok {
+		if _, ok := streams[id]; ok {
 			return
 		}
 		cctx, cancel := context.WithCancel(ctx)
-		cancels[id] = cancel
+		h := &statsStream{cancel}
+		streams[id] = h
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			c.streamStats(cctx, id, name, out)
-			mu.Lock()
-			delete(cancels, id)
-			mu.Unlock()
 			cancel()
+			mu.Lock()
+			defer mu.Unlock()
+			if streams[id] == h {
+				delete(streams, id)
+			}
+			if streams[id] != nil {
+				return // restarted: the new stream owns the row
+			}
+			// Sent under mu so a new stream for id can't emit a sample first.
 			select {
 			case out <- StatsUpdate{Stats: Stats{ID: id, Name: name}, Gone: true}:
 			case <-ctx.Done():
@@ -145,10 +155,11 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 	}
 	stop := func(id string) {
 		mu.Lock()
-		if cancel, ok := cancels[id]; ok {
-			cancel()
+		defer mu.Unlock()
+		if h, ok := streams[id]; ok {
+			h.cancel()
+			delete(streams, id)
 		}
-		mu.Unlock()
 	}
 
 	// Subscribe before listing so no start event is missed in between.
@@ -188,6 +199,9 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 	}()
 	return out, nil
 }
+
+// statsStream is one container's live stats stream in WatchStats.
+type statsStream struct{ cancel context.CancelFunc }
 
 func (c *Client) streamStats(ctx context.Context, id, name string, out chan<- StatsUpdate) {
 	res, err := c.api.ContainerStats(ctx, id, client.ContainerStatsOptions{Stream: true})
