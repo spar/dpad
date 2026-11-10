@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"context"
+	"slices"
 	"strings"
 	"testing"
 
@@ -78,5 +80,33 @@ func TestFooterHidesContainerActionsOnImages(t *testing.T) {
 	press(a, "2")
 	if f := ansi.Strip(a.footer()); strings.Contains(f, "logs") || strings.Contains(f, "S/x/R") {
 		t.Errorf("images footer offers container actions: %q", f)
+	}
+}
+
+func TestAppStopAsksFirst(t *testing.T) {
+	f := &fakeClient{containers: []container.Summary{
+		{ID: "id-db", Names: []string{"/db"}, State: "running"},
+		{ID: "id-web", Names: []string{"/web"}, State: "running"},
+	}}
+	a := newTestApp()
+	a.ctx, a.client = context.Background(), f
+	a.Update(containersMsg{items: f.containers})
+
+	press(a, "j", "x")
+	if a.confirm == nil || a.confirm.name != "web" {
+		t.Fatalf("x should ask to stop web, confirm = %+v", a.confirm)
+	}
+	press(a, "n")
+	if a.confirm != nil || len(f.actions) != 0 {
+		t.Fatalf("n should cancel, actions = %v", f.actions)
+	}
+
+	a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+	_, cmd := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
+	if msg, ok := cmd().(actionDoneMsg); !ok || msg.err != nil {
+		t.Fatalf("y should run the stop, got %#v", msg)
+	}
+	if want := []string{"stop id-web"}; !slices.Equal(f.actions, want) {
+		t.Errorf("actions = %v, want %v", f.actions, want)
 	}
 }

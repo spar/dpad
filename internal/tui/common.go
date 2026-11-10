@@ -3,17 +3,34 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/image"
 
+	"dockernext/internal/docker"
 	"dockernext/internal/sortx"
 )
 
 const refreshInterval = 2 * time.Second
+
+// dockerClient is what the TUI needs from docker.Client, so tests can fake it.
+type dockerClient interface {
+	Containers(ctx context.Context, all bool) ([]container.Summary, error)
+	Images(ctx context.Context) ([]image.Summary, error)
+	Start(ctx context.Context, id string) error
+	Stop(ctx context.Context, id string) error
+	Restart(ctx context.Context, id string) error
+	Logs(ctx context.Context, id string, opts docker.LogOptions, out chan<- docker.LogLine) error
+	WatchStats(ctx context.Context) (<-chan docker.StatsUpdate, error)
+}
+
+var _ dockerClient = (*docker.Client)(nil)
 
 // tab is one top-level view of the App.
 type tab interface {

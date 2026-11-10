@@ -9,7 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"dockernext/internal/docker"
 	"dockernext/internal/render"
 	"dockernext/internal/sortx"
 )
@@ -34,7 +33,7 @@ var (
 // App is the full-screen TUI with Containers / Images / Stats tabs.
 type App struct {
 	ctx           context.Context
-	client        *docker.Client
+	client        dockerClient
 	tabs          []tab
 	active        int
 	width, height int
@@ -48,7 +47,7 @@ type App struct {
 }
 
 // Run starts the TUI and blocks until the user quits.
-func Run(ctx context.Context, c *docker.Client) error {
+func Run(ctx context.Context, c dockerClient) error {
 	fi := textinput.New()
 	fi.Prompt = "/"
 	tabs := []tab{

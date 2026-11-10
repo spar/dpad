@@ -7,7 +7,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/moby/moby/api/types/image"
 
-	"dockernext/internal/docker"
 	"dockernext/internal/render"
 	"dockernext/internal/sortx"
 )
@@ -21,10 +20,10 @@ type imagesMsg struct {
 type ImagesView struct {
 	list[image.Summary]
 	ctx    context.Context
-	client *docker.Client
+	client dockerClient
 }
 
-func NewImagesView(ctx context.Context, c *docker.Client) *ImagesView {
+func NewImagesView(ctx context.Context, c dockerClient) *ImagesView {
 	return &ImagesView{ctx: ctx, client: c, list: list[image.Summary]{
 		columns: render.ImageColumns,
 		keys:    sortx.ImageKeys,

@@ -25,13 +25,13 @@ type (
 type StatsView struct {
 	list[docker.Stats]
 	ctx      context.Context
-	client   *docker.Client
+	client   dockerClient
 	ch       <-chan docker.StatsUpdate
 	data     map[string]docker.Stats
 	watching bool // WatchStats requested
 }
 
-func NewStatsView(ctx context.Context, c *docker.Client, key sortx.Key, reverse bool) *StatsView {
+func NewStatsView(ctx context.Context, c dockerClient, key sortx.Key, reverse bool) *StatsView {
 	return &StatsView{ctx: ctx, client: c, data: map[string]docker.Stats{}, list: list[docker.Stats]{
 		columns: render.StatsColumns,
 		keys:    sortx.StatsKeys,
@@ -165,7 +165,7 @@ func (v *StatsView) Help() [][2]string {
 type statsProgram struct{ v *StatsView }
 
 // RunStats shows live stats inline until the user quits.
-func RunStats(ctx context.Context, c *docker.Client, key sortx.Key, reverse bool) error {
+func RunStats(ctx context.Context, c dockerClient, key sortx.Key, reverse bool) error {
 	v := NewStatsView(ctx, c, key, reverse)
 	v.noHighlight = true
 	v.SetSize(120, 28)

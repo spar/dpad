@@ -26,10 +26,10 @@ type (
 type ContainersView struct {
 	list[container.Summary]
 	ctx    context.Context
-	client *docker.Client
+	client dockerClient
 }
 
-func NewContainersView(ctx context.Context, c *docker.Client) *ContainersView {
+func NewContainersView(ctx context.Context, c dockerClient) *ContainersView {
 	return &ContainersView{ctx: ctx, client: c, list: list[container.Summary]{
 		columns: render.ContainerColumns,
 		keys:    sortx.ContainerKeys,

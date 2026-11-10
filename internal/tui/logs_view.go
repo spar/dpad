@@ -37,7 +37,7 @@ type LogsView struct {
 	err    error
 }
 
-func NewLogsView(ctx context.Context, c *docker.Client, id, name string, width, height int) (*LogsView, tea.Cmd) {
+func NewLogsView(ctx context.Context, c dockerClient, id, name string, width, height int) (*LogsView, tea.Cmd) {
 	ctx, cancel := context.WithCancel(ctx)
 	v := &LogsView{
 		name:   name,
