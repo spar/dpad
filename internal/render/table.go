@@ -2,6 +2,7 @@ package render
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/x/ansi"
 )
@@ -55,7 +56,7 @@ func (t Table) lines(selected, start, end int) []string {
 	widths := make([]int, n)
 	headers, headerW := make([]string, n), make([]int, n)
 	for i, c := range t.Columns {
-		headers[i], headerW[i] = Header.Render(c.Header), ansi.StringWidth(c.Header)
+		headers[i], headerW[i] = Header.Render(c.Header), width(c.Header)
 		widths[i] = headerW[i]
 	}
 	// Truncate and measure every cell once.
@@ -63,18 +64,25 @@ func (t Table) lines(selected, start, end int) []string {
 	for r, row := range t.Rows {
 		cells[r], cellW[r] = make([]string, n), make([]int, n)
 		for i := range min(n, len(row)) {
-			s, w := row[i], ansi.StringWidth(row[i])
+			s, w := row[i], width(row[i])
 			if w == 0 {
 				s = "" // a styled empty cell would stop trailing padding being trimmed
 			}
 			if m := t.Columns[i].Max; m > 0 && w > m {
 				s = ansi.Truncate(s, m, "…")
-				w = ansi.StringWidth(s)
+				w = width(s)
 			}
 			cells[r][i], cellW[r][i] = s, w
 			widths[i] = max(widths[i], w)
 		}
 	}
+
+	// Lines only need truncating if the widest possible one doesn't fit.
+	total := len(colGap) * (n - 1)
+	for _, w := range widths {
+		total += w
+	}
+	truncate := t.Width > 0 && total > t.Width
 
 	line := func(cells []string, cellW []int) string {
 		var b strings.Builder
@@ -92,7 +100,7 @@ func (t Table) lines(selected, start, end int) []string {
 			}
 		}
 		out := strings.TrimRight(b.String(), " ")
-		if t.Width > 0 {
+		if truncate {
 			out = ansi.Truncate(out, t.Width, "…")
 		}
 		return out
@@ -112,9 +120,32 @@ func (t Table) lines(selected, start, end int) []string {
 		}
 		l := line(plain, cellW[r])
 		if t.Width > 0 {
-			l += strings.Repeat(" ", max(0, t.Width-ansi.StringWidth(l)))
+			l += strings.Repeat(" ", max(0, t.Width-width(l)))
 		}
 		out = append(out, Selected.Render(l))
 	}
 	return out
+}
+
+// width is ansi.StringWidth with a fast path for the usual cell: ASCII text
+// with SGR color codes. The general case segments every grapheme, which
+// dominates rendering time.
+func width(s string) int {
+	w := 0
+	for i := 0; i < len(s); i++ {
+		switch c := s[i]; {
+		case c >= utf8.RuneSelf:
+			return ansi.StringWidth(s)
+		case c == ansi.ESC:
+			// Skip a CSI sequence (ESC [ params final); fall back for others.
+			if i+1 >= len(s) || s[i+1] != '[' {
+				return ansi.StringWidth(s)
+			}
+			for i += 2; i < len(s) && (s[i] < 0x40 || s[i] > 0x7e); i++ {
+			}
+		case c >= 0x20 && c != 0x7f:
+			w++
+		}
+	}
+	return w
 }

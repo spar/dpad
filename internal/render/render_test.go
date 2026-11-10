@@ -152,3 +152,15 @@ func TestTableTrimsStyledEmptyCells(t *testing.T) {
 		t.Errorf("row = %q, want trailing padding trimmed", got)
 	}
 }
+
+func TestWidthMatchesAnsi(t *testing.T) {
+	for _, s := range []string{
+		"", "plain", Bold.Render("bold"), fg(Cyan).Render(""), Dim.Render("0123456789ab") + "  x",
+		"8080→80/tcp", Bar(42, 10), HealthBadge("healthy"), "\x1b]8;;http://x\x1b\\link\x1b]8;;\x1b\\",
+		"tab\there", "日本語", "e\u0301",
+	} {
+		if got, want := width(s), ansi.StringWidth(s); got != want {
+			t.Errorf("width(%q) = %d, want %d", s, got, want)
+		}
+	}
+}
