@@ -76,7 +76,7 @@ func Stats(items []docker.Stats, key Key, reverse bool) {
 		case PIDs:
 			c = cmp.Compare(b.PIDs, a.PIDs)
 		}
-		return finish(c, a.Name, b.Name, reverse)
+		return order(cmp.Or(c, cmp.Compare(a.Name, b.Name)), reverse)
 	})
 }
 
@@ -94,7 +94,7 @@ func Containers(items []container.Summary, key Key, reverse bool) {
 		case Status:
 			c = cmp.Compare(rank(a.State), rank(b.State))
 		}
-		return finish(c, docker.ContainerName(a.Names), docker.ContainerName(b.Names), reverse)
+		return order(cmp.Or(c, cmp.Compare(docker.ContainerName(a.Names), docker.ContainerName(b.Names))), reverse)
 	})
 }
 
@@ -114,22 +114,25 @@ func Images(items []image.Summary, key Key, reverse bool) {
 		case Created:
 			c = cmp.Compare(b.Created, a.Created)
 		}
-		return finish(c, imageName(a), imageName(b), reverse)
+		return order(cmp.Or(c, compareImageNames(a, b)), reverse)
 	})
 }
 
-// imageName sorts untagged images after tagged ones.
-func imageName(img image.Summary) string {
-	if len(img.RepoTags) == 0 {
-		return "￿"
+// compareImageNames orders images by first tag, untagged (dangling) last.
+func compareImageNames(a, b image.Summary) int {
+	switch ta, tb := len(a.RepoTags) > 0, len(b.RepoTags) > 0; {
+	case ta && tb:
+		return cmp.Compare(a.RepoTags[0], b.RepoTags[0])
+	case ta:
+		return -1
+	case tb:
+		return 1
 	}
-	return img.RepoTags[0]
+	return 0
 }
 
-func finish(c int, nameA, nameB string, reverse bool) int {
-	if c == 0 {
-		c = cmp.Compare(nameA, nameB)
-	}
+// order applies reverse to a comparison result.
+func order(c int, reverse bool) int {
 	if reverse {
 		return -c
 	}

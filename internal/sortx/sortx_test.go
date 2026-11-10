@@ -76,6 +76,13 @@ func TestImagesDanglingLast(t *testing.T) {
 	if want := []string{"3", "2", "1"}; !slices.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
+
+	// A tag that sorts after any letter still comes before untagged images.
+	items = []image.Summary{{ID: "1"}, {ID: "2", RepoTags: []string{"\uffff\uffff:1"}}}
+	Images(items, Name, false)
+	if items[0].ID != "2" {
+		t.Errorf("untagged image sorted before a tagged one")
+	}
 }
 
 func TestParseAndNext(t *testing.T) {
