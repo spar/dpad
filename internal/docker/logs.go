@@ -1,9 +1,11 @@
 package docker
 
 import (
-	"bufio"
+	"bytes"
 	"cmp"
 	"context"
+	"encoding/binary"
+	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -57,57 +59,116 @@ func (c *Client) Logs(ctx context.Context, id string, opts LogOptions, out chan<
 // maxLogLine caps the length of one emitted line; longer lines are split.
 const maxLogLine = 1024 * 1024
 
-// readLogs splits a raw log stream into lines on out until the stream ends or
-// ctx is cancelled. It returns the first read error, if any.
-func readLogs(ctx context.Context, rc io.Reader, tty bool, name string, out chan<- LogLine) error {
-	// TTY containers produce a raw stream; others are multiplexed stdout/stderr.
-	outR, outW := io.Pipe()
-	errR, errW := io.Pipe()
-	go func() {
-		var err error
-		if tty {
-			_, err = io.Copy(outW, rc)
-		} else {
-			_, err = stdcopy.StdCopy(outW, errW, rc)
-		}
-		outW.CloseWithError(err)
-		errW.CloseWithError(err)
-	}()
-
-	errs := make(chan error, 2)
-	scan := func(r *io.PipeReader, stderr bool) {
-		err := func() error {
-			sc := bufio.NewScanner(r)
-			sc.Buffer(make([]byte, 64*1024), maxLogLine)
-			sc.Split(scanLogLines)
-			for sc.Scan() {
-				ts, text := splitTimestamp(sc.Text())
-				select {
-				case out <- LogLine{Container: name, Stderr: stderr, Time: ts, Text: text}:
-				case <-ctx.Done():
-					return ctx.Err()
-				}
+// readLogs splits a raw log stream into lines on out, in stream order, until
+// the stream ends or ctx is cancelled. Non-TTY streams are multiplexed:
+// frames of an 8-byte header (stream type, 3 zero bytes, big-endian payload
+// length) and a payload. Reading them in one pass keeps stdout and stderr
+// lines in the order the daemon sent them.
+func readLogs(ctx context.Context, r io.Reader, tty bool, name string, out chan<- LogLine) error {
+	var stdout, stderr lineSplitter
+	emit := func(isErr bool) func([]byte) error {
+		return func(line []byte) error {
+			ts, text := splitTimestamp(string(line))
+			select {
+			case out <- LogLine{Container: name, Stderr: isErr, Time: ts, Text: text}:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
 			}
-			return sc.Err()
-		}()
-		// Closing the reader fails the copier's next write, so a scanner that
-		// stops early ends the other stream too instead of leaving it blocked.
-		r.CloseWithError(err)
-		errs <- err
+		}
 	}
-	go scan(outR, false)
-	go scan(errR, true)
-	return cmp.Or(<-errs, <-errs)
+	emitOut, emitErr := emit(false), emit(true)
+	fail := func(err error) error {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return err
+	}
+
+	buf := make([]byte, 32*1024)
+	if tty {
+		for {
+			n, err := r.Read(buf)
+			if err := stdout.write(buf[:n], emitOut); err != nil {
+				return err
+			}
+			if err == io.EOF {
+				return stdout.flush(emitOut)
+			}
+			if err != nil {
+				return fail(err)
+			}
+		}
+	}
+
+	var hdr [8]byte
+	for {
+		if _, err := io.ReadFull(r, hdr[:]); err != nil {
+			if err == io.EOF {
+				return cmp.Or(stdout.flush(emitOut), stderr.flush(emitErr))
+			}
+			return fail(err)
+		}
+		size := int(binary.BigEndian.Uint32(hdr[4:]))
+		if size > len(buf) {
+			buf = make([]byte, size)
+		}
+		if _, err := io.ReadFull(r, buf[:size]); err != nil {
+			return fail(err)
+		}
+		var err error
+		switch stdcopy.StdType(hdr[0]) {
+		case stdcopy.Stdin, stdcopy.Stdout:
+			err = stdout.write(buf[:size], emitOut)
+		case stdcopy.Stderr:
+			err = stderr.write(buf[:size], emitErr)
+		case stdcopy.Systemerr:
+			return fmt.Errorf("daemon: %s", buf[:size])
+		default:
+			return fmt.Errorf("unrecognized log stream type %d", hdr[0])
+		}
+		if err != nil {
+			return err
+		}
+	}
 }
 
-// scanLogLines is bufio.ScanLines, except a line longer than maxLogLine is
-// emitted in maxLogLine chunks instead of stopping the scanner.
-func scanLogLines(data []byte, atEOF bool) (int, []byte, error) {
-	advance, token, err := bufio.ScanLines(data, atEOF)
-	if advance == 0 && token == nil && err == nil && len(data) >= maxLogLine {
-		return maxLogLine, data[:maxLogLine], nil
+// lineSplitter turns a byte stream into lines, holding a partial last line
+// until it completes. A line longer than maxLogLine is emitted in chunks.
+type lineSplitter struct{ buf []byte }
+
+func (s *lineSplitter) write(p []byte, emit func([]byte) error) error {
+	s.buf = append(s.buf, p...)
+	rest := s.buf
+	for {
+		n := bytes.IndexByte(rest, '\n')
+		if n < 0 || n > maxLogLine {
+			if len(rest) < maxLogLine {
+				break
+			}
+			n = maxLogLine
+			if err := emit(rest[:n]); err != nil {
+				return err
+			}
+			rest = rest[n:]
+			continue
+		}
+		if err := emit(rest[:n]); err != nil {
+			return err
+		}
+		rest = rest[n+1:]
 	}
-	return advance, token, err
+	s.buf = append(s.buf[:0], rest...)
+	return nil
+}
+
+// flush emits a final line that had no trailing newline.
+func (s *lineSplitter) flush(emit func([]byte) error) error {
+	if len(s.buf) == 0 {
+		return nil
+	}
+	defer func() { s.buf = s.buf[:0] }()
+	return emit(s.buf)
 }
 
 // splitTimestamp separates the RFC3339Nano prefix added by Timestamps: true.

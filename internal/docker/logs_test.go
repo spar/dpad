@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -85,5 +86,28 @@ func TestReadLogsStderr(t *testing.T) {
 		if l.Stderr != (l.Text == "err") || l.Time.IsZero() || l.Container != "web" {
 			t.Errorf("bad line %+v", l)
 		}
+	}
+}
+
+func TestReadLogsKeepsStreamOrder(t *testing.T) {
+	var b bytes.Buffer
+	frame(&b, stdcopy.Stdout, testTS+"one\n"+testTS+"tw")
+	frame(&b, stdcopy.Stderr, testTS+"three\n")
+	frame(&b, stdcopy.Stdout, "o\n"+testTS+"four") // no trailing newline
+	var got []string
+	for _, l := range collect(t, b.Bytes(), false) {
+		got = append(got, l.Text)
+	}
+	if want := []string{"one", "three", "two", "four"}; !slices.Equal(got, want) {
+		t.Errorf("lines = %q, want %q", got, want)
+	}
+}
+
+func TestReadLogsDaemonError(t *testing.T) {
+	var b bytes.Buffer
+	frame(&b, stdcopy.Systemerr, "boom")
+	err := readLogs(context.Background(), &b, false, "web", make(chan LogLine, 1))
+	if err == nil || !strings.Contains(err.Error(), "boom") {
+		t.Errorf("err = %v, want the daemon's error", err)
 	}
 }
