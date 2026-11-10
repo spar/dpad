@@ -46,7 +46,9 @@ func Calc(id, name string, s *container.StatsResponse) Stats {
 	if cpus == 0 {
 		cpus = float64(len(s.CPUStats.CPUUsage.PercpuUsage))
 	}
-	if cpuDelta > 0 && sysDelta > 0 {
+	// A stream's first record has no previous sample (PreCPUStats is zero), so
+	// its "delta" would be the container's lifetime; report 0 until there is one.
+	if s.PreCPUStats.SystemUsage > 0 && cpuDelta > 0 && sysDelta > 0 {
 		st.CPUPercent = cpuDelta / sysDelta * cpus * 100
 	}
 

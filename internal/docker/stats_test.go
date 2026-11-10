@@ -53,13 +53,12 @@ func TestCalc(t *testing.T) {
 }
 
 func TestCalcFirstSampleHasNoCPU(t *testing.T) {
-	// Streamed stats have an empty PreCPUStats on the first record.
+	// A stream's first record has an empty PreCPUStats, as the daemon sends it.
 	s := &container.StatsResponse{CPUStats: container.CPUStats{
-		CPUUsage: container.CPUUsage{TotalUsage: 5}, SystemUsage: 50, OnlineCPUs: 2,
+		CPUUsage: container.CPUUsage{TotalUsage: 1_434_910_833_000}, SystemUsage: 14_299_130_000_000, OnlineCPUs: 4,
 	}}
-	s.PreCPUStats.SystemUsage = 50
 	if got := Calc("", "", s); got.CPUPercent != 0 {
-		t.Errorf("CPUPercent = %v, want 0", got.CPUPercent)
+		t.Errorf("CPUPercent = %v, want 0 (no previous sample)", got.CPUPercent)
 	}
 }
 
