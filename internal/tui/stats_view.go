@@ -161,15 +161,14 @@ func (v *StatsView) View(width, height int, filter string) string {
 	}, height)
 }
 
+// Selected returns the highlighted row, resolved the same way View does so a
+// cursor on a filtered-out container never targets something off screen.
 func (v *StatsView) Selected() (string, string, bool) {
-	s, ok := v.data[v.cur.key]
-	if !ok {
-		items := v.items(v.filter)
-		if len(items) == 0 {
-			return "", "", false
-		}
-		s = items[0]
+	items := v.items(v.filter)
+	if len(items) == 0 {
+		return "", "", false
 	}
+	s := items[v.cur.index(statsKeys(items))]
 	return s.ID, s.Name, true
 }
 
