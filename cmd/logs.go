@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"slices"
 	"sync"
+	"sync/atomic"
 
 	"github.com/spf13/cobra"
 
@@ -56,17 +57,14 @@ func streamLogs(ctx context.Context, c *docker.Client, names []string, opts dock
 	ch := make(chan docker.LogLine, 256)
 	var (
 		wg     sync.WaitGroup
-		failed bool
-		mu     sync.Mutex
+		failed atomic.Bool
 	)
 	for _, name := range names {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			if err := c.Logs(ctx, name, opts, ch); err != nil && ctx.Err() == nil {
-				mu.Lock()
-				failed = true
-				mu.Unlock()
+				failed.Store(true)
 				fmt.Fprintf(os.Stderr, "dn: %s: %v\n", name, err)
 			}
 		}()
@@ -90,7 +88,7 @@ func streamLogs(ctx context.Context, c *docker.Client, names []string, opts dock
 	for _, n := range names {
 		colors.Style(n)
 	}
-	print := func(l docker.LogLine) {
+	printLine := func(l docker.LogLine) {
 		if grep != nil && !grep.MatchString(l.Text) {
 			return
 		}
@@ -106,16 +104,16 @@ func streamLogs(ctx context.Context, c *docker.Client, names []string, opts dock
 			select {
 			case l, ok := <-ch:
 				if !ok {
-					return logsErr(failed)
+					return logsErr(failed.Load())
 				}
-				print(l)
+				printLine(l)
 			default:
 				out.Flush()
 				l, ok := <-ch
 				if !ok {
-					return logsErr(failed)
+					return logsErr(failed.Load())
 				}
-				print(l)
+				printLine(l)
 			}
 		}
 	}
@@ -127,9 +125,9 @@ func streamLogs(ctx context.Context, c *docker.Client, names []string, opts dock
 	}
 	slices.SortStableFunc(lines, func(a, b docker.LogLine) int { return a.Time.Compare(b.Time) })
 	for _, l := range lines {
-		print(l)
+		printLine(l)
 	}
-	return logsErr(failed)
+	return logsErr(failed.Load())
 }
 
 func logsErr(failed bool) error {

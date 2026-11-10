@@ -34,7 +34,7 @@ func Execute() {
 		os.Exit(passthrough.Run(dockerArgs(args, false)))
 	}
 	if err := root.Execute(); err != nil {
-		if err != errSilent {
+		if !errors.Is(err, errSilent) {
 			fmt.Fprintln(os.Stderr, "dn:", err)
 		}
 		os.Exit(1)
