@@ -9,8 +9,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-
-	"dockernext/internal/render"
 )
 
 const refreshInterval = 2 * time.Second
@@ -70,18 +68,6 @@ func (c *cursor) navKey(keys []string, key string, page int) bool {
 		return false
 	}
 	return true
-}
-
-// tableWindow renders a table with the selected row kept in view within height lines.
-func tableWindow(t render.Table, height int) string {
-	header, rows := t.Lines()
-	avail := max(height-1, 1)
-	start := 0
-	if t.Selected >= avail {
-		start = t.Selected - avail + 1
-	}
-	end := min(start+avail, len(rows))
-	return strings.Join(append([]string{header}, rows[start:end]...), "\n")
 }
 
 func matches(filter string, fields ...string) bool {

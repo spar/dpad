@@ -15,32 +15,58 @@ const (
 
 const colGap = "   "
 
+// Column describes one table column.
+type Column struct {
+	Header string
+	Align  Align
+	Max    int // truncate wider cells to this width; 0 = unlimited
+}
+
 // Table renders docker-style borderless columns. Cells may contain ANSI
 // styling; widths are measured on visible characters.
 type Table struct {
-	Headers  []string
-	Rows     [][]string
-	Align    []Align // per column; default Left
-	MaxWidth []int   // per column; 0 = unlimited
-	Selected int     // row index to highlight, -1 for none
-	Width    int     // truncate every line to this width; 0 = unlimited
+	Columns []Column
+	Rows    [][]string
+	Width   int // truncate every line to this width; 0 = unlimited
 }
 
-// Lines returns the rendered header line and one line per row.
-func (t Table) Lines() (string, []string) {
-	widths := make([]int, len(t.Headers))
+// String renders the full table with no row highlighted.
+func (t Table) String() string {
+	return strings.Join(t.lines(-1), "\n")
+}
+
+// Window renders the header and as many rows as fit in height lines,
+// scrolled so the selected row is visible and highlighted. A negative
+// selected highlights nothing.
+func (t Table) Window(selected, height int) string {
+	lines := t.lines(selected)
+	header, rows := lines[0], lines[1:]
+	avail := max(height-1, 1)
+	start := 0
+	if selected >= avail {
+		start = selected - avail + 1
+	}
+	end := min(start+avail, len(rows))
+	return strings.Join(append([]string{header}, rows[start:end]...), "\n")
+}
+
+// lines returns the rendered header line followed by one line per row.
+func (t Table) lines(selected int) []string {
+	widths := make([]int, len(t.Columns))
 	cell := func(row []string, i int) string {
 		if i >= len(row) {
 			return ""
 		}
 		s := row[i]
-		if i < len(t.MaxWidth) && t.MaxWidth[i] > 0 && ansi.StringWidth(s) > t.MaxWidth[i] {
-			s = ansi.Truncate(s, t.MaxWidth[i], "…")
+		if m := t.Columns[i].Max; m > 0 && ansi.StringWidth(s) > m {
+			s = ansi.Truncate(s, m, "…")
 		}
 		return s
 	}
-	for i, h := range t.Headers {
-		widths[i] = ansi.StringWidth(h)
+	headers := make([]string, len(t.Columns))
+	for i, c := range t.Columns {
+		headers[i] = c.Header
+		widths[i] = ansi.StringWidth(c.Header)
 	}
 	for _, r := range t.Rows {
 		for i := range widths {
@@ -53,7 +79,7 @@ func (t Table) Lines() (string, []string) {
 		for i, w := range widths {
 			s := style(cell(cells, i))
 			pad := strings.Repeat(" ", w-ansi.StringWidth(s))
-			if i < len(t.Align) && t.Align[i] == Right {
+			if t.Columns[i].Align == Right {
 				b.WriteString(pad + s)
 			} else if i == len(widths)-1 {
 				b.WriteString(s)
@@ -71,25 +97,19 @@ func (t Table) Lines() (string, []string) {
 		return out
 	}
 
-	header := line(t.Headers, func(s string) string { return Header.Render(s) })
-	rows := make([]string, len(t.Rows))
+	out := make([]string, 0, len(t.Rows)+1)
+	out = append(out, line(headers, func(s string) string { return Header.Render(s) }))
 	for i, r := range t.Rows {
-		if i == t.Selected {
+		if i == selected {
 			// Inner ANSI resets would break the highlight, so render plain text.
 			plain := line(r, ansi.Strip)
 			if t.Width > 0 {
 				plain += strings.Repeat(" ", max(0, t.Width-ansi.StringWidth(plain)))
 			}
-			rows[i] = Selected.Render(plain)
+			out = append(out, Selected.Render(plain))
 			continue
 		}
-		rows[i] = line(r, func(s string) string { return s })
+		out = append(out, line(r, func(s string) string { return s }))
 	}
-	return header, rows
-}
-
-// String renders the full table.
-func (t Table) String() string {
-	h, rows := t.Lines()
-	return strings.Join(append([]string{h}, rows...), "\n")
+	return out
 }

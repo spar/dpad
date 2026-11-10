@@ -113,13 +113,8 @@ func (v *ContainersView) View(width, height int, filter string) string {
 	for i, c := range items {
 		rows[i] = render.ContainerRow(c)
 	}
-	return tableWindow(render.Table{
-		Headers:  render.ContainerHeaders,
-		Rows:     rows,
-		MaxWidth: render.ContainerMax,
-		Selected: v.cur.index(containerIDs(items)),
-		Width:    width,
-	}, height)
+	t := render.Table{Columns: render.ContainerColumns, Rows: rows, Width: width}
+	return t.Window(v.cur.index(containerIDs(items)), height)
 }
 
 func (v *ContainersView) Selected() (string, string, bool) {

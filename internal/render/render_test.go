@@ -84,10 +84,8 @@ func TestHighlightKeepsText(t *testing.T) {
 
 func TestTableAlignment(t *testing.T) {
 	tbl := Table{
-		Headers:  []string{"NAME", "SIZE"},
-		Rows:     [][]string{{Bold.Render("a"), "1MB"}, {"longer-name", "100MB"}},
-		Align:    []Align{Left, Right},
-		Selected: -1,
+		Columns: []Column{{Header: "NAME"}, {Header: "SIZE", Align: Right}},
+		Rows:    [][]string{{Bold.Render("a"), "1MB"}, {"longer-name", "100MB"}},
 	}
 	lines := strings.Split(ansi.Strip(tbl.String()), "\n")
 	want := []string{
@@ -98,6 +96,27 @@ func TestTableAlignment(t *testing.T) {
 	for i := range want {
 		if lines[i] != want[i] {
 			t.Errorf("line %d = %q, want %q", i, lines[i], want[i])
+		}
+	}
+}
+
+func TestTableWindow(t *testing.T) {
+	tbl := Table{Columns: []Column{{Header: "N"}}}
+	for _, r := range []string{"r0", "r1", "r2", "r3", "r4"} {
+		tbl.Rows = append(tbl.Rows, []string{r})
+	}
+	for _, tt := range []struct {
+		selected, height int
+		want             string
+	}{
+		{-1, 3, "N|r0|r1"},
+		{1, 3, "N|r0|r1"},
+		{4, 3, "N|r3|r4"},
+		{2, 10, "N|r0|r1|r2|r3|r4"},
+	} {
+		got := strings.ReplaceAll(ansi.Strip(tbl.Window(tt.selected, tt.height)), "\n", "|")
+		if got != tt.want {
+			t.Errorf("Window(%d, %d) = %q, want %q", tt.selected, tt.height, got, tt.want)
 		}
 	}
 }

@@ -42,13 +42,7 @@ func newImagesCmd() *cobra.Command {
 						dangling++
 					}
 				}
-				fmt.Println(render.Table{
-					Headers:  render.ImageHeaders,
-					Rows:     rows,
-					Align:    render.ImageAlign,
-					MaxWidth: render.ImageMax,
-					Selected: -1,
-				})
+				fmt.Println(render.Table{Columns: render.ImageColumns, Rows: rows})
 				fmt.Println()
 				fmt.Println(render.Dim.Render(fmt.Sprintf("%d images · %s total · %d dangling", len(items), render.Size(total), dangling)))
 				return nil

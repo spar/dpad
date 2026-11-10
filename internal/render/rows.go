@@ -11,16 +11,19 @@ import (
 )
 
 var (
-	ContainerHeaders = []string{"CONTAINER ID", "NAME", "IMAGE", "STATE", "STATUS", "HEALTH", "PORTS"}
-	ContainerMax     = []int{0, 30, 40, 0, 0, 0, 60}
-
-	ImageHeaders = []string{"REPOSITORY", "TAG", "IMAGE ID", "CREATED", "SIZE"}
-	ImageAlign   = []Align{Left, Left, Left, Left, Right}
-	ImageMax     = []int{50, 30}
-
-	StatsHeaders = []string{"NAME", "CPU %", "", "MEM USAGE / LIMIT", "MEM %", "", "NET I/O", "BLOCK I/O", "PIDS"}
-	StatsAlign   = []Align{Left, Right, Left, Right, Right, Left, Right, Right, Right}
-	StatsMax     = []int{30}
+	ContainerColumns = []Column{
+		{Header: "CONTAINER ID"}, {Header: "NAME", Max: 30}, {Header: "IMAGE", Max: 40},
+		{Header: "STATE"}, {Header: "STATUS"}, {Header: "HEALTH"}, {Header: "PORTS", Max: 60},
+	}
+	ImageColumns = []Column{
+		{Header: "REPOSITORY", Max: 50}, {Header: "TAG", Max: 30}, {Header: "IMAGE ID"},
+		{Header: "CREATED"}, {Header: "SIZE", Align: Right},
+	}
+	StatsColumns = []Column{
+		{Header: "NAME", Max: 30}, {Header: "CPU %", Align: Right}, {},
+		{Header: "MEM USAGE / LIMIT", Align: Right}, {Header: "MEM %", Align: Right}, {},
+		{Header: "NET I/O", Align: Right}, {Header: "BLOCK I/O", Align: Right}, {Header: "PIDS", Align: Right},
+	}
 )
 
 const barWidth = 10

@@ -35,12 +35,7 @@ func newPsCmd() *cobra.Command {
 				for i, it := range items {
 					rows[i] = render.ContainerRow(it)
 				}
-				fmt.Println(render.Table{
-					Headers:  render.ContainerHeaders,
-					Rows:     rows,
-					MaxWidth: render.ContainerMax,
-					Selected: -1,
-				})
+				fmt.Println(render.Table{Columns: render.ContainerColumns, Rows: rows})
 				return nil
 			})
 		},

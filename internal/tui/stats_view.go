@@ -166,14 +166,8 @@ func (v *StatsView) View(width, height int, filter string) string {
 	for i, s := range items {
 		rows[i] = render.StatsRow(s)
 	}
-	return tableWindow(render.Table{
-		Headers:  render.StatsHeaders,
-		Rows:     rows,
-		Align:    render.StatsAlign,
-		MaxWidth: render.StatsMax,
-		Selected: sel,
-		Width:    width,
-	}, height)
+	t := render.Table{Columns: render.StatsColumns, Rows: rows, Width: width}
+	return t.Window(sel, height)
 }
 
 // Selected returns the highlighted row, resolved the same way View does so a

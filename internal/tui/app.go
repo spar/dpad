@@ -279,6 +279,6 @@ func (a *App) helpView() string {
 	for _, h := range append(global, a.tabs[a.active].Help()...) {
 		rows = append(rows, []string{keyStyle.Render(h[0]), h[1]})
 	}
-	t := render.Table{Headers: []string{"KEY", a.tabs[a.active].Title() + " — ACTION"}, Rows: rows, Selected: -1}
+	t := render.Table{Columns: []render.Column{{Header: "KEY"}, {Header: a.tabs[a.active].Title() + " — ACTION"}}, Rows: rows}
 	return t.String() + "\n\n" + render.Dim.Render("press any key to close")
 }

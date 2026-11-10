@@ -116,14 +116,8 @@ func (v *ImagesView) View(width, height int, filter string) string {
 	for i, r := range rows {
 		cells[i] = r.cells
 	}
-	return tableWindow(render.Table{
-		Headers:  render.ImageHeaders,
-		Rows:     cells,
-		Align:    render.ImageAlign,
-		MaxWidth: render.ImageMax,
-		Selected: v.cur.index(rowKeys(rows)),
-		Width:    width,
-	}, height)
+	t := render.Table{Columns: render.ImageColumns, Rows: cells, Width: width}
+	return t.Window(v.cur.index(rowKeys(rows)), height)
 }
 
 func (v *ImagesView) Selected() (string, string, bool) { return "", "", false }
