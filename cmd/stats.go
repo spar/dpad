@@ -9,7 +9,6 @@ import (
 	"golang.org/x/term"
 
 	"dockernext/internal/docker"
-	"dockernext/internal/passthrough"
 	"dockernext/internal/render"
 	"dockernext/internal/sortx"
 	"dockernext/internal/tui"
@@ -31,7 +30,7 @@ r to reverse, q to quit. Output is a single snapshot when not a terminal.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Selecting specific containers is docker's job.
 			if len(args) > 0 {
-				os.Exit(passthrough.Run(dockerArgs(os.Args[1:], true)))
+				return errPassthrough
 			}
 			key, err := sortx.Parse(sortKey, sortx.StatsKeys)
 			if err != nil {

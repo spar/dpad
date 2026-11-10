@@ -23,22 +23,33 @@ var version = "dev"
 
 var noColor bool
 
-// errSilent signals failure when the details were already printed.
-var errSilent = errors.New("")
+var (
+	// errSilent signals failure when the details were already printed.
+	errSilent = errors.New("")
+	// errPassthrough asks run to hand the command to docker instead.
+	errPassthrough = errors.New("passthrough to docker")
+)
 
 // Execute runs dn. Commands and flags dn doesn't know are forwarded to docker.
-func Execute() {
+func Execute() { os.Exit(run(os.Args[1:])) }
+
+// run executes dn with args and returns the process exit code.
+func run(args []string) int {
 	root := newRoot()
-	args := os.Args[1:]
 	if shouldPassthrough(root, args) {
-		os.Exit(passthrough.Run(dockerArgs(args, false)))
+		return passthrough.Run(dockerArgs(args, false))
 	}
-	if err := root.Execute(); err != nil {
-		if !errors.Is(err, errSilent) {
-			fmt.Fprintln(os.Stderr, "dn:", err)
-		}
-		os.Exit(1)
+	root.SetArgs(args)
+	err := root.Execute()
+	switch {
+	case err == nil:
+		return 0
+	case errors.Is(err, errPassthrough):
+		return passthrough.Run(dockerArgs(args, true))
+	case !errors.Is(err, errSilent):
+		fmt.Fprintln(os.Stderr, "dn:", err)
 	}
+	return 1
 }
 
 func newRoot() *cobra.Command {
@@ -67,10 +78,7 @@ so "dn network ls" or "dn ps --format ..." behave exactly like docker.`,
 	root.AddCommand(newPsCmd(), newImagesCmd(), newStatsCmd(), newLogsCmd())
 
 	// Flags we don't implement (e.g. `ps --format`) mean the user wants docker's behavior.
-	root.SetFlagErrorFunc(func(*cobra.Command, error) error {
-		os.Exit(passthrough.Run(dockerArgs(os.Args[1:], true)))
-		return nil
-	})
+	root.SetFlagErrorFunc(func(*cobra.Command, error) error { return errPassthrough })
 	return root
 }
 
