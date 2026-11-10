@@ -40,7 +40,7 @@ var _ engine = (*client.Client)(nil)
 // New connects to the same daemon the docker CLI would use: DOCKER_HOST if set,
 // otherwise the endpoint of the current docker context.
 func New() (*Client, error) {
-	opts := []client.Opt{client.FromEnv, client.WithAPIVersionNegotiation()}
+	opts := []client.Opt{client.FromEnv} // API version negotiation is on by default
 	if os.Getenv("DOCKER_HOST") == "" {
 		if host := contextHost(); host != "" {
 			opts = append(opts, client.WithHost(host))
