@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -54,25 +53,21 @@ container name in a stable color; stderr lines use a red separator.`,
 }
 
 func streamLogs(ctx context.Context, c *docker.Client, names []string, opts docker.LogOptions, timestamps bool, grep *regexp.Regexp) error {
-	ch := make(chan docker.LogLine, 256)
-	var (
-		wg     sync.WaitGroup
-		failed atomic.Bool
-	)
-	for _, name := range names {
-		wg.Add(1)
+	// One channel per container, closed when its stream ends. Each delivers
+	// its container's lines in time order.
+	sources := make([]<-chan docker.LogLine, len(names))
+	var failed atomic.Bool
+	for i, name := range names {
+		ch := make(chan docker.LogLine, 256)
+		sources[i] = ch
 		go func() {
-			defer wg.Done()
+			defer close(ch)
 			if err := c.Logs(ctx, name, opts, ch); err != nil && ctx.Err() == nil {
 				failed.Store(true)
 				fmt.Fprintf(os.Stderr, "dn: %s: %v\n", name, err)
 			}
 		}()
 	}
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
 
 	out := bufio.NewWriter(os.Stdout)
 	defer out.Flush()
@@ -98,36 +93,74 @@ func streamLogs(ctx context.Context, c *docker.Client, names []string, opts dock
 		fmt.Fprintln(out, render.LogLine(l, colors.Style(l.Container), prefix, timestamps, grep))
 	}
 
-	if opts.Follow {
-		// Print as lines arrive, flushing whenever the stream goes idle.
-		for {
-			select {
-			case l, ok := <-ch:
-				if !ok {
-					return logsErr(failed.Load())
-				}
-				printLine(l)
-			default:
-				out.Flush()
-				l, ok := <-ch
-				if !ok {
-					return logsErr(failed.Load())
-				}
-				printLine(l)
-			}
-		}
+	if !opts.Follow {
+		mergeLogs(sources, printLine)
+		return logsErr(failed.Load())
 	}
 
-	// Without -f, merge all containers chronologically.
-	var lines []docker.LogLine
-	for l := range ch {
-		lines = append(lines, l)
+	// With -f, print lines as they arrive, flushing whenever output goes idle.
+	ch := fanIn(sources)
+	for {
+		select {
+		case l, ok := <-ch:
+			if !ok {
+				return logsErr(failed.Load())
+			}
+			printLine(l)
+		default:
+			out.Flush()
+			l, ok := <-ch
+			if !ok {
+				return logsErr(failed.Load())
+			}
+			printLine(l)
+		}
 	}
-	slices.SortStableFunc(lines, func(a, b docker.LogLine) int { return a.Time.Compare(b.Time) })
-	for _, l := range lines {
-		printLine(l)
+}
+
+// mergeLogs emits lines from time-ordered sources in overall time order. It
+// holds one pending line per source, so memory stays flat however long the
+// logs are. Ties go to the earlier source.
+func mergeLogs(sources []<-chan docker.LogLine, emit func(docker.LogLine)) {
+	heads := make([]docker.LogLine, len(sources))
+	open := make([]bool, len(sources))
+	for i, src := range sources {
+		heads[i], open[i] = <-src
 	}
-	return logsErr(failed.Load())
+	for {
+		next := -1
+		for i := range sources {
+			if open[i] && (next < 0 || heads[i].Time.Before(heads[next].Time)) {
+				next = i
+			}
+		}
+		if next < 0 {
+			return
+		}
+		emit(heads[next])
+		heads[next], open[next] = <-sources[next]
+	}
+}
+
+// fanIn forwards lines from all sources onto one channel, closed once every
+// source is.
+func fanIn(sources []<-chan docker.LogLine) <-chan docker.LogLine {
+	out := make(chan docker.LogLine, 256)
+	var wg sync.WaitGroup
+	for _, src := range sources {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for l := range src {
+				out <- l
+			}
+		}()
+	}
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+	return out
 }
 
 func logsErr(failed bool) error {
