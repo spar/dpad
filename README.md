@@ -6,7 +6,7 @@ sorting to the commands you use most, and a full-screen TUI. It does not replace
 
 ## Getting started
 
-You need Go 1.24.2+ and a running Docker engine (Docker Desktop, colima,
+You need Go 1.26+ and a running Docker engine (Docker Desktop, colima,
 OrbStack, or Linux).
 
 ```sh

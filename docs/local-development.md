@@ -14,7 +14,7 @@ containers.
 
 | Tool | Version | Check | Needed for |
 |---|---|---|---|
-| Go | 1.24.2+ | `go version` | building |
+| Go | 1.26+ | `go version` | building |
 | Docker Engine | any recent | `docker info` | everything. Docker Desktop, colima, OrbStack and Linux all work |
 | `docker` CLI | any | `docker version` | passthrough of commands `dn` doesn't enhance |
 | Docker Compose v2 | any | `docker compose version` or `docker-compose version` | the demo environment only |
@@ -149,4 +149,4 @@ make build && ./bin/dockernext stats
 | `docker: unknown command: docker compose` | Compose isn't installed as a plugin. See [Prerequisites](#1-prerequisites), or run `make demo-up COMPOSE=docker-compose`. |
 | Demo containers fail with `/scripts/...: not found` | The engine can't see the repo directory. colima and Docker Desktop share your home directory by default, so clone under `~` or add the path to the engine's file-sharing settings. |
 | TUI looks garbled | Use a terminal with UTF-8 and 256 colors (iTerm2, the macOS Terminal, kitty, WezTerm, Windows Terminal). Over tmux, set `TERM=tmux-256color`. |
-| `go: go.mod requires go >= 1.24.2` | Upgrade Go (`brew upgrade go`). |
+| `go: go.mod requires go >= 1.26.0` | Upgrade Go (`brew upgrade go`). |
