@@ -135,7 +135,7 @@ make build && ./bin/dockernext stats
 **Tips:**
 - **Colors and piping:** colors are disabled automatically when output is piped, so `dn ps | less` shows plain text. Run `dn ps` directly in a terminal to see colors.
 - **Re-running the TUI:** after a change, `go run .` is the fastest way to try it.
-- **Version string:** `make build` stamps it from `git describe`. In a tree without git it reports `dev`.
+- **Version string:** `make build` stamps it from `git describe`. Other builds (`go build`, `go install`) report the module version Go records, and `dev` if there is none.
 
 ## 6. Troubleshooting
 

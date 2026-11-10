@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strings"
 	"syscall"
 
@@ -19,7 +20,20 @@ import (
 	"dockernext/internal/tui"
 )
 
+// version is stamped by `make build`; see buildVersion for other builds.
 var version = "dev"
+
+// buildVersion returns the stamped version, else the module version Go
+// recorded (e.g. by `go install ...@v1.2.0` or a build in a git checkout).
+func buildVersion() string {
+	if version != "dev" {
+		return version
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		return bi.Main.Version
+	}
+	return version
+}
 
 var noColor bool
 
@@ -61,7 +75,7 @@ and opens an interactive TUI when run without arguments.
 
 Any command or flag dn doesn't handle itself is passed through to docker,
 so "dn network ls" or "dn ps --format ..." behave exactly like docker.`,
-		Version:       version,
+		Version:       buildVersion(),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Args:          cobra.NoArgs,

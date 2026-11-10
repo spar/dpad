@@ -9,8 +9,9 @@ DEMO    := $(COMPOSE) -f testenv/compose.yaml
 
 .PHONY: build install uninstall run test vet clean demo-up demo-extras demo-down demo-status
 
+# Static, reproducible build: no cgo, no local paths in the binary.
 build:
-	go build -ldflags '$(LDFLAGS)' -o $(BIN) .
+	CGO_ENABLED=0 go build -trimpath -ldflags '$(LDFLAGS)' -o $(BIN) .
 
 # Installs dockernext plus a short `dn` symlink into $(PREFIX)/bin.
 install: build
