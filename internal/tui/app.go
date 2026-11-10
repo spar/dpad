@@ -27,7 +27,6 @@ type pending struct {
 var (
 	tabActive   = lipgloss.NewStyle().Bold(true).Reverse(true).Padding(0, 1)
 	tabInactive = lipgloss.NewStyle().Padding(0, 1).Foreground(render.Gray)
-	brand       = lipgloss.NewStyle().Bold(true).Foreground(render.Cyan)
 	keyStyle    = lipgloss.NewStyle().Bold(true)
 )
 
@@ -220,7 +219,7 @@ func (a *App) View() string {
 	if a.flash != "" {
 		st := render.Bold
 		if a.flashErr {
-			st = render.StateStyle("dead", 0)
+			st = render.Error
 		}
 		status += "  " + st.Render(a.flash)
 	}
@@ -233,7 +232,7 @@ func (a *App) View() string {
 }
 
 func (a *App) tabBar() string {
-	parts := []string{brand.Render("dockernext") + " "}
+	parts := []string{render.Accent.Render("dockernext") + " "}
 	for i, t := range a.tabs {
 		label := fmt.Sprintf("%d %s", i+1, t.Title())
 		if i == a.active {
@@ -248,7 +247,7 @@ func (a *App) tabBar() string {
 func (a *App) footer() string {
 	switch {
 	case a.confirm != nil:
-		return render.StateStyle("paused", 0).Render(fmt.Sprintf("%s container %s? (y/N)", a.confirm.verb, a.confirm.name))
+		return render.Warn.Render(fmt.Sprintf("%s container %s? (y/N)", a.confirm.verb, a.confirm.name))
 	case a.filtering:
 		return a.filter.View()
 	case a.logs != nil:

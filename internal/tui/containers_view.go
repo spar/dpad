@@ -99,7 +99,7 @@ func (v *ContainersView) HandleKey(key string) (tea.Cmd, bool) {
 func (v *ContainersView) View(width, height int, filter string) string {
 	switch {
 	case v.err != nil:
-		return render.StateStyle("dead", 0).Render("error: " + v.err.Error())
+		return render.Error.Render("error: " + v.err.Error())
 	case !v.loaded:
 		return render.Dim.Render("loading…")
 	}

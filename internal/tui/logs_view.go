@@ -123,10 +123,10 @@ func (v *LogsView) Update(msg tea.Msg) tea.Cmd {
 func (v *LogsView) View() string { return v.vp.View() }
 
 func (v *LogsView) Status() string {
-	s := "logs: " + render.NameStyle(v.name).Render(v.name)
+	s := "logs: " + render.Accent.Render(v.name)
 	switch {
 	case v.err != nil:
-		s += " · " + render.StateStyle("dead", 0).Render(v.err.Error())
+		s += " · " + render.Error.Render(v.err.Error())
 	case v.ended:
 		s += " · stream ended"
 	case v.vp.AtBottom():

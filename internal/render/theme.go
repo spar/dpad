@@ -3,7 +3,6 @@
 package render
 
 import (
-	"hash/fnv"
 	"os"
 	"strings"
 
@@ -27,6 +26,9 @@ var (
 	Bold     = lipgloss.NewStyle().Bold(true)
 	Selected = lipgloss.NewStyle().Reverse(true)
 	Match    = lipgloss.NewStyle().Background(Yellow).Foreground(lipgloss.Color("0"))
+	Error    = lipgloss.NewStyle().Bold(true).Foreground(Red)
+	Warn     = lipgloss.NewStyle().Foreground(Yellow)
+	Accent   = lipgloss.NewStyle().Bold(true).Foreground(Cyan)
 )
 
 // SetupColor disables color when requested, when NO_COLOR is set, or when
@@ -56,7 +58,7 @@ func StateStyle(state string, exitCode int) lipgloss.Style {
 	case "created":
 		return fg(Blue)
 	case "dead":
-		return fg(Red).Bold(true)
+		return Error
 	default:
 		return fg(Gray)
 	}
@@ -102,13 +104,6 @@ func Bar(p float64, width int) string {
 var namePalette = []lipgloss.Color{
 	Cyan, Magenta, Blue, Yellow, Green,
 	lipgloss.Color("14"), lipgloss.Color("13"), lipgloss.Color("12"), lipgloss.Color("11"), lipgloss.Color("10"),
-}
-
-// NameStyle returns a stable color for a container name, used for log prefixes.
-func NameStyle(name string) lipgloss.Style {
-	h := fnv.New32a()
-	h.Write([]byte(name))
-	return fg(namePalette[h.Sum32()%uint32(len(namePalette))])
 }
 
 // NameColors hands out palette colors in order of first use, so a handful of
