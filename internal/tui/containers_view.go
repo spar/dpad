@@ -63,7 +63,7 @@ func (v *ContainersView) Focus() tea.Cmd { return nil }
 func (v *ContainersView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case containersMsg:
-		v.items, v.err, v.loaded = msg.items, msg.err, true
+		v.setItems(msg.items, msg.err)
 	case containersTickMsg:
 		return tea.Batch(v.load(), tick(containersTickMsg{}))
 	case refreshMsg:

@@ -99,7 +99,8 @@ func waitStats(ch <-chan docker.StatsUpdate) tea.Cmd {
 func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case statsStartedMsg:
-		v.ch, v.loaded = msg.ch, true
+		v.ch = msg.ch
+		v.setItems(nil, nil)
 		return waitStats(v.ch)
 	case statsBatchMsg:
 		for _, u := range msg {
@@ -109,7 +110,7 @@ func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 				v.data[u.Stats.ID] = u.Stats
 			}
 		}
-		v.items = slices.Collect(maps.Values(v.data))
+		v.setItems(slices.Collect(maps.Values(v.data)), nil)
 		return waitStats(v.ch)
 	case statsErrMsg:
 		v.err = msg.err
@@ -137,7 +138,7 @@ func shortcutHelp(sep string) (keys, sorts string) {
 func (v *StatsView) HandleKey(key string) tea.Cmd {
 	for _, sc := range statsShortcuts {
 		if sc.key == key {
-			v.key = sc.sort
+			v.setSort(sc.sort, v.reverse)
 			return nil
 		}
 	}

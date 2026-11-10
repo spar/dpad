@@ -37,40 +37,56 @@ type list[T any] struct {
 	width       int
 	height      int
 	page        int // rows moved by pgup/pgdn
+
+	// Cache of visible and its row keys; nil when items, filter or sort change.
+	rowCache []row
+	keyCache []string
 }
 
-// visible returns the rows that match the filter, in sort order.
-func (l *list[T]) visible(filter string) []row {
+// setItems replaces the list's items after a load.
+func (l *list[T]) setItems(items []T, err error) {
+	l.items, l.err, l.loaded = items, err, true
+	l.rowCache = nil
+}
+
+func (l *list[T]) setSort(key sortx.Key, reverse bool) {
+	l.key, l.reverse = key, reverse
+	l.rowCache = nil
+}
+
+// visible returns the rows that match the filter, in sort order, and their keys.
+func (l *list[T]) visible() ([]row, []string) {
+	if l.rowCache != nil {
+		return l.rowCache, l.keyCache
+	}
 	items := make([]T, 0, len(l.items))
 	for _, it := range l.items {
-		if filter == "" || l.match(it, filter) {
+		if l.filter == "" || l.match(it, l.filter) {
 			items = append(items, it)
 		}
 	}
 	l.sort(items, l.key, l.reverse)
-	var out []row
+	rows := []row{}
 	for _, it := range items {
-		out = append(out, l.rows(it)...)
+		rows = append(rows, l.rows(it)...)
 	}
-	return out
-}
-
-func rowKeys(rows []row) []string {
 	keys := make([]string, len(rows))
 	for i, r := range rows {
 		keys[i] = r.key
 	}
-	return keys
+	l.rowCache, l.keyCache = rows, keys
+	return rows, keys
 }
 
 func (l *list[T]) HandleKey(key string) tea.Cmd {
 	switch key {
 	case "s":
-		l.key = sortx.Next(l.key, l.keys)
+		l.setSort(sortx.Next(l.key, l.keys), l.reverse)
 	case "r":
-		l.reverse = !l.reverse
+		l.setSort(l.key, !l.reverse)
 	default:
-		l.cur.navKey(rowKeys(l.visible(l.filter)), key, l.page)
+		_, keys := l.visible()
+		l.cur.navKey(keys, key, l.page)
 	}
 	return nil
 }
@@ -80,7 +96,11 @@ func (l *list[T]) SetSize(width, height int) {
 	l.page = max(height-2, 1)
 }
 
-func (l *list[T]) SetFilter(filter string) { l.filter = filter }
+func (l *list[T]) SetFilter(filter string) {
+	if filter != l.filter {
+		l.filter, l.rowCache = filter, nil
+	}
+}
 
 func (l *list[T]) Filter() string { return l.filter }
 
@@ -91,7 +111,7 @@ func (l *list[T]) View() string {
 	case !l.loaded:
 		return render.Dim.Render(l.loading)
 	}
-	rows := l.visible(l.filter)
+	rows, keys := l.visible()
 	if len(rows) == 0 {
 		return render.Dim.Render(l.empty)
 	}
@@ -99,7 +119,7 @@ func (l *list[T]) View() string {
 	for i, r := range rows {
 		cells[i] = r.cells
 	}
-	sel := l.cur.index(rowKeys(rows))
+	sel := l.cur.index(keys)
 	if l.noHighlight {
 		sel = -1
 	}
@@ -110,11 +130,11 @@ func (l *list[T]) View() string {
 // Selected returns the container of the highlighted row, resolved the same
 // way View does so actions never target a row that isn't on screen.
 func (l *list[T]) Selected() (string, string, bool) {
-	rows := l.visible(l.filter)
+	rows, keys := l.visible()
 	if len(rows) == 0 {
 		return "", "", false
 	}
-	r := rows[l.cur.index(rowKeys(rows))]
+	r := rows[l.cur.index(keys)]
 	return r.id, r.name, r.id != ""
 }
 

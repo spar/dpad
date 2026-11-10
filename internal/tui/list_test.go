@@ -1,12 +1,15 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
+	"github.com/muesli/termenv"
 )
 
 func TestContainersNavigateAndSelect(t *testing.T) {
@@ -51,4 +54,29 @@ func TestImagesAreNotSelectable(t *testing.T) {
 	if _, _, ok := v.Selected(); ok {
 		t.Error("image rows should not select a container")
 	}
+}
+
+func BenchmarkContainersView(b *testing.B) {
+	prev := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	b.Cleanup(func() { lipgloss.SetColorProfile(prev) })
+	items := make([]container.Summary, 200)
+	for i := range items {
+		items[i] = container.Summary{ID: fmt.Sprintf("%064d", i), Names: []string{fmt.Sprintf("/svc-%d", i)},
+			Image: "nginx:1.27-alpine", State: "running", Status: "Up 3 hours (healthy)"}
+	}
+	v := NewContainersView(nil, nil)
+	v.Update(containersMsg{items: items})
+	v.SetSize(160, 40)
+	b.Run("view", func(b *testing.B) {
+		for b.Loop() {
+			_ = v.View()
+		}
+	})
+	b.Run("keypress", func(b *testing.B) {
+		for b.Loop() {
+			v.HandleKey("j")
+			_ = v.View()
+		}
+	})
 }

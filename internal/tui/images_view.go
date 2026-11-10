@@ -62,7 +62,7 @@ func (v *ImagesView) Focus() tea.Cmd { return nil }
 func (v *ImagesView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case imagesMsg:
-		v.items, v.err, v.loaded = msg.items, msg.err, true
+		v.setItems(msg.items, msg.err)
 	case refreshMsg:
 		return v.load()
 	}
