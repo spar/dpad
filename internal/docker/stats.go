@@ -83,8 +83,12 @@ func memUsageNoCache(m container.MemoryStats) uint64 {
 	return m.Usage
 }
 
+// maxSnapshotRequests caps concurrent stats requests in StatsSnapshot, so a
+// host with hundreds of containers doesn't get hundreds at once.
+const maxSnapshotRequests = 16
+
 // StatsSnapshot collects one sample (with a previous sample for CPU deltas)
-// from every running container, concurrently.
+// from every running container, a bounded number at a time.
 func (c *Client) StatsSnapshot(ctx context.Context) ([]Stats, error) {
 	list, err := c.Containers(ctx, false)
 	if err != nil {
@@ -92,10 +96,13 @@ func (c *Client) StatsSnapshot(ctx context.Context) ([]Stats, error) {
 	}
 	out := make([]Stats, len(list))
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxSnapshotRequests)
 	for i, ctr := range list {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			name := ContainerName(ctr.Names)
 			out[i] = Stats{ID: ctr.ID, Name: name}
 			res, err := c.api.ContainerStats(ctx, ctr.ID, client.ContainerStatsOptions{IncludePreviousSample: true})

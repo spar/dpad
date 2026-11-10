@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -106,4 +107,24 @@ func TestWatchStatsResubscribes(t *testing.T) {
 	// Events on the new subscription are followed.
 	f.send(events.ActionStart, "api")
 	tr.waitShown(t, "api", true)
+}
+
+func TestStatsSnapshotBoundsConcurrency(t *testing.T) {
+	var ids []string
+	for i := range 3 * maxSnapshotRequests {
+		ids = append(ids, fmt.Sprintf("c%d", i))
+	}
+	f := newFakeEngine(ids...)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	got, err := (&Client{api: f}).StatsSnapshot(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != len(ids) || got[0].PIDs != 1 {
+		t.Errorf("got %d samples (first %+v), want %d decoded samples", len(got), got[0], len(ids))
+	}
+	if f.maxInflight > maxSnapshotRequests {
+		t.Errorf("%d stats requests in flight, want at most %d", f.maxInflight, maxSnapshotRequests)
+	}
 }

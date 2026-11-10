@@ -20,6 +20,8 @@ type fakeEngine struct {
 	containers []container.Summary
 	listErr    error
 	statsCalls map[string]int
+	// inflight and maxInflight count open stats bodies.
+	inflight, maxInflight int
 	// hold, when set for an ID, keeps that container's stats stream open
 	// after its context is cancelled until the channel is closed.
 	hold   map[string]chan struct{}
@@ -61,6 +63,8 @@ func (f *fakeEngine) ContainerStats(ctx context.Context, id string, _ client.Con
 	f.mu.Lock()
 	f.statsCalls[id]++
 	hold := f.hold[id]
+	f.inflight++
+	f.maxInflight = max(f.maxInflight, f.inflight)
 	f.mu.Unlock()
 	pr, pw := io.Pipe()
 	go func() {
@@ -71,7 +75,20 @@ func (f *fakeEngine) ContainerStats(ctx context.Context, id string, _ client.Con
 		}
 		pw.Close()
 	}()
-	return client.ContainerStatsResult{Body: pr}, nil
+	return client.ContainerStatsResult{Body: &statsBody{pr, f}}, nil
+}
+
+// statsBody tracks when a stats stream is closed.
+type statsBody struct {
+	*io.PipeReader
+	f *fakeEngine
+}
+
+func (b *statsBody) Close() error {
+	b.f.mu.Lock()
+	b.f.inflight--
+	b.f.mu.Unlock()
+	return b.PipeReader.Close()
 }
 
 // Events opens a new subscription; the test drives it with send and fail.
