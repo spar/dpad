@@ -123,16 +123,7 @@ func (v *ImagesView) View(width, height int, filter string) string {
 func (v *ImagesView) Selected() (string, string, bool) { return "", "", false }
 
 func (v *ImagesView) Status() string {
-	var total int64
-	dangling := 0
-	for _, img := range v.items {
-		total += img.Size
-		if len(img.RepoTags) == 0 {
-			dangling++
-		}
-	}
-	return fmt.Sprintf("%d images · %s total · %d dangling · %s",
-		len(v.items), render.Size(total), dangling, sortLabel(v.key, v.reverse))
+	return render.ImageSummary(v.items) + " · " + sortLabel(v.key, v.reverse)
 }
 
 func (v *ImagesView) Help() [][2]string {

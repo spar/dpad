@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/image"
 	"github.com/muesli/termenv"
 )
 
@@ -34,6 +35,13 @@ func TestExitCode(t *testing.T) {
 		if got := ExitCode(status); got != want {
 			t.Errorf("ExitCode(%q) = %d, want %d", status, got, want)
 		}
+	}
+}
+
+func TestImageSummary(t *testing.T) {
+	items := []image.Summary{{Size: 1_000_000, RepoTags: []string{"a:1"}}, {Size: 500_000}}
+	if got, want := ImageSummary(items), "2 images · 1.5MB total · 1 dangling"; got != want {
+		t.Errorf("ImageSummary = %q, want %q", got, want)
 	}
 }
 

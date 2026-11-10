@@ -68,6 +68,19 @@ func ImageRows(img image.Summary) [][]string {
 	return rows
 }
 
+// ImageSummary describes a set of images, e.g. "12 images · 1.2GB total · 1 dangling".
+func ImageSummary(items []image.Summary) string {
+	var total int64
+	dangling := 0
+	for _, img := range items {
+		total += img.Size
+		if len(img.RepoTags) == 0 {
+			dangling++
+		}
+	}
+	return fmt.Sprintf("%d images · %s total · %d dangling", len(items), Size(total), dangling)
+}
+
 // SplitRepoTag splits "registry:5000/app:v1" into repo and tag.
 func SplitRepoTag(rt string) (string, string) {
 	i := strings.LastIndex(rt, ":")
