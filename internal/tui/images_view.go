@@ -87,16 +87,16 @@ func rowKeys(rows []imageRow) []string {
 	return keys
 }
 
-func (v *ImagesView) HandleKey(key string) (tea.Cmd, bool) {
+func (v *ImagesView) HandleKey(key string) tea.Cmd {
 	switch key {
 	case "s":
 		v.key = sortx.Next(v.key, sortx.ImageKeys)
 	case "r":
 		v.reverse = !v.reverse
 	default:
-		return nil, v.cur.navKey(rowKeys(v.rows(v.filter)), key, v.page)
+		v.cur.navKey(rowKeys(v.rows(v.filter)), key, v.page)
 	}
-	return nil, true
+	return nil
 }
 
 func (v *ImagesView) View(width, height int, filter string) string {

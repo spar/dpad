@@ -130,10 +130,10 @@ func statsKeys(items []docker.Stats) []string {
 
 var statsSortKeys = map[string]string{"c": "cpu", "m": "mem", "n": "net", "i": "io", "p": "pids", "a": "name"}
 
-func (v *StatsView) HandleKey(key string) (tea.Cmd, bool) {
+func (v *StatsView) HandleKey(key string) tea.Cmd {
 	if k, ok := statsSortKeys[key]; ok {
 		v.key = k
-		return nil, true
+		return nil
 	}
 	switch key {
 	case "s":
@@ -141,9 +141,9 @@ func (v *StatsView) HandleKey(key string) (tea.Cmd, bool) {
 	case "r":
 		v.reverse = !v.reverse
 	default:
-		return nil, v.cur.navKey(statsKeys(v.items(v.filter)), key, v.page)
+		v.cur.navKey(statsKeys(v.items(v.filter)), key, v.page)
 	}
-	return nil, true
+	return nil
 }
 
 func (v *StatsView) View(width, height int, filter string) string {
@@ -225,8 +225,7 @@ func (p statsProgram) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "esc", "ctrl+c":
 			return p, tea.Quit
 		}
-		cmd, _ := p.v.HandleKey(msg.String())
-		return p, cmd
+		return p, p.v.HandleKey(msg.String())
 	default:
 		return p, p.v.Update(msg)
 	}

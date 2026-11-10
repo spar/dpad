@@ -22,8 +22,8 @@ type tab interface {
 	Focus() tea.Cmd
 	// Update handles data messages; every tab sees every non-key message.
 	Update(msg tea.Msg) tea.Cmd
-	// HandleKey handles keys when the tab is active; returns false if unhandled.
-	HandleKey(key string) (tea.Cmd, bool)
+	// HandleKey handles keys the App doesn't when the tab is active.
+	HandleKey(key string) tea.Cmd
 	View(width, height int, filter string) string
 	// Selected returns the highlighted container, if the tab lists containers.
 	Selected() (id, name string, ok bool)
@@ -49,8 +49,8 @@ func (c *cursor) move(keys []string, delta int) {
 	c.key = keys[i]
 }
 
-// navKey applies standard list navigation; returns false if key isn't one.
-func (c *cursor) navKey(keys []string, key string, page int) bool {
+// navKey applies standard list navigation keys and ignores others.
+func (c *cursor) navKey(keys []string, key string, page int) {
 	switch key {
 	case "up", "k":
 		c.move(keys, -1)
@@ -64,10 +64,7 @@ func (c *cursor) navKey(keys []string, key string, page int) bool {
 		c.move(keys, -len(keys))
 	case "end", "G":
 		c.move(keys, len(keys))
-	default:
-		return false
 	}
-	return true
 }
 
 func matches(filter string, fields ...string) bool {

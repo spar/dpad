@@ -51,16 +51,17 @@ type App struct {
 func Run(ctx context.Context, c *docker.Client) error {
 	fi := textinput.New()
 	fi.Prompt = "/"
+	tabs := []tab{
+		NewContainersView(ctx, c),
+		NewImagesView(ctx, c),
+		NewStatsView(ctx, c, "cpu", false),
+	}
 	app := &App{
-		ctx:    ctx,
-		client: c,
-		tabs: []tab{
-			NewContainersView(ctx, c),
-			NewImagesView(ctx, c),
-			NewStatsView(ctx, c, "cpu", false),
-		},
+		ctx:     ctx,
+		client:  c,
+		tabs:    tabs,
 		filter:  fi,
-		filters: make([]string, 3),
+		filters: make([]string, len(tabs)),
 		width:   120,
 		height:  30,
 	}
@@ -159,8 +160,6 @@ func (a *App) handleKey(msg tea.KeyMsg) tea.Cmd {
 		return a.switchTab((a.active + 1) % len(a.tabs))
 	case "shift+tab", "left", "h":
 		return a.switchTab((a.active + len(a.tabs) - 1) % len(a.tabs))
-	case "1", "2", "3":
-		return a.switchTab(int(key[0] - '1'))
 	case "/":
 		a.filtering = true
 		return a.filter.Focus()
@@ -183,8 +182,10 @@ func (a *App) handleKey(msg tea.KeyMsg) tea.Cmd {
 	case "R":
 		a.ask("restart", a.client.Restart)
 	default:
-		cmd, _ := a.tabs[a.active].HandleKey(key)
-		return cmd
+		if len(key) == 1 && key[0] >= '1' && int(key[0]-'1') < len(a.tabs) {
+			return a.switchTab(int(key[0] - '1'))
+		}
+		return a.tabs[a.active].HandleKey(key)
 	}
 	return nil
 }
@@ -266,7 +267,7 @@ func hints(pairs ...string) string {
 
 func (a *App) helpView() string {
 	global := [][2]string{
-		{"tab / shift+tab, 1-3", "switch tabs"},
+		{fmt.Sprintf("tab / shift+tab, 1-%d", len(a.tabs)), "switch tabs"},
 		{"↑↓ / j k, pgup/pgdn, g/G", "move selection"},
 		{"/", "filter (enter keeps, esc clears)"},
 		{"enter", "follow logs of selected container"},

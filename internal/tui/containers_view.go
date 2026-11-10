@@ -84,16 +84,16 @@ func containerIDs(items []container.Summary) []string {
 	return ids
 }
 
-func (v *ContainersView) HandleKey(key string) (tea.Cmd, bool) {
+func (v *ContainersView) HandleKey(key string) tea.Cmd {
 	switch key {
 	case "s":
 		v.key = sortx.Next(v.key, sortx.ContainerKeys)
 	case "r":
 		v.reverse = !v.reverse
 	default:
-		return nil, v.cur.navKey(containerIDs(v.visible(v.filter)), key, v.page)
+		v.cur.navKey(containerIDs(v.visible(v.filter)), key, v.page)
 	}
-	return nil, true
+	return nil
 }
 
 func (v *ContainersView) View(width, height int, filter string) string {
