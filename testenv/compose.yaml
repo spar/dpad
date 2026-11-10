@@ -1,0 +1,147 @@
+# Demo environment for trying out dockernext (dn) locally.
+#
+#   make demo-up     # start everything (+ paused/created/dangling extras)
+#   dn               # explore
+#   make demo-down   # remove everything
+#
+# Each service exists to exercise a specific dn feature; see testenv/README.md.
+name: dn-demo
+
+x-alpine: &alpine
+  image: alpine:3.20
+  volumes:
+    - ./scripts:/scripts:ro
+  labels:
+    dn-demo: "true"
+
+services:
+  # ── Ports, health, nginx-style logs ────────────────────────────────────────
+  web:
+    image: nginx:1.27-alpine
+    # Generate a 5MB file so `traffic` produces visible network I/O.
+    command: >-
+      sh -c "head -c 5000000 /dev/urandom > /usr/share/nginx/html/big.bin
+      && exec nginx -g 'daemon off;'"
+    ports:
+      - "8080:80"
+      - "8443:443"
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+    labels:
+      dn-demo: "true"
+
+  traffic:
+    <<: *alpine
+    command: ["sh", "/scripts/traffic.sh"]
+    depends_on:
+      web:
+        condition: service_healthy
+
+  # ── CPU thresholds: red (>80%), yellow (50–80%) ────────────────────────────
+  cpu-hog:
+    <<: *alpine
+    command: ["sh", "-c", "while :; do :; done"]
+    cpus: 0.9
+
+  cpu-warm:
+    <<: *alpine
+    command: ["sh", "-c", "while :; do :; done"]
+    cpus: 0.6
+
+  # ── Memory thresholds against a 64MiB limit ────────────────────────────────
+  mem-hog:
+    image: python:3.13-alpine
+    command: ["python", "-c", "import time; b = b'x' * (52 * 1024 * 1024); time.sleep(10**9)"]
+    mem_limit: 64m
+    labels:
+      dn-demo: "true"
+
+  mem-warm:
+    image: python:3.13-alpine
+    command: ["python", "-c", "import time; b = b'x' * (34 * 1024 * 1024); time.sleep(10**9)"]
+    mem_limit: 64m
+    labels:
+      dn-demo: "true"
+
+  # ── Block I/O and PIDs columns ─────────────────────────────────────────────
+  disk-io:
+    <<: *alpine
+    command: ["sh", "/scripts/disk-io.sh"]
+    volumes:
+      - ./scripts:/scripts:ro
+      - scratch:/data
+
+  many-pids:
+    <<: *alpine
+    command: ["sh", "-c", "for i in $$(seq 60); do sleep 1000000 & done; wait"]
+
+  # ── Log formats ────────────────────────────────────────────────────────────
+  logger-text:
+    <<: *alpine
+    command: ["sh", "/scripts/logger-text.sh"]
+
+  logger-logfmt:
+    <<: *alpine
+    command: ["sh", "/scripts/logger-logfmt.sh"]
+
+  logger-json:
+    image: python:3.13-alpine
+    command: ["python", "-u", "/scripts/logger_json.py"]
+    volumes:
+      - ./scripts:/scripts:ro
+    labels:
+      dn-demo: "true"
+
+  # TTY containers send a raw (non-multiplexed) log stream.
+  logger-tty:
+    <<: *alpine
+    tty: true
+    command: ["sh", "/scripts/logger-text.sh"]
+
+  # ── Health badges ──────────────────────────────────────────────────────────
+  unhealthy:
+    <<: *alpine
+    command: ["sleep", "infinity"]
+    healthcheck:
+      test: ["CMD", "false"]
+      interval: 3s
+      retries: 1
+
+  # Failures during start_period don't count, so this stays "starting".
+  health-starting:
+    <<: *alpine
+    command: ["sleep", "infinity"]
+    healthcheck:
+      test: ["CMD", "false"]
+      interval: 1h
+      start_period: 1h
+
+  # ── Container states ───────────────────────────────────────────────────────
+  # Crash-loops: shows as restarting (magenta) with FATAL in its logs.
+  flaky:
+    <<: *alpine
+    command: ["sh", "-c", "echo 'INFO starting'; sleep 2; echo 'FATAL config file /etc/app.yaml not found' >&2; exit 1"]
+    restart: always
+
+  # Exited non-zero: red.
+  crashed:
+    <<: *alpine
+    command: ["sh", "-c", "echo 'ERROR unrecoverable state, exiting' >&2; exit 3"]
+    restart: "no"
+
+  # Exited zero: gray.
+  completed:
+    <<: *alpine
+    command: ["sh", "-c", "echo 'INFO migration complete'; exit 0"]
+    restart: "no"
+
+  # Paused by `make demo-up` after start: yellow.
+  paused:
+    <<: *alpine
+    command: ["sleep", "infinity"]
+
+volumes:
+  scratch:
