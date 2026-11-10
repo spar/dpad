@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 
 	"dockernext/internal/docker"
 	"dockernext/internal/render"
@@ -169,7 +169,7 @@ func RunStats(ctx context.Context, c dockerClient, key sortx.Key, reverse bool) 
 	v := NewStatsView(ctx, c, key, reverse)
 	v.noHighlight = true
 	v.SetSize(120, 28)
-	_, err := tea.NewProgram(statsProgram{v}, tea.WithContext(ctx)).Run()
+	_, err := tea.NewProgram(statsProgram{v}, programOptions(ctx)...).Run()
 	return err
 }
 
@@ -179,7 +179,7 @@ func (p statsProgram) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		p.v.SetSize(msg.Width, msg.Height-2) // minus the status line and a spare
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "q", "esc", "ctrl+c":
 			return p, tea.Quit
@@ -191,8 +191,8 @@ func (p statsProgram) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return p, nil
 }
 
-func (p statsProgram) View() string {
+func (p statsProgram) View() tea.View {
 	keys, _ := shortcutHelp("/")
 	status := render.Dim.Render(p.v.Status() + "  ·  " + keys + " sort · r reverse · q quit")
-	return strings.Join([]string{status, p.v.View()}, "\n")
+	return tea.NewView(strings.Join([]string{status, p.v.View()}, "\n"))
 }

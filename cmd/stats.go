@@ -49,7 +49,7 @@ r to reverse, q to quit. Output is a single snapshot when not a terminal.`,
 				for i, s := range items {
 					rows[i] = render.StatsRow(s)
 				}
-				fmt.Println(render.Table{Columns: render.StatsColumns, Rows: rows})
+				fmt.Fprintln(render.Out, render.Table{Columns: render.StatsColumns, Rows: rows})
 				return nil
 			})
 		},

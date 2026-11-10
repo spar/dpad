@@ -35,9 +35,9 @@ func newImagesCmd() *cobra.Command {
 				for _, img := range items {
 					rows = append(rows, render.ImageRows(img)...)
 				}
-				fmt.Println(render.Table{Columns: render.ImageColumns, Rows: rows})
-				fmt.Println()
-				fmt.Println(render.Dim.Render(render.ImageSummary(items)))
+				fmt.Fprintln(render.Out, render.Table{Columns: render.ImageColumns, Rows: rows})
+				fmt.Fprintln(render.Out)
+				fmt.Fprintln(render.Out, render.Dim.Render(render.ImageSummary(items)))
 				return nil
 			})
 		},

@@ -7,11 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
-	"github.com/muesli/termenv"
 )
 
 func TestPorts(t *testing.T) {
@@ -133,9 +131,6 @@ func TestTableWindow(t *testing.T) {
 }
 
 func BenchmarkTableWindow(b *testing.B) {
-	prev := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.ANSI256)
-	b.Cleanup(func() { lipgloss.SetColorProfile(prev) })
 	tbl := Table{Columns: ContainerColumns, Width: 160}
 	for i := range 200 {
 		tbl.Rows = append(tbl.Rows, []string{
@@ -149,9 +144,6 @@ func BenchmarkTableWindow(b *testing.B) {
 }
 
 func TestTableTrimsStyledEmptyCells(t *testing.T) {
-	prev := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.ANSI256)
-	t.Cleanup(func() { lipgloss.SetColorProfile(prev) })
 	tbl := Table{
 		Columns: []Column{{Header: "NAME"}, {Header: "PORTS"}},
 		Rows:    [][]string{{"web", fg(Cyan).Render("")}},

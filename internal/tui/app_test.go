@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 
@@ -23,18 +23,22 @@ func newTestApp() *App {
 	return a
 }
 
+// key builds the key press message for a key name or a single character.
+func key(k string) tea.KeyPressMsg {
+	switch k {
+	case "tab":
+		return tea.KeyPressMsg{Code: tea.KeyTab}
+	case "esc":
+		return tea.KeyPressMsg{Code: tea.KeyEscape}
+	case "enter":
+		return tea.KeyPressMsg{Code: tea.KeyEnter}
+	}
+	return tea.KeyPressMsg{Code: rune(k[0]), Text: k}
+}
+
 func press(a *App, keys ...string) {
 	for _, k := range keys {
-		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)}
-		switch k {
-		case "tab":
-			msg = tea.KeyMsg{Type: tea.KeyTab}
-		case "esc":
-			msg = tea.KeyMsg{Type: tea.KeyEsc}
-		case "enter":
-			msg = tea.KeyMsg{Type: tea.KeyEnter}
-		}
-		a.Update(msg)
+		a.Update(key(k))
 	}
 }
 
@@ -101,8 +105,8 @@ func TestAppStopAsksFirst(t *testing.T) {
 		t.Fatalf("n should cancel, actions = %v", f.actions)
 	}
 
-	a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
-	_, cmd := a.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
+	a.Update(key("x"))
+	_, cmd := a.Update(key("y"))
 	if msg, ok := cmd().(actionDoneMsg); !ok || msg.err != nil {
 		t.Fatalf("y should run the stop, got %#v", msg)
 	}

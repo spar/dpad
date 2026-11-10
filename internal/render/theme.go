@@ -3,12 +3,13 @@
 package render
 
 import (
+	"image/color"
+	"io"
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/termenv"
-	"golang.org/x/term"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
 )
 
 // ANSI palette so colors follow the user's terminal theme.
@@ -31,15 +32,33 @@ var (
 	Accent   = lipgloss.NewStyle().Bold(true).Foreground(Cyan)
 )
 
-// SetupColor disables color when requested, when NO_COLOR is set, or when
-// stdout is not a terminal (so piped output stays plain).
+// Out is stdout for CLI output. Styles always render full ANSI; Out adapts
+// it to the terminal, downsampling colors and stripping all styling when
+// stdout isn't a terminal, so piped output stays plain.
+var Out = colorprofile.NewWriter(os.Stdout, os.Environ())
+
+// colorDisabled records that the user turned color off; see ColorDisabled.
+var colorDisabled bool
+
+// SetupColor turns styling off for CLI output when requested or when
+// NO_COLOR is set.
 func SetupColor(disable bool) {
-	if disable || os.Getenv("NO_COLOR") != "" || !term.IsTerminal(int(os.Stdout.Fd())) {
-		lipgloss.SetColorProfile(termenv.Ascii)
+	if disable || os.Getenv("NO_COLOR") != "" {
+		Out.Profile = colorprofile.NoTTY
+		colorDisabled = true
 	}
 }
 
-func fg(c lipgloss.Color) lipgloss.Style { return lipgloss.NewStyle().Foreground(c) }
+// ColorDisabled reports whether SetupColor turned color off.
+func ColorDisabled() bool { return colorDisabled }
+
+// NewWriter returns a writer to w that adapts styling like Out. Write whole
+// lines to it: escape sequences split across writes aren't recognized.
+func NewWriter(w io.Writer) io.Writer {
+	return &colorprofile.Writer{Forward: w, Profile: Out.Profile}
+}
+
+func fg(c color.Color) lipgloss.Style { return lipgloss.NewStyle().Foreground(c) }
 
 // StateStyle colors a container state; exitCode only matters for "exited".
 func StateStyle(state string, exitCode int) lipgloss.Style {
@@ -101,7 +120,7 @@ func Bar(p float64, width int) string {
 	return PercentStyle(p).Render(strings.Repeat("█", n)) + Dim.Render(strings.Repeat("░", width-n))
 }
 
-var namePalette = []lipgloss.Color{
+var namePalette = []color.Color{
 	Cyan, Magenta, Blue, Yellow, Green,
 	lipgloss.Color("14"), lipgloss.Color("13"), lipgloss.Color("12"), lipgloss.Color("11"), lipgloss.Color("10"),
 }

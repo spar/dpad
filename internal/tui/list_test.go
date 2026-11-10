@@ -7,12 +7,10 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
-	"github.com/muesli/termenv"
 )
 
 func TestContainersNavigateAndSelect(t *testing.T) {
@@ -60,9 +58,6 @@ func TestImagesAreNotSelectable(t *testing.T) {
 }
 
 func BenchmarkContainersView(b *testing.B) {
-	prev := lipgloss.ColorProfile()
-	lipgloss.SetColorProfile(termenv.ANSI256)
-	b.Cleanup(func() { lipgloss.SetColorProfile(prev) })
 	items := make([]container.Summary, 200)
 	for i := range items {
 		items[i] = container.Summary{ID: fmt.Sprintf("%064d", i), Names: []string{fmt.Sprintf("/svc-%d", i)},

@@ -2,12 +2,12 @@ package tui
 
 import (
 	"context"
-	"strings"
+	"slices"
 	"time"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"dockernext/internal/docker"
 	"dockernext/internal/render"
@@ -48,7 +48,7 @@ func NewLogsView(ctx context.Context, c dockerClient, id, name string, width, he
 		ch:     make(chan docker.LogLine, 512),
 		errc:   make(chan error, 1),
 		cancel: cancel,
-		vp:     viewport.New(width, height),
+		vp:     viewport.New(viewport.WithWidth(width), viewport.WithHeight(height)),
 	}
 	go func() {
 		v.errc <- c.Logs(ctx, id, docker.LogOptions{Follow: true, Tail: "500"}, v.ch)
@@ -91,7 +91,8 @@ func (v *LogsView) wait() tea.Cmd {
 func (v *LogsView) Close() { v.cancel() }
 
 func (v *LogsView) SetSize(width, height int) {
-	v.vp.Width, v.vp.Height = width, height
+	v.vp.SetWidth(width)
+	v.vp.SetHeight(height)
 }
 
 func (v *LogsView) Update(msg tea.Msg) tea.Cmd {
@@ -107,7 +108,7 @@ func (v *LogsView) Update(msg tea.Msg) tea.Cmd {
 		if over := len(v.lines) - maxLogLines; over > 0 {
 			v.lines = v.lines[over:]
 		}
-		v.vp.SetContent(strings.Join(v.lines, "\n"))
+		v.vp.SetContentLines(slices.Clone(v.lines)) // the viewport may edit its slice
 		if atBottom {
 			v.vp.GotoBottom()
 		}
@@ -117,7 +118,7 @@ func (v *LogsView) Update(msg tea.Msg) tea.Cmd {
 			v.ended, v.err = true, msg.err
 		}
 		return nil
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "G", "end":
 			v.vp.GotoBottom()

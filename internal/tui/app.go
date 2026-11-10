@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"dockernext/internal/render"
 	"dockernext/internal/sortx"
@@ -57,7 +57,7 @@ func Run(ctx context.Context, c dockerClient) error {
 	}
 	app := &App{ctx: ctx, client: c, tabs: tabs, filter: fi}
 	app.resize(120, 30)
-	_, err := tea.NewProgram(app, tea.WithAltScreen(), tea.WithContext(ctx)).Run()
+	_, err := tea.NewProgram(app, programOptions(ctx)...).Run()
 	return err
 }
 
@@ -92,7 +92,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		a.resize(msg.Width, msg.Height)
 		return a, nil
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return a, a.handleKey(msg)
 	case actionDoneMsg:
 		a.flash, a.flashErr = msg.text, msg.err != nil
@@ -112,7 +112,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return a, tea.Batch(cmds...)
 }
 
-func (a *App) handleKey(msg tea.KeyMsg) tea.Cmd {
+func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	key := msg.String()
 	if key == "ctrl+c" {
 		return tea.Quit
@@ -208,7 +208,13 @@ func (a *App) ask(verb string, run func(context.Context, string) error) {
 	}
 }
 
-func (a *App) View() string {
+func (a *App) View() tea.View {
+	v := tea.NewView(a.render())
+	v.AltScreen = true
+	return v
+}
+
+func (a *App) render() string {
 	var body, status string
 	switch {
 	case a.help:

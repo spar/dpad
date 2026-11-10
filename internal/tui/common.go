@@ -9,11 +9,13 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
 
 	"dockernext/internal/docker"
+	"dockernext/internal/render"
 	"dockernext/internal/sortx"
 )
 
@@ -112,6 +114,16 @@ func sortLabel(key sortx.Key, reverse bool) string {
 		return fmt.Sprintf("sort: %s (reversed)", key)
 	}
 	return "sort: " + string(key)
+}
+
+// programOptions are the Bubble Tea options shared by the TUI and dn stats.
+func programOptions(ctx context.Context) []tea.ProgramOption {
+	opts := []tea.ProgramOption{tea.WithContext(ctx)}
+	if render.ColorDisabled() {
+		// Ascii keeps bold and reverse, so the selected row stays visible.
+		opts = append(opts, tea.WithColorProfile(colorprofile.Ascii))
+	}
+	return opts
 }
 
 func tick(msg tea.Msg) tea.Cmd {

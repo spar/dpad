@@ -69,8 +69,9 @@ func streamLogs(ctx context.Context, c *docker.Client, names []string, opts dock
 		}()
 	}
 
-	out := bufio.NewWriter(os.Stdout)
-	defer out.Flush()
+	buf := bufio.NewWriter(os.Stdout)
+	defer buf.Flush()
+	out := render.NewWriter(buf) // printLine writes whole lines
 	// Prefix only when merging several containers. Size it from the
 	// arguments up front; it grows if a resolved name is longer (e.g. IDs given).
 	prefix := 0
@@ -108,7 +109,7 @@ func streamLogs(ctx context.Context, c *docker.Client, names []string, opts dock
 			}
 			printLine(l)
 		default:
-			out.Flush()
+			buf.Flush()
 			l, ok := <-ch
 			if !ok {
 				return logsErr(failed.Load())

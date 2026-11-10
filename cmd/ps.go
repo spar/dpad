@@ -36,7 +36,7 @@ func newPsCmd() *cobra.Command {
 				for i, it := range items {
 					rows[i] = render.ContainerRow(it)
 				}
-				fmt.Println(render.Table{Columns: render.ContainerColumns, Rows: rows})
+				fmt.Fprintln(render.Out, render.Table{Columns: render.ContainerColumns, Rows: rows})
 				return nil
 			})
 		},
