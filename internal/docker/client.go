@@ -16,8 +16,26 @@ import (
 
 // Client is a thin wrapper around the Engine API client.
 type Client struct {
-	api *client.Client
+	api engine
 }
+
+// engine is the part of the Engine API client dockernext uses, so tests can
+// substitute a fake daemon.
+type engine interface {
+	Close() error
+	ContainerList(context.Context, client.ContainerListOptions) (client.ContainerListResult, error)
+	ImageList(context.Context, client.ImageListOptions) (client.ImageListResult, error)
+	ContainerInspect(context.Context, string, client.ContainerInspectOptions) (client.ContainerInspectResult, error)
+	ContainerStart(context.Context, string, client.ContainerStartOptions) (client.ContainerStartResult, error)
+	ContainerStop(context.Context, string, client.ContainerStopOptions) (client.ContainerStopResult, error)
+	ContainerRestart(context.Context, string, client.ContainerRestartOptions) (client.ContainerRestartResult, error)
+	ContainerUnpause(context.Context, string, client.ContainerUnpauseOptions) (client.ContainerUnpauseResult, error)
+	ContainerLogs(context.Context, string, client.ContainerLogsOptions) (client.ContainerLogsResult, error)
+	ContainerStats(context.Context, string, client.ContainerStatsOptions) (client.ContainerStatsResult, error)
+	Events(context.Context, client.EventsListOptions) client.EventsResult
+}
+
+var _ engine = (*client.Client)(nil)
 
 // New connects to the same daemon the docker CLI would use: DOCKER_HOST if set,
 // otherwise the endpoint of the current docker context.
