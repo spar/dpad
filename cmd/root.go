@@ -75,14 +75,19 @@ so "dn network ls" or "dn ps --format ..." behave exactly like docker.`,
 
 // shouldPassthrough reports whether args target a docker command dn doesn't enhance.
 func shouldPassthrough(root *cobra.Command, args []string) bool {
+	// Leading dn flags don't decide anything: `dn --no-color network ls` is
+	// still a docker command.
+	for len(args) > 0 && isDNFlag(args[0]) {
+		args = args[1:]
+	}
 	if len(args) == 0 {
 		return false
 	}
 	if strings.HasPrefix(args[0], "-") {
-		// Leading flags: ours (help/version/no-color) stay here, docker global
+		// Leading flags: ours (help/version) stay here, docker global
 		// flags like --context or -H go to docker.
 		switch strings.SplitN(args[0], "=", 2)[0] {
-		case "-h", "--help", "-v", "--version", "--no-color":
+		case "-h", "--help", "-v", "--version":
 			return false
 		}
 		return true
