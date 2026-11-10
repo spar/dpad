@@ -1,13 +1,16 @@
 package render
 
 import (
+	"fmt"
 	"net/netip"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
+	"github.com/muesli/termenv"
 )
 
 func TestPorts(t *testing.T) {
@@ -118,5 +121,21 @@ func TestTableWindow(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("Window(%d, %d) = %q, want %q", tt.selected, tt.height, got, tt.want)
 		}
+	}
+}
+
+func BenchmarkTableWindow(b *testing.B) {
+	prev := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.ANSI256)
+	b.Cleanup(func() { lipgloss.SetColorProfile(prev) })
+	tbl := Table{Columns: ContainerColumns, Width: 160}
+	for i := range 200 {
+		tbl.Rows = append(tbl.Rows, []string{
+			Dim.Render("0123456789ab"), Bold.Render(fmt.Sprintf("service-%d", i)), "nginx:1.27-alpine",
+			fg(Green).Render("running"), fg(Green).Render("Up 3 hours"), HealthBadge("healthy"), "8080→80/tcp",
+		})
+	}
+	for b.Loop() {
+		_ = tbl.Window(100, 40)
 	}
 }

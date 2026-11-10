@@ -32,61 +32,59 @@ type Table struct {
 
 // String renders the full table with no row highlighted.
 func (t Table) String() string {
-	return strings.Join(t.lines(-1), "\n")
+	return strings.Join(t.lines(-1, 0, len(t.Rows)), "\n")
 }
 
 // Window renders the header and as many rows as fit in height lines,
 // scrolled so the selected row is visible and highlighted. A negative
-// selected highlights nothing.
+// selected highlights nothing. Only the rows shown are formatted.
 func (t Table) Window(selected, height int) string {
-	lines := t.lines(selected)
-	header, rows := lines[0], lines[1:]
 	avail := max(height-1, 1)
 	start := 0
 	if selected >= avail {
 		start = selected - avail + 1
 	}
-	end := min(start+avail, len(rows))
-	return strings.Join(append([]string{header}, rows[start:end]...), "\n")
+	end := min(start+avail, len(t.Rows))
+	return strings.Join(t.lines(selected, start, end), "\n")
 }
 
-// lines returns the rendered header line followed by one line per row.
-func (t Table) lines(selected int) []string {
-	widths := make([]int, len(t.Columns))
-	cell := func(row []string, i int) string {
-		if i >= len(row) {
-			return ""
-		}
-		s := row[i]
-		if m := t.Columns[i].Max; m > 0 && ansi.StringWidth(s) > m {
-			s = ansi.Truncate(s, m, "…")
-		}
-		return s
-	}
-	headers := make([]string, len(t.Columns))
+// lines returns the header line followed by rows[start:end]. Column widths
+// account for every row, so columns don't shift while scrolling.
+func (t Table) lines(selected, start, end int) []string {
+	n := len(t.Columns)
+	widths := make([]int, n)
+	headers, headerW := make([]string, n), make([]int, n)
 	for i, c := range t.Columns {
-		headers[i] = c.Header
-		widths[i] = ansi.StringWidth(c.Header)
+		headers[i], headerW[i] = Header.Render(c.Header), ansi.StringWidth(c.Header)
+		widths[i] = headerW[i]
 	}
-	for _, r := range t.Rows {
-		for i := range widths {
-			widths[i] = max(widths[i], ansi.StringWidth(cell(r, i)))
+	// Truncate and measure every cell once.
+	cells, cellW := make([][]string, len(t.Rows)), make([][]int, len(t.Rows))
+	for r, row := range t.Rows {
+		cells[r], cellW[r] = make([]string, n), make([]int, n)
+		for i := range min(n, len(row)) {
+			s, w := row[i], ansi.StringWidth(row[i])
+			if m := t.Columns[i].Max; m > 0 && w > m {
+				s = ansi.Truncate(s, m, "…")
+				w = ansi.StringWidth(s)
+			}
+			cells[r][i], cellW[r][i] = s, w
+			widths[i] = max(widths[i], w)
 		}
 	}
 
-	line := func(cells []string, style func(string) string) string {
+	line := func(cells []string, cellW []int) string {
 		var b strings.Builder
 		for i, w := range widths {
-			s := style(cell(cells, i))
-			pad := strings.Repeat(" ", w-ansi.StringWidth(s))
+			pad := strings.Repeat(" ", w-cellW[i])
 			if t.Columns[i].Align == Right {
-				b.WriteString(pad + s)
-			} else if i == len(widths)-1 {
-				b.WriteString(s)
+				b.WriteString(pad + cells[i])
+			} else if i == n-1 {
+				b.WriteString(cells[i])
 			} else {
-				b.WriteString(s + pad)
+				b.WriteString(cells[i] + pad)
 			}
-			if i < len(widths)-1 {
+			if i < n-1 {
 				b.WriteString(colGap)
 			}
 		}
@@ -97,19 +95,23 @@ func (t Table) lines(selected int) []string {
 		return out
 	}
 
-	out := make([]string, 0, len(t.Rows)+1)
-	out = append(out, line(headers, func(s string) string { return Header.Render(s) }))
-	for i, r := range t.Rows {
-		if i == selected {
-			// Inner ANSI resets would break the highlight, so render plain text.
-			plain := line(r, ansi.Strip)
-			if t.Width > 0 {
-				plain += strings.Repeat(" ", max(0, t.Width-ansi.StringWidth(plain)))
-			}
-			out = append(out, Selected.Render(plain))
+	out := make([]string, 0, end-start+1)
+	out = append(out, line(headers, headerW))
+	for r := start; r < end; r++ {
+		if r != selected {
+			out = append(out, line(cells[r], cellW[r]))
 			continue
 		}
-		out = append(out, line(r, func(s string) string { return s }))
+		// Inner ANSI resets would break the highlight, so render plain text.
+		plain := make([]string, n)
+		for i, c := range cells[r] {
+			plain[i] = ansi.Strip(c)
+		}
+		l := line(plain, cellW[r])
+		if t.Width > 0 {
+			l += strings.Repeat(" ", max(0, t.Width-ansi.StringWidth(l)))
+		}
+		out = append(out, Selected.Render(l))
 	}
 	return out
 }
