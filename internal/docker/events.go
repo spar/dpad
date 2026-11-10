@@ -63,3 +63,35 @@ func (c *Client) followEvents(ctx context.Context, actions []events.Action, resy
 		}
 	}, nil
 }
+
+// containerChangeActions are the events that change what `dn ps -a` shows.
+// Healthcheck exec_* events are frequent and deliberately left out.
+var containerChangeActions = []events.Action{
+	events.ActionCreate, events.ActionStart, events.ActionRestart, events.ActionDie,
+	events.ActionDestroy, events.ActionPause, events.ActionUnPause, events.ActionRename,
+	events.ActionHealthStatus,
+}
+
+// ContainerChanges signals whenever the container list may have changed,
+// including once right away so the caller loads the current state. Signals
+// coalesce: one pending signal stands for any number of changes. The channel
+// is closed when ctx is cancelled.
+func (c *Client) ContainerChanges(ctx context.Context) (<-chan struct{}, error) {
+	out := make(chan struct{}, 1)
+	notify := func() {
+		select {
+		case out <- struct{}{}:
+		default:
+		}
+	}
+	resync := func() error { notify(); return nil }
+	loop, err := c.followEvents(ctx, containerChangeActions, resync, func(events.Message) { notify() })
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		loop()
+		close(out)
+	}()
+	return out, nil
+}

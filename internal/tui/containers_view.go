@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/moby/moby/api/types/container"
@@ -17,7 +18,12 @@ type (
 		items []container.Summary
 		err   error
 	}
-	containersTickMsg struct{}
+	containersTickMsg  struct{}
+	containersWatchMsg struct {
+		ch  <-chan struct{}
+		err error
+	}
+	containersChangedMsg struct{ ch <-chan struct{} }
 	// refreshMsg asks list tabs to reload now (e.g. after start/stop).
 	refreshMsg struct{}
 )
@@ -56,7 +62,33 @@ func (v *ContainersView) load() tea.Cmd {
 	}
 }
 
-func (v *ContainersView) Init() tea.Cmd { return tea.Batch(v.load(), tick(containersTickMsg{})) }
+// Init follows daemon events, which also trigger the first load.
+func (v *ContainersView) Init() tea.Cmd { return tea.Batch(v.watch(), tick(containersTickMsg{})) }
+
+func (v *ContainersView) watch() tea.Cmd {
+	return func() tea.Msg {
+		ch, err := v.client.ContainerChanges(v.ctx)
+		return containersWatchMsg{ch, err}
+	}
+}
+
+// changeDebounce gives a burst of events (e.g. compose up) time to finish
+// before reloading.
+const changeDebounce = 100 * time.Millisecond
+
+func waitChange(ch <-chan struct{}) tea.Cmd {
+	return func() tea.Msg {
+		if _, ok := <-ch; !ok {
+			return nil
+		}
+		time.Sleep(changeDebounce)
+		select {
+		case <-ch:
+		default:
+		}
+		return containersChangedMsg{ch}
+	}
+}
 
 func (v *ContainersView) Focus() tea.Cmd { return nil }
 
@@ -64,6 +96,13 @@ func (v *ContainersView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case containersMsg:
 		v.setItems(msg.items, msg.err)
+	case containersWatchMsg:
+		if msg.err != nil {
+			return v.load() // keep going on the poll alone
+		}
+		return waitChange(msg.ch)
+	case containersChangedMsg:
+		return tea.Batch(v.load(), waitChange(msg.ch))
 	case containersTickMsg:
 		return tea.Batch(v.load(), tick(containersTickMsg{}))
 	case refreshMsg:

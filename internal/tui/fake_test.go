@@ -43,3 +43,7 @@ func (f *fakeClient) Logs(context.Context, string, docker.LogOptions, chan<- doc
 func (f *fakeClient) WatchStats(context.Context) (<-chan docker.StatsUpdate, error) {
 	return make(chan docker.StatsUpdate), nil
 }
+
+func (f *fakeClient) ContainerChanges(context.Context) (<-chan struct{}, error) {
+	return make(chan struct{}), nil
+}

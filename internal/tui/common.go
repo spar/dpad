@@ -17,7 +17,10 @@ import (
 	"dockernext/internal/sortx"
 )
 
-const refreshInterval = 2 * time.Second
+// pollInterval is how often the containers tab reloads besides on daemon
+// events: it keeps relative times ("Up 5 minutes") current, and is the only
+// refresh if events are unavailable.
+const pollInterval = 10 * time.Second
 
 // dockerClient is what the TUI needs from docker.Client, so tests can fake it.
 type dockerClient interface {
@@ -28,6 +31,7 @@ type dockerClient interface {
 	Restart(ctx context.Context, id string) error
 	Logs(ctx context.Context, id string, opts docker.LogOptions, out chan<- docker.LogLine) error
 	WatchStats(ctx context.Context) (<-chan docker.StatsUpdate, error)
+	ContainerChanges(ctx context.Context) (<-chan struct{}, error)
 }
 
 var _ dockerClient = (*docker.Client)(nil)
@@ -111,5 +115,5 @@ func sortLabel(key sortx.Key, reverse bool) string {
 }
 
 func tick(msg tea.Msg) tea.Cmd {
-	return tea.Tick(refreshInterval, func(time.Time) tea.Msg { return msg })
+	return tea.Tick(pollInterval, func(time.Time) tea.Msg { return msg })
 }
