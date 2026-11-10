@@ -13,22 +13,47 @@ import (
 	"dockernext/internal/docker"
 )
 
-var (
-	StatsKeys     = []string{"cpu", "mem", "net", "io", "pids", "name"}
-	ContainerKeys = []string{"name", "created", "status"}
-	ImageKeys     = []string{"size", "created", "name"}
+// Key names a sort order, as accepted by --sort.
+type Key string
+
+const (
+	CPU     Key = "cpu"
+	Mem     Key = "mem"
+	Net     Key = "net"
+	IO      Key = "io"
+	PIDs    Key = "pids"
+	Name    Key = "name"
+	Created Key = "created"
+	Status  Key = "status"
+	Size    Key = "size"
 )
 
-// Validate returns an error if key is not one of keys.
-func Validate(key string, keys []string) error {
-	if slices.Contains(keys, key) {
-		return nil
+// The keys each list supports, in the order the TUI cycles through them.
+var (
+	StatsKeys     = []Key{CPU, Mem, Net, IO, PIDs, Name}
+	ContainerKeys = []Key{Name, Created, Status}
+	ImageKeys     = []Key{Size, Created, Name}
+)
+
+// Parse returns s as a Key, or an error if it is not one of keys.
+func Parse(s string, keys []Key) (Key, error) {
+	if k := Key(s); slices.Contains(keys, k) {
+		return k, nil
 	}
-	return fmt.Errorf("invalid sort key %q (valid: %s)", key, strings.Join(keys, ", "))
+	return "", fmt.Errorf("invalid sort key %q (valid: %s)", s, Join(keys, ", "))
+}
+
+// Join lists keys separated by sep, e.g. for help text.
+func Join(keys []Key, sep string) string {
+	s := make([]string, len(keys))
+	for i, k := range keys {
+		s[i] = string(k)
+	}
+	return strings.Join(s, sep)
 }
 
 // Next cycles to the key after current.
-func Next(current string, keys []string) string {
+func Next(current Key, keys []Key) Key {
 	i := slices.Index(keys, current)
 	return keys[(i+1)%len(keys)]
 }
@@ -36,19 +61,19 @@ func Next(current string, keys []string) string {
 // Each key has a natural direction: numbers descending (biggest first),
 // names ascending. reverse flips it. Ties fall back to name for stable output.
 
-func Stats(items []docker.Stats, key string, reverse bool) {
+func Stats(items []docker.Stats, key Key, reverse bool) {
 	slices.SortStableFunc(items, func(a, b docker.Stats) int {
 		var c int
 		switch key {
-		case "cpu":
+		case CPU:
 			c = cmp.Compare(b.CPUPercent, a.CPUPercent)
-		case "mem":
+		case Mem:
 			c = cmp.Compare(b.MemUsage, a.MemUsage)
-		case "net":
+		case Net:
 			c = cmp.Compare(b.NetRx+b.NetTx, a.NetRx+a.NetTx)
-		case "io":
+		case IO:
 			c = cmp.Compare(b.BlockRead+b.BlockWrite, a.BlockRead+a.BlockWrite)
-		case "pids":
+		case PIDs:
 			c = cmp.Compare(b.PIDs, a.PIDs)
 		}
 		return finish(c, a.Name, b.Name, reverse)
@@ -60,13 +85,13 @@ var containerStateRank = map[container.ContainerState]int{
 	"running": 0, "restarting": 1, "paused": 2, "created": 3, "exited": 4, "dead": 5,
 }
 
-func Containers(items []container.Summary, key string, reverse bool) {
+func Containers(items []container.Summary, key Key, reverse bool) {
 	slices.SortStableFunc(items, func(a, b container.Summary) int {
 		var c int
 		switch key {
-		case "created":
+		case Created:
 			c = cmp.Compare(b.Created, a.Created)
-		case "status":
+		case Status:
 			c = cmp.Compare(rank(a.State), rank(b.State))
 		}
 		return finish(c, docker.ContainerName(a.Names), docker.ContainerName(b.Names), reverse)
@@ -80,13 +105,13 @@ func rank(s container.ContainerState) int {
 	return len(containerStateRank)
 }
 
-func Images(items []image.Summary, key string, reverse bool) {
+func Images(items []image.Summary, key Key, reverse bool) {
 	slices.SortStableFunc(items, func(a, b image.Summary) int {
 		var c int
 		switch key {
-		case "size":
+		case Size:
 			c = cmp.Compare(b.Size, a.Size)
-		case "created":
+		case Created:
 			c = cmp.Compare(b.Created, a.Created)
 		}
 		return finish(c, imageName(a), imageName(b), reverse)

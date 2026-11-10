@@ -22,7 +22,7 @@ type ImagesView struct {
 	ctx     context.Context
 	client  *docker.Client
 	items   []image.Summary
-	key     string
+	key     sortx.Key
 	reverse bool
 	cur     cursor
 	filter  string
@@ -32,7 +32,7 @@ type ImagesView struct {
 }
 
 func NewImagesView(ctx context.Context, c *docker.Client) *ImagesView {
-	return &ImagesView{ctx: ctx, client: c, key: "size", page: 10}
+	return &ImagesView{ctx: ctx, client: c, key: sortx.Size, page: 10}
 }
 
 func (v *ImagesView) Title() string { return "Images" }
@@ -137,7 +137,7 @@ func (v *ImagesView) Status() string {
 
 func (v *ImagesView) Help() [][2]string {
 	return [][2]string{
-		{"s", "cycle sort: size / created / name"},
+		{"s", "cycle sort: " + sortx.Join(sortx.ImageKeys, " / ")},
 		{"r", "reverse sort"},
 	}
 }

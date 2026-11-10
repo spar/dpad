@@ -25,7 +25,7 @@ type StatsView struct {
 	client   *docker.Client
 	ch       <-chan docker.StatsUpdate
 	data     map[string]docker.Stats
-	key      string
+	key      sortx.Key
 	reverse  bool
 	cur      cursor
 	page     int
@@ -36,7 +36,7 @@ type StatsView struct {
 	err      error
 }
 
-func NewStatsView(ctx context.Context, c *docker.Client, key string, reverse bool) *StatsView {
+func NewStatsView(ctx context.Context, c *docker.Client, key sortx.Key, reverse bool) *StatsView {
 	return &StatsView{ctx: ctx, client: c, data: map[string]docker.Stats{}, key: key, reverse: reverse, page: 10}
 }
 
@@ -128,12 +128,29 @@ func statsKeys(items []docker.Stats) []string {
 	return keys
 }
 
-var statsSortKeys = map[string]string{"c": "cpu", "m": "mem", "n": "net", "i": "io", "p": "pids", "a": "name"}
+// statsShortcuts are single keys that pick a sort key directly.
+var statsShortcuts = []struct {
+	key  string
+	sort sortx.Key
+}{{"c", sortx.CPU}, {"m", sortx.Mem}, {"n", sortx.Net}, {"i", sortx.IO}, {"p", sortx.PIDs}, {"a", sortx.Name}}
+
+// shortcutHelp returns the shortcut keys and the sort keys they select,
+// joined by sep (e.g. "c/m/n/i/p/a" and "cpu/mem/net/io/pids/name").
+func shortcutHelp(sep string) (keys, sorts string) {
+	var k []string
+	var s []sortx.Key
+	for _, sc := range statsShortcuts {
+		k, s = append(k, sc.key), append(s, sc.sort)
+	}
+	return strings.Join(k, sep), sortx.Join(s, sep)
+}
 
 func (v *StatsView) HandleKey(key string) tea.Cmd {
-	if k, ok := statsSortKeys[key]; ok {
-		v.key = k
-		return nil
+	for _, sc := range statsShortcuts {
+		if sc.key == key {
+			v.key = sc.sort
+			return nil
+		}
 	}
 	switch key {
 	case "s":
@@ -193,8 +210,9 @@ func (v *StatsView) Status() string {
 }
 
 func (v *StatsView) Help() [][2]string {
+	keys, sorts := shortcutHelp(" / ")
 	return [][2]string{
-		{"c m n i p a", "sort by cpu / mem / net / io / pids / name"},
+		{keys, "sort by " + sorts},
 		{"s", "cycle sort key"},
 		{"r", "reverse sort"},
 	}
@@ -207,7 +225,7 @@ type statsProgram struct {
 }
 
 // RunStats shows live stats inline until the user quits.
-func RunStats(ctx context.Context, c *docker.Client, key string, reverse bool) error {
+func RunStats(ctx context.Context, c *docker.Client, key sortx.Key, reverse bool) error {
 	v := NewStatsView(ctx, c, key, reverse)
 	v.noSel = true
 	_, err := tea.NewProgram(statsProgram{v: v, width: 120, height: 30}, tea.WithContext(ctx)).Run()
@@ -233,7 +251,8 @@ func (p statsProgram) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (p statsProgram) View() string {
-	status := render.Dim.Render(p.v.Status() + "  ·  c/m/n/i/p/a sort · r reverse · q quit")
+	keys, _ := shortcutHelp("/")
+	status := render.Dim.Render(p.v.Status() + "  ·  " + keys + " sort · r reverse · q quit")
 	body := p.v.View(p.width, p.height-2, "")
 	return strings.Join([]string{status, body}, "\n")
 }

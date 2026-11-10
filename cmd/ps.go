@@ -14,7 +14,7 @@ import (
 func newPsCmd() *cobra.Command {
 	var (
 		all     bool
-		key     string
+		sortKey string
 		reverse bool
 	)
 	cmd := &cobra.Command{
@@ -22,7 +22,8 @@ func newPsCmd() *cobra.Command {
 		Short: "List containers, colored by state",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			if err := sortx.Validate(key, sortx.ContainerKeys); err != nil {
+			key, err := sortx.Parse(sortKey, sortx.ContainerKeys)
+			if err != nil {
 				return err
 			}
 			return withClient(cmd.Context(), func(ctx context.Context, c *docker.Client) error {
@@ -41,6 +42,6 @@ func newPsCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVarP(&all, "all", "a", false, "show all containers (default shows just running)")
-	addSortFlags(cmd, &key, &reverse, "status", sortx.ContainerKeys)
+	addSortFlags(cmd, &sortKey, &reverse, sortx.Status, sortx.ContainerKeys)
 	return cmd
 }

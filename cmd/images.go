@@ -13,7 +13,7 @@ import (
 
 func newImagesCmd() *cobra.Command {
 	var (
-		key     string
+		sortKey string
 		reverse bool
 	)
 	cmd := &cobra.Command{
@@ -21,7 +21,8 @@ func newImagesCmd() *cobra.Command {
 		Short: "List images with sizes; dangling images dimmed",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			if err := sortx.Validate(key, sortx.ImageKeys); err != nil {
+			key, err := sortx.Parse(sortKey, sortx.ImageKeys)
+			if err != nil {
 				return err
 			}
 			return withClient(cmd.Context(), func(ctx context.Context, c *docker.Client) error {
@@ -49,6 +50,6 @@ func newImagesCmd() *cobra.Command {
 			})
 		},
 	}
-	addSortFlags(cmd, &key, &reverse, "size", sortx.ImageKeys)
+	addSortFlags(cmd, &sortKey, &reverse, sortx.Size, sortx.ImageKeys)
 	return cmd
 }

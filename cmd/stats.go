@@ -17,7 +17,7 @@ import (
 
 func newStatsCmd() *cobra.Command {
 	var (
-		key      string
+		sortKey  string
 		reverse  bool
 		noStream bool
 	)
@@ -33,7 +33,8 @@ r to reverse, q to quit. Output is a single snapshot when not a terminal.`,
 			if len(args) > 0 {
 				os.Exit(passthrough.Run(dockerArgs(os.Args[1:], true)))
 			}
-			if err := sortx.Validate(key, sortx.StatsKeys); err != nil {
+			key, err := sortx.Parse(sortKey, sortx.StatsKeys)
+			if err != nil {
 				return err
 			}
 			return withClient(cmd.Context(), func(ctx context.Context, c *docker.Client) error {
@@ -55,6 +56,6 @@ r to reverse, q to quit. Output is a single snapshot when not a terminal.`,
 		},
 	}
 	cmd.Flags().BoolVar(&noStream, "no-stream", false, "print a single snapshot and exit")
-	addSortFlags(cmd, &key, &reverse, "cpu", sortx.StatsKeys)
+	addSortFlags(cmd, &sortKey, &reverse, sortx.CPU, sortx.StatsKeys)
 	return cmd
 }

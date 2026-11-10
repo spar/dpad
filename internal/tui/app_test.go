@@ -4,11 +4,13 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"dockernext/internal/sortx"
 )
 
 func newTestApp() *App {
 	return &App{
-		tabs:    []tab{NewContainersView(nil, nil), NewImagesView(nil, nil), NewStatsView(nil, nil, "cpu", false)},
+		tabs:    []tab{NewContainersView(nil, nil), NewImagesView(nil, nil), NewStatsView(nil, nil, sortx.CPU, false)},
 		filters: make([]string, 3),
 	}
 }

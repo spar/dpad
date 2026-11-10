@@ -15,6 +15,7 @@ import (
 	"dockernext/internal/docker"
 	"dockernext/internal/passthrough"
 	"dockernext/internal/render"
+	"dockernext/internal/sortx"
 	"dockernext/internal/tui"
 )
 
@@ -132,7 +133,7 @@ func withClient(ctx context.Context, fn func(context.Context, *docker.Client) er
 	return fn(ctx, c)
 }
 
-func addSortFlags(cmd *cobra.Command, key *string, reverse *bool, def string, keys []string) {
-	cmd.Flags().StringVar(key, "sort", def, "sort by: "+strings.Join(keys, ", "))
+func addSortFlags(cmd *cobra.Command, key *string, reverse *bool, def sortx.Key, keys []sortx.Key) {
+	cmd.Flags().StringVar(key, "sort", string(def), "sort by: "+sortx.Join(keys, ", "))
 	cmd.Flags().BoolVarP(reverse, "reverse", "r", false, "reverse the sort order")
 }

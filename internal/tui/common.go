@@ -9,6 +9,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"dockernext/internal/sortx"
 )
 
 const refreshInterval = 2 * time.Second
@@ -80,11 +82,11 @@ func matches(filter string, fields ...string) bool {
 	return false
 }
 
-func sortLabel(key string, reverse bool) string {
+func sortLabel(key sortx.Key, reverse bool) string {
 	if reverse {
 		return fmt.Sprintf("sort: %s (reversed)", key)
 	}
-	return "sort: " + key
+	return "sort: " + string(key)
 }
 
 func tick(msg tea.Msg) tea.Cmd {

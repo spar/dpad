@@ -27,7 +27,7 @@ type ContainersView struct {
 	ctx     context.Context
 	client  *docker.Client
 	items   []container.Summary
-	key     string
+	key     sortx.Key
 	reverse bool
 	cur     cursor
 	filter  string
@@ -37,7 +37,7 @@ type ContainersView struct {
 }
 
 func NewContainersView(ctx context.Context, c *docker.Client) *ContainersView {
-	return &ContainersView{ctx: ctx, client: c, key: "status", page: 10}
+	return &ContainersView{ctx: ctx, client: c, key: sortx.Status, page: 10}
 }
 
 func (v *ContainersView) Title() string { return "Containers" }
@@ -138,7 +138,7 @@ func (v *ContainersView) Status() string {
 
 func (v *ContainersView) Help() [][2]string {
 	return [][2]string{
-		{"s", "cycle sort: name / created / status"},
+		{"s", "cycle sort: " + sortx.Join(sortx.ContainerKeys, " / ")},
 		{"r", "reverse sort"},
 	}
 }

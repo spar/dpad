@@ -25,7 +25,7 @@ func TestStats(t *testing.T) {
 		{Name: "c", CPUPercent: 10, MemUsage: 200, NetTx: 5, PIDs: 1},
 	}
 	tests := []struct {
-		key     string
+		key     Key
 		reverse bool
 		want    []string
 	}{
@@ -78,11 +78,14 @@ func TestImagesDanglingLast(t *testing.T) {
 	}
 }
 
-func TestValidateAndNext(t *testing.T) {
-	if Validate("cpu", StatsKeys) != nil || Validate("bogus", StatsKeys) == nil {
-		t.Error("Validate mismatch")
+func TestParseAndNext(t *testing.T) {
+	if k, err := Parse("cpu", StatsKeys); k != CPU || err != nil {
+		t.Errorf("Parse(cpu) = %q, %v", k, err)
 	}
-	if Next("name", StatsKeys) != "cpu" || Next("cpu", StatsKeys) != "mem" {
+	if _, err := Parse("size", StatsKeys); err == nil {
+		t.Error("Parse should reject a key the list doesn't support")
+	}
+	if Next(Name, StatsKeys) != CPU || Next(CPU, StatsKeys) != Mem {
 		t.Error("Next should cycle through keys")
 	}
 }

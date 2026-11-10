@@ -8,10 +8,11 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"dockernext/internal/docker"
+	"dockernext/internal/sortx"
 )
 
 func TestStatsSelectedMatchesHighlight(t *testing.T) {
-	v := NewStatsView(nil, nil, "name", false)
+	v := NewStatsView(nil, nil, sortx.Name, false)
 	v.started = true
 	v.data["a"] = docker.Stats{ID: "a", Name: "alpha"}
 	v.data["b"] = docker.Stats{ID: "b", Name: "beta"}
@@ -42,7 +43,7 @@ func TestWaitStatsBatchesUpdates(t *testing.T) {
 }
 
 func TestStatsWatchStartsOnFirstFocus(t *testing.T) {
-	v := NewStatsView(nil, nil, "cpu", false)
+	v := NewStatsView(nil, nil, sortx.CPU, false)
 	if v.Init() != nil {
 		t.Error("Init should not start watching stats")
 	}

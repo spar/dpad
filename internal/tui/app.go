@@ -11,6 +11,7 @@ import (
 
 	"dockernext/internal/docker"
 	"dockernext/internal/render"
+	"dockernext/internal/sortx"
 )
 
 type actionDoneMsg struct {
@@ -54,7 +55,7 @@ func Run(ctx context.Context, c *docker.Client) error {
 	tabs := []tab{
 		NewContainersView(ctx, c),
 		NewImagesView(ctx, c),
-		NewStatsView(ctx, c, "cpu", false),
+		NewStatsView(ctx, c, sortx.CPU, false),
 	}
 	app := &App{
 		ctx:     ctx,
