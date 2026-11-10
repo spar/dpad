@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/events"
@@ -114,12 +113,6 @@ func (c *Client) StatsSnapshot(ctx context.Context) ([]Stats, error) {
 	return out, nil
 }
 
-// Backoff for resubscribing to daemon events after the stream breaks.
-const (
-	resubscribeDelay    = time.Second
-	maxResubscribeDelay = 5 * time.Second
-)
-
 // WatchStats streams stats for all running containers, following containers as
 // they start and stop. The channel is closed when ctx is cancelled.
 func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
@@ -176,19 +169,12 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 		}
 	}
 
-	// subscribe follows container events, then starts streams for running
-	// containers and stops streams for ones that are gone. Subscribing before
-	// listing means no start event is missed in between.
-	subscribe := func() (client.EventsResult, context.CancelFunc, error) {
-		ectx, cancel := context.WithCancel(ctx)
-		ev := c.api.Events(ectx, client.EventsListOptions{
-			Filters: make(client.Filters).Add("type", string(events.ContainerEventType)).
-				Add("event", string(events.ActionStart), string(events.ActionDie)),
-		})
+	// Start streams for running containers and stop streams for ones that
+	// are gone; runs on every (re)subscription to events.
+	resync := func() error {
 		list, err := c.Containers(ctx, false)
 		if err != nil {
-			cancel()
-			return ev, cancel, err
+			return err
 		}
 		running := make(map[string]bool, len(list))
 		for _, ctr := range list {
@@ -200,46 +186,23 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 				stop(id)
 			}
 		}
-		return ev, cancel, nil
+		return nil
 	}
-	ev, cancelEvents, err := subscribe()
+	loop, err := c.followEvents(ctx, []events.Action{events.ActionStart, events.ActionDie}, resync, func(m events.Message) {
+		switch m.Action {
+		case events.ActionStart:
+			start(m.Actor.ID, m.Actor.Attributes["name"])
+		case events.ActionDie:
+			stop(m.Actor.ID)
+		}
+	})
 	if err != nil {
 		return nil, err
 	}
-
 	go func() {
-		defer func() {
-			cancelEvents()
-			wg.Wait()
-			close(out)
-		}()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ev.Err:
-				// The event stream broke (e.g. the daemon restarted). Resubscribe
-				// with backoff; subscribe also resyncs streams missed meanwhile.
-				cancelEvents()
-				for delay := resubscribeDelay; ; delay = min(2*delay, maxResubscribeDelay) {
-					select {
-					case <-ctx.Done():
-						return
-					case <-time.After(delay):
-					}
-					if ev, cancelEvents, err = subscribe(); err == nil {
-						break
-					}
-				}
-			case m := <-ev.Messages:
-				switch m.Action {
-				case events.ActionStart:
-					start(m.Actor.ID, m.Actor.Attributes["name"])
-				case events.ActionDie:
-					stop(m.Actor.ID)
-				}
-			}
-		}
+		loop()
+		wg.Wait()
+		close(out)
 	}()
 	return out, nil
 }
