@@ -2,6 +2,7 @@ package docker
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"io"
 	"strings"
@@ -50,6 +51,15 @@ func (c *Client) Logs(ctx context.Context, id string, opts LogOptions, out chan<
 	}
 	defer rc.Close()
 
+	return readLogs(ctx, rc, tty, name, out)
+}
+
+// maxLogLine caps the length of one emitted line; longer lines are split.
+const maxLogLine = 1024 * 1024
+
+// readLogs splits a raw log stream into lines on out until the stream ends or
+// ctx is cancelled. It returns the first read error, if any.
+func readLogs(ctx context.Context, rc io.Reader, tty bool, name string, out chan<- LogLine) error {
 	// TTY containers produce a raw stream; others are multiplexed stdout/stderr.
 	outR, outW := io.Pipe()
 	errR, errW := io.Pipe()
@@ -64,28 +74,40 @@ func (c *Client) Logs(ctx context.Context, id string, opts LogOptions, out chan<
 		errW.CloseWithError(err)
 	}()
 
-	done := make(chan struct{}, 2)
-	scan := func(r io.Reader, stderr bool) {
-		defer func() { done <- struct{}{} }()
-		sc := bufio.NewScanner(r)
-		sc.Buffer(make([]byte, 64*1024), 1024*1024)
-		for sc.Scan() {
-			ts, text := splitTimestamp(sc.Text())
-			select {
-			case out <- LogLine{Container: name, Stderr: stderr, Time: ts, Text: text}:
-			case <-ctx.Done():
-				return
+	errs := make(chan error, 2)
+	scan := func(r *io.PipeReader, stderr bool) {
+		err := func() error {
+			sc := bufio.NewScanner(r)
+			sc.Buffer(make([]byte, 64*1024), maxLogLine)
+			sc.Split(scanLogLines)
+			for sc.Scan() {
+				ts, text := splitTimestamp(sc.Text())
+				select {
+				case out <- LogLine{Container: name, Stderr: stderr, Time: ts, Text: text}:
+				case <-ctx.Done():
+					return ctx.Err()
+				}
 			}
-		}
+			return sc.Err()
+		}()
+		// Closing the reader fails the copier's next write, so a scanner that
+		// stops early ends the other stream too instead of leaving it blocked.
+		r.CloseWithError(err)
+		errs <- err
 	}
 	go scan(outR, false)
 	go scan(errR, true)
-	<-done
-	<-done
-	// Unblock the copier if the scanners stopped early (ctx cancelled).
-	outR.Close()
-	errR.Close()
-	return nil
+	return cmp.Or(<-errs, <-errs)
+}
+
+// scanLogLines is bufio.ScanLines, except a line longer than maxLogLine is
+// emitted in maxLogLine chunks instead of stopping the scanner.
+func scanLogLines(data []byte, atEOF bool) (int, []byte, error) {
+	advance, token, err := bufio.ScanLines(data, atEOF)
+	if advance == 0 && token == nil && err == nil && len(data) >= maxLogLine {
+		return maxLogLine, data[:maxLogLine], nil
+	}
+	return advance, token, err
 }
 
 // splitTimestamp separates the RFC3339Nano prefix added by Timestamps: true.
