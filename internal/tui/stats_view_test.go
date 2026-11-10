@@ -21,7 +21,9 @@ func TestStatsSelectedMatchesHighlight(t *testing.T) {
 	v.cur.key = "b"
 
 	// Filtering hides the cursor's row, so the first visible row is highlighted.
-	out := ansi.Strip(v.View(120, 10, "alpha"))
+	v.SetSize(120, 10)
+	v.SetFilter("alpha")
+	out := ansi.Strip(v.View())
 	if strings.Contains(out, "beta") {
 		t.Fatalf("filter should hide beta:\n%s", out)
 	}

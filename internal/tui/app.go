@@ -38,8 +38,7 @@ type App struct {
 	tabs          []tab
 	active        int
 	width, height int
-	filter        textinput.Model
-	filters       []string // saved filter per tab
+	filter        textinput.Model // edits the active tab's filter
 	filtering     bool
 	confirm       *pending
 	logs          *LogsView
@@ -57,15 +56,8 @@ func Run(ctx context.Context, c *docker.Client) error {
 		NewImagesView(ctx, c),
 		NewStatsView(ctx, c, sortx.CPU, false),
 	}
-	app := &App{
-		ctx:     ctx,
-		client:  c,
-		tabs:    tabs,
-		filter:  fi,
-		filters: make([]string, len(tabs)),
-		width:   120,
-		height:  30,
-	}
+	app := &App{ctx: ctx, client: c, tabs: tabs, filter: fi}
+	app.resize(120, 30)
 	_, err := tea.NewProgram(app, tea.WithAltScreen(), tea.WithContext(ctx)).Run()
 	return err
 }
@@ -80,13 +72,26 @@ func (a *App) Init() tea.Cmd {
 
 func (a *App) bodyHeight() int { return max(a.height-3, 1) }
 
+func (a *App) resize(width, height int) {
+	a.width, a.height = width, height
+	for _, t := range a.tabs {
+		t.SetSize(a.width, a.bodyHeight())
+	}
+	if a.logs != nil {
+		a.logs.SetSize(a.width, a.bodyHeight())
+	}
+}
+
+// setFilter sets the active tab's filter and the input showing it.
+func (a *App) setFilter(f string) {
+	a.filter.SetValue(f)
+	a.tabs[a.active].SetFilter(f)
+}
+
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		a.width, a.height = msg.Width, msg.Height
-		if a.logs != nil {
-			a.logs.SetSize(a.width, a.bodyHeight())
-		}
+		a.resize(msg.Width, msg.Height)
 		return a, nil
 	case tea.KeyMsg:
 		return a, a.handleKey(msg)
@@ -135,10 +140,11 @@ func (a *App) handleKey(msg tea.KeyMsg) tea.Cmd {
 		case "esc":
 			a.filtering = false
 			a.filter.Blur()
-			a.filter.SetValue("")
+			a.setFilter("")
 		default:
 			var cmd tea.Cmd
 			a.filter, cmd = a.filter.Update(msg)
+			a.tabs[a.active].SetFilter(a.filter.Value())
 			return cmd
 		}
 		return nil
@@ -165,7 +171,7 @@ func (a *App) handleKey(msg tea.KeyMsg) tea.Cmd {
 		a.filtering = true
 		return a.filter.Focus()
 	case "esc":
-		a.filter.SetValue("")
+		a.setFilter("")
 	case "?":
 		a.help = true
 	case "ctrl+r":
@@ -192,9 +198,8 @@ func (a *App) handleKey(msg tea.KeyMsg) tea.Cmd {
 }
 
 func (a *App) switchTab(i int) tea.Cmd {
-	a.filters[a.active] = a.filter.Value()
 	a.active = i
-	a.filter.SetValue(a.filters[i])
+	a.filter.SetValue(a.tabs[i].Filter())
 	return a.tabs[i].Focus()
 }
 
@@ -213,7 +218,7 @@ func (a *App) View() string {
 		body, status = a.logs.View(), a.logs.Status()
 	default:
 		t := a.tabs[a.active]
-		body, status = t.View(a.width, a.bodyHeight(), a.filter.Value()), t.Status()
+		body, status = t.View(), t.Status()
 		if f := a.filter.Value(); f != "" && !a.filtering {
 			status += " · filter: " + render.Bold.Render(f)
 		}

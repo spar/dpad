@@ -33,8 +33,10 @@ type list[T any] struct {
 	err         error
 	noHighlight bool // hide the cursor (standalone `dn stats`)
 	cur         cursor
-	filter      string // last filter passed to View, for navigation
-	page        int
+	filter      string
+	width       int
+	height      int
+	page        int // rows moved by pgup/pgdn
 }
 
 // visible returns the rows that match the filter, in sort order.
@@ -73,16 +75,23 @@ func (l *list[T]) HandleKey(key string) tea.Cmd {
 	return nil
 }
 
-func (l *list[T]) View(width, height int, filter string) string {
+func (l *list[T]) SetSize(width, height int) {
+	l.width, l.height = width, height
+	l.page = max(height-2, 1)
+}
+
+func (l *list[T]) SetFilter(filter string) { l.filter = filter }
+
+func (l *list[T]) Filter() string { return l.filter }
+
+func (l *list[T]) View() string {
 	switch {
 	case l.err != nil:
 		return render.Error.Render("error: " + l.err.Error())
 	case !l.loaded:
 		return render.Dim.Render(l.loading)
 	}
-	l.filter = filter
-	l.page = max(height-2, 1)
-	rows := l.visible(filter)
+	rows := l.visible(l.filter)
 	if len(rows) == 0 {
 		return render.Dim.Render(l.empty)
 	}
@@ -94,8 +103,8 @@ func (l *list[T]) View(width, height int, filter string) string {
 	if l.noHighlight {
 		sel = -1
 	}
-	t := render.Table{Columns: l.columns, Rows: cells, Width: width}
-	return t.Window(sel, height)
+	t := render.Table{Columns: l.columns, Rows: cells, Width: l.width}
+	return t.Window(sel, l.height)
 }
 
 // Selected returns the container of the highlighted row, resolved the same

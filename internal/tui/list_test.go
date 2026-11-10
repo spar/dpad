@@ -16,7 +16,7 @@ func TestContainersNavigateAndSelect(t *testing.T) {
 		{ID: "2", Names: []string{"/db"}, State: "running"},
 		{ID: "3", Names: []string{"/old"}, State: "exited"},
 	}})
-	v.View(120, 10, "")
+	v.SetSize(120, 10)
 	if _, name, _ := v.Selected(); name != "db" {
 		t.Errorf("initial selection = %q, want db (first by status, then name)", name)
 	}
@@ -33,7 +33,8 @@ func TestContainersNavigateAndSelect(t *testing.T) {
 	if _, name, _ := v.Selected(); name != "old" {
 		t.Errorf("after re-sort selection = %q, want old", name)
 	}
-	out := ansi.Strip(v.View(120, 10, "we"))
+	v.SetFilter("we")
+	out := ansi.Strip(v.View())
 	if !strings.Contains(out, "web") || strings.Contains(out, "old") {
 		t.Errorf("filter \"we\" shows:\n%s", out)
 	}
@@ -42,7 +43,8 @@ func TestContainersNavigateAndSelect(t *testing.T) {
 func TestImagesAreNotSelectable(t *testing.T) {
 	v := NewImagesView(nil, nil)
 	v.Update(imagesMsg{items: []image.Summary{{ID: "sha256:abc", RepoTags: []string{"a:1", "a:2"}}}})
-	out := ansi.Strip(v.View(120, 10, ""))
+	v.SetSize(120, 10)
+	out := ansi.Strip(v.View())
 	if strings.Count(out, "\n") != 2 {
 		t.Errorf("want a header and one row per tag:\n%s", out)
 	}

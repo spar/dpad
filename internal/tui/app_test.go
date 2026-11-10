@@ -3,16 +3,19 @@ package tui
 import (
 	"testing"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"dockernext/internal/sortx"
 )
 
 func newTestApp() *App {
-	return &App{
-		tabs:    []tab{NewContainersView(nil, nil), NewImagesView(nil, nil), NewStatsView(nil, nil, sortx.CPU, false)},
-		filters: make([]string, 3),
+	a := &App{
+		tabs:   []tab{NewContainersView(nil, nil), NewImagesView(nil, nil), NewStatsView(nil, nil, sortx.CPU, false)},
+		filter: textinput.New(),
 	}
+	a.resize(120, 30)
+	return a
 }
 
 func press(a *App, keys ...string) {
@@ -40,5 +43,25 @@ func TestAppSwitchTabs(t *testing.T) {
 		if a.active != tt.want {
 			t.Errorf("after %q active = %d, want %d", tt.key, a.active, tt.want)
 		}
+	}
+}
+
+func TestAppFilterIsPerTab(t *testing.T) {
+	a := newTestApp()
+	press(a, "/", "w", "e", "enter")
+	if got := a.tabs[0].Filter(); got != "we" {
+		t.Fatalf("containers filter = %q, want we", got)
+	}
+	press(a, "2")
+	if a.filter.Value() != "" || a.tabs[1].Filter() != "" {
+		t.Errorf("images tab should start unfiltered, input shows %q", a.filter.Value())
+	}
+	press(a, "1")
+	if a.filter.Value() != "we" {
+		t.Errorf("switching back should restore the filter, input shows %q", a.filter.Value())
+	}
+	press(a, "esc")
+	if a.tabs[0].Filter() != "" {
+		t.Errorf("esc should clear the filter, got %q", a.tabs[0].Filter())
 	}
 }

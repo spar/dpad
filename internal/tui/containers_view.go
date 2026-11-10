@@ -44,7 +44,6 @@ func NewContainersView(ctx context.Context, c *docker.Client) *ContainersView {
 		},
 		loading: "loading…",
 		empty:   "no containers",
-		page:    10,
 	}}
 }
 

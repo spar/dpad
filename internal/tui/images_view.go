@@ -42,7 +42,6 @@ func NewImagesView(ctx context.Context, c *docker.Client) *ImagesView {
 		},
 		loading: "loading…",
 		empty:   "no images",
-		page:    10,
 	}}
 }
 

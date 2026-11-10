@@ -44,7 +44,6 @@ func NewStatsView(ctx context.Context, c *docker.Client, key sortx.Key, reverse 
 		},
 		loading: "connecting…",
 		empty:   "no running containers",
-		page:    10,
 	}}
 }
 
@@ -162,16 +161,14 @@ func (v *StatsView) Help() [][2]string {
 }
 
 // statsProgram runs StatsView on its own for `dn stats`.
-type statsProgram struct {
-	v             *StatsView
-	width, height int
-}
+type statsProgram struct{ v *StatsView }
 
 // RunStats shows live stats inline until the user quits.
 func RunStats(ctx context.Context, c *docker.Client, key sortx.Key, reverse bool) error {
 	v := NewStatsView(ctx, c, key, reverse)
 	v.noHighlight = true
-	_, err := tea.NewProgram(statsProgram{v: v, width: 120, height: 30}, tea.WithContext(ctx)).Run()
+	v.SetSize(120, 28)
+	_, err := tea.NewProgram(statsProgram{v}, tea.WithContext(ctx)).Run()
 	return err
 }
 
@@ -180,7 +177,7 @@ func (p statsProgram) Init() tea.Cmd { return p.v.Focus() }
 func (p statsProgram) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		p.width, p.height = msg.Width, msg.Height
+		p.v.SetSize(msg.Width, msg.Height-2) // minus the status line and a spare
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "esc", "ctrl+c":
@@ -196,6 +193,5 @@ func (p statsProgram) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (p statsProgram) View() string {
 	keys, _ := shortcutHelp("/")
 	status := render.Dim.Render(p.v.Status() + "  ·  " + keys + " sort · r reverse · q quit")
-	body := p.v.View(p.width, p.height-2, "")
-	return strings.Join([]string{status, body}, "\n")
+	return strings.Join([]string{status, p.v.View()}, "\n")
 }

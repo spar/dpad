@@ -26,7 +26,11 @@ type tab interface {
 	Update(msg tea.Msg) tea.Cmd
 	// HandleKey handles keys the App doesn't when the tab is active.
 	HandleKey(key string) tea.Cmd
-	View(width, height int, filter string) string
+	// SetSize sets the space the tab's View has; SetFilter narrows its rows.
+	SetSize(width, height int)
+	SetFilter(filter string)
+	Filter() string
+	View() string
 	// Selected returns the highlighted container, if the tab lists containers.
 	Selected() (id, name string, ok bool)
 	Status() string
