@@ -100,9 +100,7 @@ func (c *Client) StatsSnapshot(ctx context.Context) ([]Stats, error) {
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, maxSnapshotRequests)
 	for i, ctr := range list {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			sem <- struct{}{}
 			defer func() { <-sem }()
 			name := ContainerName(ctr.Names)
@@ -116,7 +114,7 @@ func (c *Client) StatsSnapshot(ctx context.Context) ([]Stats, error) {
 			if json.NewDecoder(res.Body).Decode(&raw) == nil {
 				out[i] = Calc(ctr.ID, name, &raw)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	return out, nil
@@ -144,9 +142,7 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 		cctx, cancel := context.WithCancel(ctx)
 		h := &statsStream{cancel}
 		streams[id] = h
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			c.streamStats(cctx, id, name, out)
 			cancel()
 			mu.Lock()
@@ -162,7 +158,7 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 			case out <- StatsUpdate{Stats: Stats{ID: id, Name: name}, Gone: true}:
 			case <-ctx.Done():
 			}
-		}()
+		})
 	}
 	streamIDs := func() []string {
 		mu.Lock()

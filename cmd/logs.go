@@ -148,13 +148,11 @@ func fanIn(sources []<-chan docker.LogLine) <-chan docker.LogLine {
 	out := make(chan docker.LogLine, 256)
 	var wg sync.WaitGroup
 	for _, src := range sources {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for l := range src {
 				out <- l
 			}
-		}()
+		})
 	}
 	go func() {
 		wg.Wait()

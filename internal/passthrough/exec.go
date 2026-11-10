@@ -24,8 +24,7 @@ func Run(args []string) int {
 	defer signal.Reset(os.Interrupt)
 
 	if err := cmd.Run(); err != nil {
-		var exit *exec.ExitError
-		if errors.As(err, &exit) {
+		if exit, ok := errors.AsType[*exec.ExitError](err); ok {
 			return exit.ExitCode()
 		}
 		fmt.Fprintln(os.Stderr, "dn:", err)

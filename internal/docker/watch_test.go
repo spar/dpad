@@ -115,8 +115,7 @@ func TestStatsSnapshotBoundsConcurrency(t *testing.T) {
 		ids = append(ids, fmt.Sprintf("c%d", i))
 	}
 	f := newFakeEngine(ids...)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	got, err := (&Client{api: f}).StatsSnapshot(ctx)
 	if err != nil {
 		t.Fatal(err)
