@@ -3,6 +3,8 @@ package tui
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -21,23 +23,29 @@ type (
 
 // StatsView shows live, sortable resource usage for running containers.
 type StatsView struct {
+	list[docker.Stats]
 	ctx      context.Context
 	client   *docker.Client
 	ch       <-chan docker.StatsUpdate
 	data     map[string]docker.Stats
-	key      sortx.Key
-	reverse  bool
-	cur      cursor
-	page     int
-	filter   string // last filter passed to View, for navigation
-	watching bool   // WatchStats requested
-	started  bool
-	noSel    bool // hide the row highlight (standalone `dn stats`)
-	err      error
+	watching bool // WatchStats requested
 }
 
 func NewStatsView(ctx context.Context, c *docker.Client, key sortx.Key, reverse bool) *StatsView {
-	return &StatsView{ctx: ctx, client: c, data: map[string]docker.Stats{}, key: key, reverse: reverse, page: 10}
+	return &StatsView{ctx: ctx, client: c, data: map[string]docker.Stats{}, list: list[docker.Stats]{
+		columns: render.StatsColumns,
+		keys:    sortx.StatsKeys,
+		key:     key,
+		reverse: reverse,
+		match:   func(s docker.Stats, f string) bool { return matches(f, s.Name, s.ID) },
+		sort:    sortx.Stats,
+		rows: func(s docker.Stats) []row {
+			return []row{{key: s.ID, cells: render.StatsRow(s), id: s.ID, name: s.Name}}
+		},
+		loading: "connecting…",
+		empty:   "no running containers",
+		page:    10,
+	}}
 }
 
 func (v *StatsView) Title() string { return "Stats" }
@@ -92,7 +100,7 @@ func waitStats(ch <-chan docker.StatsUpdate) tea.Cmd {
 func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case statsStartedMsg:
-		v.ch, v.started = msg.ch, true
+		v.ch, v.loaded = msg.ch, true
 		return waitStats(v.ch)
 	case statsBatchMsg:
 		for _, u := range msg {
@@ -102,30 +110,12 @@ func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 				v.data[u.Stats.ID] = u.Stats
 			}
 		}
+		v.items = slices.Collect(maps.Values(v.data))
 		return waitStats(v.ch)
 	case statsErrMsg:
 		v.err = msg.err
 	}
 	return nil
-}
-
-func (v *StatsView) items(filter string) []docker.Stats {
-	out := make([]docker.Stats, 0, len(v.data))
-	for _, s := range v.data {
-		if matches(filter, s.Name, s.ID) {
-			out = append(out, s)
-		}
-	}
-	sortx.Stats(out, v.key, v.reverse)
-	return out
-}
-
-func statsKeys(items []docker.Stats) []string {
-	keys := make([]string, len(items))
-	for i, s := range items {
-		keys[i] = s.ID
-	}
-	return keys
 }
 
 // statsShortcuts are single keys that pick a sort key directly.
@@ -152,50 +142,7 @@ func (v *StatsView) HandleKey(key string) tea.Cmd {
 			return nil
 		}
 	}
-	switch key {
-	case "s":
-		v.key = sortx.Next(v.key, sortx.StatsKeys)
-	case "r":
-		v.reverse = !v.reverse
-	default:
-		v.cur.navKey(statsKeys(v.items(v.filter)), key, v.page)
-	}
-	return nil
-}
-
-func (v *StatsView) View(width, height int, filter string) string {
-	switch {
-	case v.err != nil:
-		return render.Error.Render("error: " + v.err.Error())
-	case !v.started:
-		return render.Dim.Render("connecting…")
-	case len(v.data) == 0:
-		return render.Dim.Render("no running containers")
-	}
-	v.filter = filter
-	items := v.items(filter)
-	v.page = max(height-2, 1)
-	sel := v.cur.index(statsKeys(items))
-	if v.noSel {
-		sel = -1
-	}
-	rows := make([][]string, len(items))
-	for i, s := range items {
-		rows[i] = render.StatsRow(s)
-	}
-	t := render.Table{Columns: render.StatsColumns, Rows: rows, Width: width}
-	return t.Window(sel, height)
-}
-
-// Selected returns the highlighted row, resolved the same way View does so a
-// cursor on a filtered-out container never targets something off screen.
-func (v *StatsView) Selected() (string, string, bool) {
-	items := v.items(v.filter)
-	if len(items) == 0 {
-		return "", "", false
-	}
-	s := items[v.cur.index(statsKeys(items))]
-	return s.ID, s.Name, true
+	return v.list.HandleKey(key)
 }
 
 func (v *StatsView) Status() string {
@@ -211,11 +158,7 @@ func (v *StatsView) Status() string {
 
 func (v *StatsView) Help() [][2]string {
 	keys, sorts := shortcutHelp(" / ")
-	return [][2]string{
-		{keys, "sort by " + sorts},
-		{"s", "cycle sort key"},
-		{"r", "reverse sort"},
-	}
+	return append([][2]string{{keys, "sort by " + sorts}}, v.list.Help()...)
 }
 
 // statsProgram runs StatsView on its own for `dn stats`.
@@ -227,7 +170,7 @@ type statsProgram struct {
 // RunStats shows live stats inline until the user quits.
 func RunStats(ctx context.Context, c *docker.Client, key sortx.Key, reverse bool) error {
 	v := NewStatsView(ctx, c, key, reverse)
-	v.noSel = true
+	v.noHighlight = true
 	_, err := tea.NewProgram(statsProgram{v: v, width: 120, height: 30}, tea.WithContext(ctx)).Run()
 	return err
 }

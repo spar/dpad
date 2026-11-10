@@ -13,9 +13,11 @@ import (
 
 func TestStatsSelectedMatchesHighlight(t *testing.T) {
 	v := NewStatsView(nil, nil, sortx.Name, false)
-	v.started = true
-	v.data["a"] = docker.Stats{ID: "a", Name: "alpha"}
-	v.data["b"] = docker.Stats{ID: "b", Name: "beta"}
+	v.Update(statsStartedMsg{})
+	v.Update(statsBatchMsg{
+		{Stats: docker.Stats{ID: "a", Name: "alpha"}},
+		{Stats: docker.Stats{ID: "b", Name: "beta"}},
+	})
 	v.cur.key = "b"
 
 	// Filtering hides the cursor's row, so the first visible row is highlighted.

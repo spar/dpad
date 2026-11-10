@@ -19,20 +19,31 @@ type imagesMsg struct {
 
 // ImagesView lists local images; one row per tag.
 type ImagesView struct {
-	ctx     context.Context
-	client  *docker.Client
-	items   []image.Summary
-	key     sortx.Key
-	reverse bool
-	cur     cursor
-	filter  string
-	page    int
-	loaded  bool
-	err     error
+	list[image.Summary]
+	ctx    context.Context
+	client *docker.Client
 }
 
 func NewImagesView(ctx context.Context, c *docker.Client) *ImagesView {
-	return &ImagesView{ctx: ctx, client: c, key: sortx.Size, page: 10}
+	return &ImagesView{ctx: ctx, client: c, list: list[image.Summary]{
+		columns: render.ImageColumns,
+		keys:    sortx.ImageKeys,
+		key:     sortx.Size,
+		match: func(img image.Summary, f string) bool {
+			return matches(f, append([]string{img.ID}, img.RepoTags...)...)
+		},
+		sort: sortx.Images,
+		rows: func(img image.Summary) []row {
+			var out []row
+			for i, cells := range render.ImageRows(img) {
+				out = append(out, row{key: fmt.Sprintf("%s#%d", img.ID, i), cells: cells})
+			}
+			return out
+		},
+		loading: "loading…",
+		empty:   "no images",
+		page:    10,
+	}}
 }
 
 func (v *ImagesView) Title() string { return "Images" }
@@ -59,76 +70,6 @@ func (v *ImagesView) Update(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-type imageRow struct {
-	key   string
-	cells []string
-}
-
-func (v *ImagesView) rows(filter string) []imageRow {
-	items := append([]image.Summary(nil), v.items...)
-	sortx.Images(items, v.key, v.reverse)
-	var out []imageRow
-	for _, img := range items {
-		if !matches(filter, append([]string{img.ID}, img.RepoTags...)...) {
-			continue
-		}
-		for i, cells := range render.ImageRows(img) {
-			out = append(out, imageRow{key: fmt.Sprintf("%s#%d", img.ID, i), cells: cells})
-		}
-	}
-	return out
-}
-
-func rowKeys(rows []imageRow) []string {
-	keys := make([]string, len(rows))
-	for i, r := range rows {
-		keys[i] = r.key
-	}
-	return keys
-}
-
-func (v *ImagesView) HandleKey(key string) tea.Cmd {
-	switch key {
-	case "s":
-		v.key = sortx.Next(v.key, sortx.ImageKeys)
-	case "r":
-		v.reverse = !v.reverse
-	default:
-		v.cur.navKey(rowKeys(v.rows(v.filter)), key, v.page)
-	}
-	return nil
-}
-
-func (v *ImagesView) View(width, height int, filter string) string {
-	switch {
-	case v.err != nil:
-		return render.Error.Render("error: " + v.err.Error())
-	case !v.loaded:
-		return render.Dim.Render("loading…")
-	}
-	v.filter = filter
-	v.page = max(height-2, 1)
-	rows := v.rows(filter)
-	if len(rows) == 0 {
-		return render.Dim.Render("no images")
-	}
-	cells := make([][]string, len(rows))
-	for i, r := range rows {
-		cells[i] = r.cells
-	}
-	t := render.Table{Columns: render.ImageColumns, Rows: cells, Width: width}
-	return t.Window(v.cur.index(rowKeys(rows)), height)
-}
-
-func (v *ImagesView) Selected() (string, string, bool) { return "", "", false }
-
 func (v *ImagesView) Status() string {
 	return render.ImageSummary(v.items) + " · " + sortLabel(v.key, v.reverse)
-}
-
-func (v *ImagesView) Help() [][2]string {
-	return [][2]string{
-		{"s", "cycle sort: " + sortx.Join(sortx.ImageKeys, " / ")},
-		{"r", "reverse sort"},
-	}
 }
