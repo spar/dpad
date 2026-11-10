@@ -1,10 +1,13 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/moby/moby/api/types/container"
 
 	"dockernext/internal/sortx"
 )
@@ -63,5 +66,17 @@ func TestAppFilterIsPerTab(t *testing.T) {
 	press(a, "esc")
 	if a.tabs[0].Filter() != "" {
 		t.Errorf("esc should clear the filter, got %q", a.tabs[0].Filter())
+	}
+}
+
+func TestFooterHidesContainerActionsOnImages(t *testing.T) {
+	a := newTestApp()
+	a.Update(containersMsg{items: []container.Summary{{ID: "1", Names: []string{"/web"}}}})
+	if f := ansi.Strip(a.footer()); !strings.Contains(f, "logs") {
+		t.Errorf("containers footer should offer logs: %q", f)
+	}
+	press(a, "2")
+	if f := ansi.Strip(a.footer()); strings.Contains(f, "logs") || strings.Contains(f, "S/x/R") {
+		t.Errorf("images footer offers container actions: %q", f)
 	}
 }

@@ -260,7 +260,11 @@ func (a *App) footer() string {
 	case a.logs != nil:
 		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/follow")
 	}
-	return hints("tab", "switch", "/", "filter", "s", "sort", "enter", "logs", "S/x/R", "start/stop/restart", "?", "help", "q", "quit")
+	keys := []string{"tab", "switch", "/", "filter", "s", "sort"}
+	if _, _, ok := a.tabs[a.active].Selected(); ok {
+		keys = append(keys, "enter", "logs", "S/x/R", "start/stop/restart")
+	}
+	return hints(append(keys, "?", "help", "q", "quit")...)
 }
 
 func hints(pairs ...string) string {
