@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -88,4 +89,21 @@ func TestWatchStatsDie(t *testing.T) {
 	f.send(events.ActionDie, "db")
 	tr.waitShown(t, "db", false)
 	tr.waitShown(t, "web", true)
+}
+
+func TestWatchStatsResubscribes(t *testing.T) {
+	f := newFakeEngine("web")
+	tr := watch(t, f)
+	tr.waitShown(t, "web", true)
+
+	// While the event stream is down, web stops and db starts.
+	f.setContainers("db")
+	f.fail(errors.New("daemon restarted"))
+	waitFor(t, "a new event subscription", func() bool { return f.subscriptions() == 2 })
+	tr.waitShown(t, "db", true)
+	tr.waitShown(t, "web", false)
+
+	// Events on the new subscription are followed.
+	f.send(events.ActionStart, "api")
+	tr.waitShown(t, "api", true)
 }
