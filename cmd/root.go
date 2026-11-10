@@ -30,7 +30,7 @@ func Execute() {
 	root := newRoot()
 	args := os.Args[1:]
 	if shouldPassthrough(root, args) {
-		os.Exit(passthrough.Run(args))
+		os.Exit(passthrough.Run(dockerArgs(args, false)))
 	}
 	if err := root.Execute(); err != nil {
 		if err != errSilent {
@@ -67,7 +67,7 @@ so "dn network ls" or "dn ps --format ..." behave exactly like docker.`,
 
 	// Flags we don't implement (e.g. `ps --format`) mean the user wants docker's behavior.
 	root.SetFlagErrorFunc(func(*cobra.Command, error) error {
-		os.Exit(passthrough.Run(os.Args[1:]))
+		os.Exit(passthrough.Run(dockerArgs(os.Args[1:], true)))
 		return nil
 	})
 	return root
@@ -89,6 +89,28 @@ func shouldPassthrough(root *cobra.Command, args []string) bool {
 	}
 	cmd, _, err := root.Find(args)
 	return err != nil || cmd == root
+}
+
+// dockerArgs removes dn's own flags from args bound for docker, which would
+// reject them. With anywhere set (dn's own commands) they are dropped up to
+// "--"; otherwise only before the command name, because later arguments may
+// belong to a program run inside a container.
+func dockerArgs(args []string, anywhere bool) []string {
+	out := make([]string, 0, len(args))
+	for i, a := range args {
+		if a == "--" || !anywhere && !strings.HasPrefix(a, "-") {
+			return append(out, args[i:]...)
+		}
+		if !isDNFlag(a) {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+// isDNFlag reports whether arg is a flag only dn understands.
+func isDNFlag(arg string) bool {
+	return arg == "--no-color" || strings.HasPrefix(arg, "--no-color=")
 }
 
 func withClient(ctx context.Context, fn func(context.Context, *docker.Client) error) error {

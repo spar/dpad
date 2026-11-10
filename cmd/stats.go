@@ -31,7 +31,7 @@ r to reverse, q to quit. Output is a single snapshot when not a terminal.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Selecting specific containers is docker's job.
 			if len(args) > 0 {
-				os.Exit(passthrough.Run(os.Args[1:]))
+				os.Exit(passthrough.Run(dockerArgs(os.Args[1:], true)))
 			}
 			if err := sortx.Validate(key, sortx.StatsKeys); err != nil {
 				return err
