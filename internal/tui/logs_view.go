@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -12,7 +13,10 @@ import (
 	"dockernext/internal/render"
 )
 
-const maxLogLines = 5000
+const (
+	maxLogLines = 5000 // lines kept in the pane
+	maxLogBatch = 1000 // lines handed over at once
+)
 
 type (
 	logBatchMsg struct {
@@ -53,6 +57,13 @@ func NewLogsView(ctx context.Context, c dockerClient, id, name string, width, he
 	return v, v.wait()
 }
 
+// logFlushInterval is how long wait collects lines before handing them over.
+// Re-rendering the pane costs a pass over every buffered line, so a busy
+// container is redrawn at most about 20 times a second, not once per line.
+const logFlushInterval = 50 * time.Millisecond
+
+// wait blocks for the next line, then collects lines for logFlushInterval
+// (or until maxLogBatch) so the batch costs one re-render.
 func (v *LogsView) wait() tea.Cmd {
 	ch, errc := v.ch, v.errc
 	return func() tea.Msg {
@@ -61,14 +72,15 @@ func (v *LogsView) wait() tea.Cmd {
 			return logEndMsg{ch, <-errc}
 		}
 		batch := []docker.LogLine{l}
-		for len(batch) < 500 {
+		flush := time.After(logFlushInterval)
+		for len(batch) < maxLogBatch {
 			select {
 			case l, ok := <-ch:
 				if !ok {
 					return logBatchMsg{ch, batch}
 				}
 				batch = append(batch, l)
-			default:
+			case <-flush:
 				return logBatchMsg{ch, batch}
 			}
 		}
