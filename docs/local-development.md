@@ -38,6 +38,79 @@ binary. To use it as `docker compose`, register Homebrew's plugin directory in
 The Makefile already falls back to `docker-compose` when the plugin isn't
 available, so this step is optional.
 
+**On Linux (Ubuntu/Debian):**
+```sh
+# Install Go (adjust version as needed)
+wget https://go.dev/dl/go1.26.7.linux-amd64.tar.gz
+sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.26.7.linux-amd64.tar.gz
+export PATH=$PATH:/usr/local/go/bin
+
+# Or use your distro's package manager:
+sudo apt-get update && sudo apt-get install -y golang-go
+
+# Install Docker Engine
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Install Docker Compose v2 (if not included with Docker)
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Install make (optional)
+sudo apt-get install -y make
+```
+
+**On Linux (Fedora/RHEL/CentOS):**
+```sh
+# Install Go
+sudo dnf install -y golang
+
+# Install Docker Engine
+sudo dnf -y install dnf-plugins-core
+sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo systemctl start docker
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Install make (optional)
+sudo dnf install -y make
+```
+
+**On Windows (with WSL2 or Git Bash):**
+
+Using **WSL2** (recommended):
+1. Install WSL2 with Ubuntu: `wsl --install -d Ubuntu`
+2. Inside the WSL2 terminal, follow the **Linux (Ubuntu/Debian)** instructions above
+3. Install Docker Desktop for Windows with WSL2 backend integration
+
+Using **Git Bash** (Windows native):
+```bash
+# Install Go from https://go.dev/dl/ or use Chocolatey:
+choco install golang
+
+# Install Docker Desktop for Windows from https://www.docker.com/products/docker-desktop
+
+# Install make for Windows (optional):
+choco install make
+```
+
+Alternatively, use **Scoop** or **winget**:
+```bash
+# With Scoop
+scoop install go
+scoop install docker
+scoop install make
+
+# With winget
+winget install GoLang.Go
+winget install Docker.DockerDesktop
+```
+
+After installing, ensure `DOCKER_HOST` points to your Docker daemon (Docker Desktop handles this automatically).
+
 ## 2. Build and run from source
 
 ```sh
@@ -68,14 +141,28 @@ list the same containers as `docker ps -a`.
 make install                 # → ~/.local/bin/dockernext and ~/.local/bin/dn
 ```
 
-If `~/.local/bin` isn't on your PATH yet (zsh shown; use `~/.bashrc` for bash):
+If `~/.local/bin` isn't on your PATH yet, add it to your shell's rc file:
+
+**bash:**
+```sh
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
+dn --version
+```
+
+**zsh:**
 ```sh
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
 dn --version
 ```
 
+**fish:**
+```sh
+fish_add_path ~/.local/bin
+dn --version
+```
+
 **Other ways to install:**
-- System-wide: `sudo make install PREFIX=/usr/local`
+- System-wide (no PATH changes needed): `sudo make install PREFIX=/usr/local`
 - With `go install .`: this puts `dockernext` in `$(go env GOPATH)/bin`. Add `alias dn=dockernext` to your shell rc file.
 - **Shell completion:** for example, `dn completion zsh > "${fpath[1]}/_dn"`. See `dn completion --help`.
 
