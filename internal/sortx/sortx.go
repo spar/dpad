@@ -58,6 +58,16 @@ func Next(current Key, keys []Key) Key {
 	return keys[(i+1)%len(keys)]
 }
 
+// Descending reports whether key's natural order puts the biggest or newest
+// first; the rest sort ascending (A→Z, running before exited).
+func Descending(key Key) bool {
+	switch key {
+	case Name, Status:
+		return false
+	}
+	return true
+}
+
 // Each key has a natural direction: numbers descending (biggest first),
 // names ascending. reverse flips it. Ties fall back to name for stable output.
 

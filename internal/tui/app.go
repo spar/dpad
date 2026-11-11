@@ -265,7 +265,7 @@ func (a *App) footer() string {
 	case a.logs != nil:
 		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/follow")
 	}
-	keys := []string{"tab", "switch", "/", "filter", "s", "sort"}
+	keys := []string{"tab", "switch", "/", "filter", "s/r", "sort: " + string(a.tabs[a.active].SortKey())}
 	if _, _, ok := a.tabs[a.active].Selected(); ok {
 		keys = append(keys, "enter", "logs", "S/x/R", "start/stop/restart")
 	}

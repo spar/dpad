@@ -11,6 +11,9 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
+
+	"dockernext/internal/render"
+	"dockernext/internal/sortx"
 )
 
 func TestContainersNavigateAndSelect(t *testing.T) {
@@ -115,4 +118,31 @@ func runBatch(cmd tea.Cmd) []tea.Msg {
 		}
 	}
 	return out
+}
+
+func TestSortedColumnsMarksSortedHeader(t *testing.T) {
+	l := list[int]{
+		columns: []render.Column{{Header: "NAME"}, {Header: "SIZE"}},
+		keys:    []sortx.Key{sortx.Size, sortx.Name, sortx.Created},
+		sortCol: map[sortx.Key]int{sortx.Name: 0, sortx.Size: 1},
+	}
+	for _, tc := range []struct {
+		key     sortx.Key
+		reverse bool
+		want    [2]string
+	}{
+		{sortx.Size, false, [2]string{"NAME", "SIZE ▼"}},
+		{sortx.Size, true, [2]string{"NAME", "SIZE ▲"}},
+		{sortx.Name, false, [2]string{"NAME ▲", "SIZE"}},
+		{sortx.Created, false, [2]string{"NAME", "SIZE"}},
+	} {
+		l.setSort(tc.key, tc.reverse)
+		cols := l.sortedColumns()
+		if got := [2]string{cols[0].Header, cols[1].Header}; got != tc.want {
+			t.Errorf("%s reverse=%v: headers %q, want %q", tc.key, tc.reverse, got, tc.want)
+		}
+	}
+	if l.columns[1].Header != "SIZE" {
+		t.Error("sortedColumns modified the shared columns")
+	}
 }

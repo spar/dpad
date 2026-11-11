@@ -27,6 +27,7 @@ func NewImagesView(ctx context.Context, c dockerClient) *ImagesView {
 	return &ImagesView{ctx: ctx, client: c, list: list[image.Summary]{
 		columns: render.ImageColumns,
 		keys:    sortx.ImageKeys,
+		sortCol: map[sortx.Key]int{sortx.Name: 0, sortx.Created: 3, sortx.Size: 4},
 		key:     sortx.Size,
 		match: func(img image.Summary, f string) bool {
 			return matches(f, append([]string{img.ID}, img.RepoTags...)...)

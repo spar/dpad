@@ -39,6 +39,7 @@ func NewContainersView(ctx context.Context, c dockerClient) *ContainersView {
 	return &ContainersView{ctx: ctx, client: c, list: list[container.Summary]{
 		columns: render.ContainerColumns,
 		keys:    sortx.ContainerKeys,
+		sortCol: map[sortx.Key]int{sortx.Name: 1, sortx.Status: 3},
 		key:     sortx.Status,
 		match: func(c container.Summary, f string) bool {
 			return matches(f, docker.ContainerName(c.Names), c.Image, c.ID, string(c.State))

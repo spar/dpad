@@ -35,6 +35,7 @@ func NewStatsView(ctx context.Context, c dockerClient, key sortx.Key, reverse bo
 	return &StatsView{ctx: ctx, client: c, data: map[string]docker.Stats{}, list: list[docker.Stats]{
 		columns: render.StatsColumns,
 		keys:    sortx.StatsKeys,
+		sortCol: map[sortx.Key]int{sortx.Name: 0, sortx.CPU: 1, sortx.Mem: 3, sortx.Net: 6, sortx.IO: 7, sortx.PIDs: 8},
 		key:     key,
 		reverse: reverse,
 		match:   func(s docker.Stats, f string) bool { return matches(f, s.Name, s.ID) },

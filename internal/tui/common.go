@@ -57,6 +57,7 @@ type tab interface {
 	// Selected returns the highlighted container, if the tab lists containers.
 	Selected() (id, name string, ok bool)
 	Status() string
+	SortKey() sortx.Key
 	Help() [][2]string
 }
 

@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"slices"
+
 	tea "charm.land/bubbletea/v2"
 
 	"dockernext/internal/render"
@@ -19,7 +21,8 @@ type row struct {
 // it, supply items, and describe how to match, sort and render them.
 type list[T any] struct {
 	columns []render.Column
-	keys    []sortx.Key // sort keys "s" cycles through
+	keys    []sortx.Key       // sort keys "s" cycles through
+	sortCol map[sortx.Key]int // column whose header shows the sort arrow
 	key     sortx.Key
 	reverse bool
 	match   func(item T, filter string) bool
@@ -123,9 +126,27 @@ func (l *list[T]) View() string {
 	if l.noHighlight {
 		sel = -1
 	}
-	t := render.Table{Columns: l.columns, Rows: cells, Width: l.width}
+	t := render.Table{Columns: l.sortedColumns(), Rows: cells, Width: l.width}
 	return t.Window(sel, l.height)
 }
+
+// sortedColumns returns the columns with an arrow on the sorted one's header:
+// ▼ for biggest/newest/Z first, ▲ for the opposite.
+func (l *list[T]) sortedColumns() []render.Column {
+	i, ok := l.sortCol[l.key]
+	if !ok {
+		return l.columns
+	}
+	arrow := " ▲"
+	if sortx.Descending(l.key) != l.reverse {
+		arrow = " ▼"
+	}
+	cols := slices.Clone(l.columns)
+	cols[i].Header += arrow
+	return cols
+}
+
+func (l *list[T]) SortKey() sortx.Key { return l.key }
 
 // Selected returns the container of the highlighted row, resolved the same
 // way View does so actions never target a row that isn't on screen.
