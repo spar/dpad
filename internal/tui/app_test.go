@@ -75,6 +75,30 @@ func TestAppFilterIsPerTab(t *testing.T) {
 	}
 }
 
+func TestAppLogSearchConsumesKeysAndPreservesTabFilter(t *testing.T) {
+	a := newTestApp()
+	press(a, "/", "w", "e", "b", "enter")
+	v := newTestLogsView(10)
+	v.cancel = func() {}
+	a.logs = v
+	addLogLines(v, "query", "other")
+	press(a, "/", "q")
+	if a.logs != v || !v.searching || v.query != "q" || a.tabs[0].Filter() != "web" {
+		t.Fatal("log search keys escaped to app or changed tab filter")
+	}
+	if !strings.Contains(ansi.Strip(a.footer()), "esc cancel") {
+		t.Fatal("search prompt is missing editing hints")
+	}
+	press(a, "esc")
+	if a.logs != v || v.searching || v.query != "" {
+		t.Fatal("escape should cancel search without leaving logs")
+	}
+	press(a, "esc")
+	if a.logs != nil || a.tabs[0].Filter() != "web" {
+		t.Fatal("escape should return to the filtered list")
+	}
+}
+
 func TestFooterHidesContainerActionsOnImages(t *testing.T) {
 	a := newTestApp()
 	a.Update(containersMsg{items: []container.Summary{{ID: "1", Names: []string{"/web"}}}})

@@ -63,6 +63,15 @@ long lines and `ctrl+r` to refresh the snapshot. Press `enter` to follow logs,
 then `esc` to return to details. From details, `esc` or `q` returns to the list
 with its filter, sort, and selection preserved. Environment variables are omitted.
 
+In the log viewer, press `/` to search and filter buffered logs with a regular
+expression. Matches are highlighted and only matching lines are shown, including
+new lines as they arrive. Use `(?i)` for case-insensitive matching, for example
+`(?i)error|timeout`. Press `enter` to keep the filter, `esc` while editing to
+cancel changes, or `ctrl+l` outside the prompt to clear it. Invalid expressions
+show an error and keep the last valid results. Filtering searches the current
+buffer (up to 5,000 lines); it does not fetch older logs. `esc` or `q` outside
+the prompt returns to the previous view.
+
 ## Colors
 Output is plain when piped, when `NO_COLOR` is set, or with `--no-color`.
 
