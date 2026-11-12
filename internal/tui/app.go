@@ -158,6 +158,9 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		a.help = false
 		return nil
 	case a.logs != nil:
+		if a.logs.searching {
+			return a.logs.Update(msg)
+		}
 		if key == "esc" || key == "q" {
 			a.logs.Close()
 			a.logs = nil
@@ -290,7 +293,10 @@ func (a *App) footer() string {
 	case a.filtering:
 		return a.filter.View()
 	case a.logs != nil:
-		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/follow")
+		if a.logs.searching {
+			return a.logs.search.View() + " " + render.Dim.Render(logSearchHints)
+		}
+		return hints("esc", "back", "/", "regex filter", "ctrl+l", "clear filter", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/follow")
 	case a.details != nil:
 		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "enter", "logs")
 	}

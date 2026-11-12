@@ -2,14 +2,145 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"dockernext/internal/docker"
+	"dockernext/internal/render"
 )
+
+func newTestLogsView(height int) *LogsView {
+	return &LogsView{
+		ch:     make(chan docker.LogLine),
+		vp:     viewport.New(viewport.WithWidth(80), viewport.WithHeight(height)),
+		search: textinput.New(),
+	}
+}
+
+func addLogLines(v *LogsView, texts ...string) {
+	lines := make([]docker.LogLine, len(texts))
+	for i, text := range texts {
+		lines[i] = docker.LogLine{Text: text}
+	}
+	v.Update(logBatchMsg{ch: v.ch, lines: lines})
+}
+
+func TestLogsFilterRetainsBufferAndAppliesToNewLines(t *testing.T) {
+	v := newTestLogsView(10)
+	addLogLines(v, "INFO ready", "ERROR timeout", "WARN retry")
+	v.setQuery("ERROR|WARN")
+	if !strings.Contains(v.lines[1].text, render.Match.Render("ERROR")) {
+		t.Fatal("matching text was not highlighted")
+	}
+	if v.visible != 2 || strings.Contains(ansi.Strip(v.View()), "INFO") {
+		t.Fatalf("filter did not narrow the view: %q", v.View())
+	}
+	addLogLines(v, "INFO healthy", "ERROR failed")
+	if v.visible != 3 || len(v.lines) != 5 || !strings.Contains(ansi.Strip(v.View()), "ERROR failed") {
+		t.Fatalf("new lines did not respect filter: %s", v.Status())
+	}
+	v.Update(tea.KeyPressMsg{Code: 'l', Mod: tea.ModCtrl})
+	if v.query != "" || v.visible != 5 || !strings.Contains(ansi.Strip(v.View()), "INFO healthy") {
+		t.Fatal("clearing filter did not restore buffered lines")
+	}
+}
+
+func TestLogsInvalidRegexKeepsLastValidResults(t *testing.T) {
+	v := newTestLogsView(10)
+	addLogLines(v, "error: timeout", "INFO ready")
+	v.setQuery("(?i)ERROR")
+	v.Update(key("/"))
+	v.Update(key("["))
+	if v.searchErr == nil || v.query != "(?i)ERROR" || v.visible != 1 {
+		t.Fatalf("invalid regex replaced valid filter: %s", v.Status())
+	}
+	v.Update(key("enter"))
+	if !v.searching {
+		t.Fatal("enter accepted an invalid regex")
+	}
+	addLogLines(v, "ERROR failed")
+	if v.visible != 2 {
+		t.Fatal("last valid filter was not applied to new logs")
+	}
+	v.Update(key("esc"))
+	if v.searching || v.searchErr != nil || v.search.Value() != "(?i)ERROR" {
+		t.Fatalf("cancel did not restore prior query: %s", v.Status())
+	}
+}
+
+func TestLogsFilterEditingKeepsAndCancels(t *testing.T) {
+	v := newTestLogsView(10)
+	addLogLines(v, "ERROR timeout", "INFO ready")
+	for _, k := range []string{"/", "E", "R", "R", "O", "R", "enter"} {
+		v.Update(key(k))
+	}
+	if v.searching || v.query != "ERROR" || v.visible != 1 {
+		t.Fatalf("enter did not keep filter: %s", v.Status())
+	}
+	v.Update(key("/"))
+	v.Update(key("x"))
+	if v.visible != 0 || !strings.Contains(v.View(), "no matching log lines") {
+		t.Fatal("no-match filter did not show empty state")
+	}
+	v.Update(key("esc"))
+	if v.query != "ERROR" || v.visible != 1 {
+		t.Fatal("escape did not restore committed filter")
+	}
+}
+
+func TestLogsPastedRegexFiltersImmediately(t *testing.T) {
+	a := newTestApp()
+	v := newTestLogsView(10)
+	a.logs = v
+	addLogLines(v, "Error: café unavailable", "INFO healthy")
+	press(a, "/")
+	a.Update(tea.PasteMsg{Content: "(?i)error.*café"})
+	if v.query != "(?i)error.*café" || v.visible != 1 || v.searchErr != nil {
+		t.Fatalf("pasted query was not applied: %s", v.Status())
+	}
+	press(a, "enter")
+	if v.searching {
+		t.Fatal("pasted query was not committed")
+	}
+}
+
+func TestLogsFilteredBufferEviction(t *testing.T) {
+	v := newTestLogsView(10)
+	v.setQuery("ERROR")
+	addLogLines(v, "ERROR oldest")
+	for range maxLogLines {
+		addLogLines(v, "INFO latest")
+	}
+	if len(v.lines) != maxLogLines || v.visible != 0 {
+		t.Fatalf("evicted match is still visible: %s", v.Status())
+	}
+	v.setQuery("")
+	if v.visible != maxLogLines {
+		t.Fatal("filter changed buffer retention")
+	}
+}
+
+func TestLogsFilterPreservesFollowAndPausedScroll(t *testing.T) {
+	v := newTestLogsView(3)
+	v.setQuery("ERROR")
+	for i := range 10 {
+		addLogLines(v, fmt.Sprintf("ERROR %d", i))
+	}
+	if !v.vp.AtBottom() {
+		t.Fatal("filtered logs stopped following")
+	}
+	v.Update(key("g"))
+	addLogLines(v, "ERROR next", "INFO hidden")
+	if v.vp.YOffset() != 0 || v.vp.AtBottom() {
+		t.Fatal("new logs moved a paused viewport")
+	}
+}
 
 func TestLogsWaitBatchesSteadyStream(t *testing.T) {
 	v := &LogsView{ch: make(chan docker.LogLine), errc: make(chan error, 1)}

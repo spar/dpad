@@ -2,9 +2,11 @@ package tui
 
 import (
 	"context"
-	"slices"
+	"fmt"
+	"regexp"
 	"time"
 
+	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -14,11 +16,17 @@ import (
 )
 
 const (
-	maxLogLines = 5000 // lines kept in the pane
-	maxLogBatch = 1000 // lines handed over at once
+	maxLogLines    = 5000 // lines kept in the pane
+	maxLogBatch    = 1000 // lines handed over at once
+	logSearchHints = "enter keep · esc cancel"
 )
 
 type (
+	bufferedLog struct {
+		line    docker.LogLine
+		text    string
+		matches bool
+	}
 	logBatchMsg struct {
 		ch    <-chan docker.LogLine
 		lines []docker.LogLine
@@ -35,14 +43,21 @@ type (
 
 // LogsView follows one container's logs in a scrollable pane.
 type LogsView struct {
-	name   string
-	ch     chan docker.LogLine
-	errc   chan error
-	cancel context.CancelFunc
-	lines  []string
-	vp     viewport.Model
-	ended  bool
-	err    error
+	name          string
+	ch            chan docker.LogLine
+	errc          chan error
+	cancel        context.CancelFunc
+	lines         []bufferedLog
+	vp            viewport.Model
+	ended         bool
+	err           error
+	search        textinput.Model
+	searching     bool
+	query         string
+	previousQuery string
+	pattern       *regexp.Regexp
+	searchErr     error
+	visible       int
 
 	// Paging glides to target over a few frames; gen invalidates stale frames.
 	target    int
@@ -58,7 +73,11 @@ func NewLogsView(ctx context.Context, c dockerClient, id, name string, width, he
 		errc:   make(chan error, 1),
 		cancel: cancel,
 		vp:     viewport.New(viewport.WithWidth(width), viewport.WithHeight(height)),
+		search: textinput.New(),
 	}
+	v.search.Prompt = "/"
+	v.search.Placeholder = "regex (e.g. ERROR|WARN, (?i)timeout)"
+	v.search.SetWidth(max(width-lipgloss.Width(logSearchHints)-2, 1))
 	go func() {
 		v.errc <- c.Logs(ctx, id, docker.LogOptions{Follow: true, Tail: "500"}, v.ch)
 		close(v.ch)
@@ -102,6 +121,53 @@ func (v *LogsView) Close() { v.cancel() }
 func (v *LogsView) SetSize(width, height int) {
 	v.vp.SetWidth(width)
 	v.vp.SetHeight(height)
+	v.search.SetWidth(max(width-lipgloss.Width(logSearchHints)-2, 1))
+}
+
+func (v *LogsView) setQuery(query string) {
+	var pattern *regexp.Regexp
+	if query != "" {
+		var err error
+		pattern, err = regexp.Compile(query)
+		if err != nil {
+			v.searchErr = err
+			return
+		}
+	}
+	v.searchErr = nil
+	v.query, v.pattern = query, pattern
+	v.animating = false
+	v.gen++
+	for i := range v.lines {
+		v.lines[i] = v.renderLine(v.lines[i].line)
+	}
+	v.rebuild()
+}
+
+func (v *LogsView) renderLine(line docker.LogLine) bufferedLog {
+	entry := bufferedLog{line: line, matches: v.pattern == nil || v.pattern.MatchString(line.Text)}
+	if entry.matches {
+		entry.text = render.LogLine(line, lipgloss.Style{}, 0, false, v.pattern)
+	}
+	return entry
+}
+
+func (v *LogsView) rebuild() {
+	atBottom := v.vp.AtBottom() && !v.animating
+	lines := make([]string, 0, len(v.lines))
+	for _, line := range v.lines {
+		if line.matches {
+			lines = append(lines, line.text)
+		}
+	}
+	v.visible = len(lines)
+	if len(lines) == 0 && v.query != "" {
+		lines = append(lines, "no matching log lines")
+	}
+	v.vp.SetContentLines(lines)
+	if atBottom {
+		v.vp.GotoBottom()
+	}
 }
 
 func (v *LogsView) Update(msg tea.Msg) tea.Cmd {
@@ -110,17 +176,13 @@ func (v *LogsView) Update(msg tea.Msg) tea.Cmd {
 		if msg.ch != v.ch {
 			return nil
 		}
-		atBottom := v.vp.AtBottom() && !v.animating
-		for _, l := range msg.lines {
-			v.lines = append(v.lines, render.LogLine(l, lipgloss.Style{}, 0, false, nil))
+		for _, line := range msg.lines {
+			v.lines = append(v.lines, v.renderLine(line))
 		}
 		if over := len(v.lines) - maxLogLines; over > 0 {
 			v.lines = v.lines[over:]
 		}
-		v.vp.SetContentLines(slices.Clone(v.lines)) // the viewport may edit its slice
-		if atBottom {
-			v.vp.GotoBottom()
-		}
+		v.rebuild()
 		return v.wait()
 	case scrollFrameMsg:
 		if msg.v != v || msg.gen != v.gen || !v.animating {
@@ -133,7 +195,37 @@ func (v *LogsView) Update(msg tea.Msg) tea.Cmd {
 		}
 		return nil
 	case tea.KeyPressMsg:
+		if v.searching {
+			switch msg.String() {
+			case "enter":
+				if v.searchErr == nil {
+					v.searching = false
+					v.search.Blur()
+				}
+				return nil
+			case "esc":
+				v.searching = false
+				v.search.Blur()
+				v.search.SetValue(v.previousQuery)
+				v.setQuery(v.previousQuery)
+				return nil
+			}
+			var cmd tea.Cmd
+			v.search, cmd = v.search.Update(msg)
+			v.setQuery(v.search.Value())
+			return cmd
+		}
 		switch msg.String() {
+		case "/":
+			v.searching = true
+			v.previousQuery = v.query
+			v.search.SetValue(v.query)
+			v.search.CursorEnd()
+			return v.search.Focus()
+		case "ctrl+l":
+			v.search.SetValue("")
+			v.setQuery("")
+			return nil
 		case "G", "end":
 			v.animating = false
 			v.vp.GotoBottom()
@@ -151,6 +243,15 @@ func (v *LogsView) Update(msg tea.Msg) tea.Cmd {
 		case "ctrl+u", "u":
 			return v.scrollBy(-v.vp.Height() / 2)
 		}
+	}
+	if v.searching {
+		var cmd tea.Cmd
+		previous := v.search.Value()
+		v.search, cmd = v.search.Update(msg)
+		if v.search.Value() != previous {
+			v.setQuery(v.search.Value())
+		}
+		return cmd
 	}
 	var cmd tea.Cmd
 	v.vp, cmd = v.vp.Update(msg)
@@ -210,6 +311,12 @@ func (v *LogsView) View() string { return v.vp.View() }
 
 func (v *LogsView) Status() string {
 	s := "logs: " + render.Accent.Render(v.name)
+	if v.query != "" {
+		s += fmt.Sprintf(" · filter: %s · %d/%d buffered lines", v.query, v.visible, len(v.lines))
+	}
+	if v.searchErr != nil {
+		s += " · " + render.Error.Render("invalid regex: "+v.searchErr.Error())
+	}
 	switch {
 	case v.err != nil:
 		s += " · " + render.Error.Render(v.err.Error())
