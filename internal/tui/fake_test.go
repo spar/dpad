@@ -16,6 +16,8 @@ type fakeClient struct {
 	images     []image.Summary
 	inspect    container.InspectResponse
 	inspectErr error
+	imageInfo  docker.ImageInfo
+	imageErr   error
 
 	mu      sync.Mutex
 	actions []string // "verb id"
@@ -26,6 +28,16 @@ func (f *fakeClient) Containers(context.Context, bool) ([]container.Summary, err
 }
 
 func (f *fakeClient) Images(context.Context) ([]image.Summary, error) { return f.images, nil }
+
+func (f *fakeClient) ImageDetails(_ context.Context, id string) (docker.ImageInfo, error) {
+	_ = f.record("image inspect", id)
+	return f.imageInfo, f.imageErr
+}
+
+func (f *fakeClient) RemoveImage(_ context.Context, removal docker.ImageRemoval) error {
+	_ = f.record("image remove", removal.Reference)
+	return f.imageErr
+}
 
 func (f *fakeClient) Inspect(_ context.Context, id string) (container.InspectResponse, error) {
 	_ = f.record("inspect", id)

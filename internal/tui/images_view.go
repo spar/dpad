@@ -2,11 +2,13 @@ package tui
 
 import (
 	"context"
-	"fmt"
+	"slices"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
 
+	"dockernext/internal/docker"
 	"dockernext/internal/render"
 	"dockernext/internal/sortx"
 )
@@ -19,13 +21,17 @@ type imagesMsg struct {
 // ImagesView lists local images; one row per tag.
 type ImagesView struct {
 	list[image.Summary]
-	ctx    context.Context
-	client dockerClient
+	ctx         context.Context
+	client      dockerClient
+	containers  []container.Summary
+	usageLoaded bool
+	usageErr    error
 }
 
 func NewImagesView(ctx context.Context, c dockerClient) *ImagesView {
-	return &ImagesView{ctx: ctx, client: c, list: list[image.Summary]{
-		columns: render.ImageColumns,
+	v := &ImagesView{ctx: ctx, client: c}
+	v.list = list[image.Summary]{
+		columns: append(slices.Clone(render.ImageColumns), render.Column{Header: "USAGE"}),
 		keys:    sortx.ImageKeys,
 		sortCol: map[sortx.Key]int{sortx.Name: 0, sortx.Created: 3, sortx.Size: 4},
 		key:     sortx.Size,
@@ -36,13 +42,24 @@ func NewImagesView(ctx context.Context, c dockerClient) *ImagesView {
 		rows: func(img image.Summary) []row {
 			var out []row
 			for i, cells := range render.ImageRows(img) {
-				out = append(out, row{key: fmt.Sprintf("%s#%d", img.ID, i), cells: cells})
+				ref := img.ID
+				if len(img.RepoTags) > 0 {
+					ref = img.RepoTags[i]
+				}
+				usage := "loading…"
+				if v.usageErr != nil {
+					usage = "unknown (refresh)"
+				} else if v.usageLoaded {
+					usage = render.ImageUsage(docker.ContainersUsingImage(v.containers, img.ID))
+				}
+				out = append(out, row{key: img.ID + "#" + ref, cells: append(cells, usage), image: &docker.ImageRemoval{ID: img.ID, Reference: ref, UntagOnly: len(img.RepoTags) > 1}})
 			}
 			return out
 		},
 		loading: "loading…",
 		empty:   "no images",
-	}}
+	}
+	return v
 }
 
 func (v *ImagesView) Title() string { return "Images" }
@@ -62,11 +79,33 @@ func (v *ImagesView) Focus() tea.Cmd { return nil }
 func (v *ImagesView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case imagesMsg:
+		_, oldKeys := v.visible()
+		selected := v.cur.index(oldKeys)
 		v.setItems(msg.items, msg.err)
+		_, keys := v.visible()
+		if len(keys) > 0 && !slices.Contains(keys, v.cur.key) {
+			v.cur.key = keys[min(selected, len(keys)-1)]
+		}
+	case containersMsg:
+		v.containers, v.usageErr, v.usageLoaded = msg.items, msg.err, true
+		v.rowCache = nil
 	case refreshMsg:
 		return v.load()
 	}
 	return nil
+}
+
+func (v *ImagesView) SelectedImage() (docker.ImageRemoval, bool) {
+	rows, keys := v.visible()
+	if !v.loaded || v.err != nil || len(rows) == 0 {
+		return docker.ImageRemoval{}, false
+	}
+	r := rows[v.cur.index(keys)]
+	return *r.image, true
+}
+
+func (v *ImagesView) Help() [][2]string {
+	return append(v.list.Help(), [2]string{"d / enter", "inspect selected image and its container usage"}, [2]string{"x", "remove selected tag or image (asks y/N)"})
 }
 
 func (v *ImagesView) Status() string {

@@ -5,6 +5,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"dockernext/internal/docker"
 	"dockernext/internal/render"
 	"dockernext/internal/sortx"
 )
@@ -15,6 +16,7 @@ type row struct {
 	cells []string
 	// id and name identify the container the row acts on; empty if none.
 	id, name string
+	image    *docker.ImageRemoval
 }
 
 // list is the sortable, filterable table shared by the list tabs. Tabs embed

@@ -97,6 +97,9 @@ dn
 9. Select a running container such as `dn-demo-web-1` and press `e`, then `enter`
    to open `/bin/sh`. Run `pwd`, then `exit` to return to the dashboard. Try a
    stopped or paused container to see the preflight error; `esc` cancels the prompt.
+10. Press `2` for Images and `d` to inspect an image's tags, metadata, and containers
+    using it. Press `esc`, then `x` to read the removal confirmation and `n` to
+    cancel. Images used by stopped containers are protected from deletion too.
 
 **Passthrough:**
 ```sh

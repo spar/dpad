@@ -28,6 +28,8 @@ const pollInterval = 10 * time.Second
 type dockerClient interface {
 	Containers(ctx context.Context, all bool) ([]container.Summary, error)
 	Images(ctx context.Context) ([]image.Summary, error)
+	ImageDetails(ctx context.Context, id string) (docker.ImageInfo, error)
+	RemoveImage(ctx context.Context, removal docker.ImageRemoval) error
 	Inspect(ctx context.Context, id string) (container.InspectResponse, error)
 	Start(ctx context.Context, id string) error
 	Stop(ctx context.Context, id string) error

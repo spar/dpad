@@ -15,14 +15,17 @@ import (
 )
 
 type actionDoneMsg struct {
-	text string
-	err  error
+	text  string
+	err   error
+	image *docker.ImageRemoval
 }
 
-// pending is a container action waiting for y/n confirmation.
+// pending is an action waiting for y/n confirmation.
 type pending struct {
 	verb, id, name string
 	run            func(context.Context, string) error
+	question       string
+	image          *docker.ImageRemoval
 }
 
 var (
@@ -43,6 +46,7 @@ type App struct {
 	confirm       *pending
 	logs          *LogsView
 	details       *DetailsView
+	imageDetails  *ImageDetailsView
 	shell         *shellPrompt
 	help          bool
 	flash         string
@@ -85,6 +89,9 @@ func (a *App) resize(width, height int) {
 	}
 	if a.details != nil {
 		a.details.SetSize(a.width, a.bodyHeight())
+	}
+	if a.imageDetails != nil {
+		a.imageDetails.SetSize(a.width, a.bodyHeight())
 	}
 	if a.shell != nil {
 		a.shell.input.SetWidth(max(width-38, 1))
@@ -134,6 +141,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			a.flash = msg.err.Error()
 		}
+		if msg.err == nil && msg.image != nil && a.imageDetails != nil && a.imageDetails.removal.ID == msg.image.ID && a.imageDetails.removal.Reference == msg.image.Reference {
+			a.imageDetails.Close()
+			a.imageDetails = nil
+		}
 		return a, func() tea.Msg { return refreshMsg{} }
 	}
 
@@ -151,6 +162,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	if a.details != nil {
 		cmds = append(cmds, a.details.Update(msg))
+	}
+	if a.imageDetails != nil {
+		cmds = append(cmds, a.imageDetails.Update(msg))
 	}
 	return a, tea.Batch(cmds...)
 }
@@ -174,7 +188,7 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		a.flash = fmt.Sprintf("%s %s…", p.verb, p.name)
 		return func() tea.Msg {
 			err := p.run(a.ctx, p.id)
-			return actionDoneMsg{text: fmt.Sprintf("%s %s: done", p.verb, p.name), err: err}
+			return actionDoneMsg{text: fmt.Sprintf("%s %s: done", p.verb, p.name), err: err, image: p.image}
 		}
 	case a.filtering:
 		switch key {
@@ -219,6 +233,19 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			return cmd
 		}
 		return a.details.Update(msg)
+	case a.imageDetails != nil:
+		switch key {
+		case "esc", "q":
+			a.imageDetails.Close()
+			a.imageDetails = nil
+			return nil
+		case "x":
+			if !a.imageDetails.loading && a.imageDetails.err == nil {
+				a.askImageRemoval(a.imageDetails.removal)
+			}
+			return nil
+		}
+		return a.imageDetails.Update(msg)
 	}
 
 	switch key {
@@ -238,6 +265,9 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "ctrl+r":
 		return func() tea.Msg { return refreshMsg{} }
 	case "enter":
+		if _, ok := a.tabs[a.active].(*ImagesView); ok {
+			return a.openSelectedImage()
+		}
 		if projects, ok := a.tabs[a.active].(*ProjectsView); ok {
 			if p := projects.selectedProject(); p != nil {
 				targets := make([]logTarget, len(p.containers))
@@ -255,6 +285,9 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			return cmd
 		}
 	case "d":
+		if _, ok := a.tabs[a.active].(*ImagesView); ok {
+			return a.openSelectedImage()
+		}
 		if id, name, ok := a.tabs[a.active].Selected(); ok {
 			var cmd tea.Cmd
 			a.details, cmd = NewDetailsView(a.ctx, a.client, id, name, a.width, a.bodyHeight())
@@ -267,6 +300,12 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "S":
 		a.ask("start", a.client.Start)
 	case "x":
+		if images, ok := a.tabs[a.active].(*ImagesView); ok {
+			if removal, ok := images.SelectedImage(); ok {
+				a.askImageRemoval(removal)
+			}
+			return nil
+		}
 		a.ask("stop", a.client.Stop)
 	case "R":
 		a.ask("restart", a.client.Restart)
@@ -306,6 +345,8 @@ func (a *App) render() string {
 		body, status = a.logs.View(), a.logs.Status()
 	case a.details != nil:
 		body, status = a.details.View(), a.details.Status()
+	case a.imageDetails != nil:
+		body, status = a.imageDetails.View(), a.imageDetails.Status()
 	default:
 		t := a.tabs[a.active]
 		body, status = t.View(), t.Status()
@@ -349,6 +390,9 @@ func (a *App) footer() string {
 		}
 		return a.shell.input.View() + " " + render.Dim.Render("enter open · esc cancel")
 	case a.confirm != nil:
+		if a.confirm.question != "" {
+			return render.Warn.Render(a.confirm.question + " (y/N)")
+		}
 		return render.Warn.Render(fmt.Sprintf("%s container %s? (y/N)", a.confirm.verb, a.confirm.name))
 	case a.filtering:
 		return a.filter.View()
@@ -359,10 +403,16 @@ func (a *App) footer() string {
 		return hints("esc", "back", "/", "regex filter", "ctrl+l", "clear filter", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/follow")
 	case a.details != nil:
 		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "enter", "logs", "e", "shell")
+	case a.imageDetails != nil:
+		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "x", "remove tag/image")
 	}
 	keys := []string{"tab", "switch", "/", "filter", "s/r", "sort: " + string(a.tabs[a.active].SortKey())}
 	if _, _, ok := a.tabs[a.active].Selected(); ok {
 		keys = append(keys, "d", "details", "enter", "logs", "e", "shell", "S/x/R", "start/stop/restart")
+	} else if images, ok := a.tabs[a.active].(*ImagesView); ok {
+		if _, ok := images.SelectedImage(); ok {
+			keys = append(keys, "d/enter", "image details", "x", "remove tag/image")
+		}
 	} else if projects, ok := a.tabs[a.active].(*ProjectsView); ok && projects.selectedProject() != nil {
 		keys = append(keys, "space", "expand/collapse", "enter", "project logs")
 	}
@@ -382,8 +432,8 @@ func (a *App) helpView() string {
 		{fmt.Sprintf("tab / shift+tab, 1-%d", len(a.tabs)), "switch tabs"},
 		{"↑↓ / j k, pgup/pgdn, g/G", "move selection"},
 		{"/", "filter (enter keeps, esc clears)"},
-		{"enter", "follow logs of selected container or project"},
-		{"d", "inspect selected container's details"},
+		{"enter", "follow container/project logs, or inspect selected image"},
+		{"d", "inspect selected container or image"},
 		{"e", "open a shell in the selected container (choose executable, enter to open)"},
 		{"S / x / R", "start (or unpause) / stop / restart selected container"},
 		{"ctrl+r", "refresh now"},
