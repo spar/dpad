@@ -25,7 +25,7 @@ make demo-down
 
 | Command | What it adds over docker |
 |---|---|
-| `dn` | Full-screen TUI: Containers / Images / Stats / Projects tabs, filtering, container details, follow logs, start/stop/restart |
+| `dn` | Full-screen TUI: Containers / Images / Stats / Projects tabs, filtering, container details, follow logs, container shells, start/stop/restart |
 | `dn ps [-a] [--sort name\|created\|status] [-r]` | Shows state colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
 | `dn images [--sort size\|created\|name] [-r]` | Shows human sizes and a total-size footer; dangling images are dimmed |
 | `dn stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream]` | Live sorting (keys `c m n i p a`, `r` to reverse), with CPU and memory colored by threshold plus usage bars |
@@ -50,6 +50,7 @@ These cases go to `docker` unchanged:
 | `/` | filter the current tab (`enter` keeps, `esc` clears) |
 | `s` / `r` | cycle sort key / reverse |
 | `d` | open details of the selected container (`esc` back) |
+| `e` | choose a shell executable for the selected container (`enter` opens, `esc` cancels) |
 | `enter` | follow logs of the selected container (`esc` back) |
 | `space` (Projects) | expand/collapse the selected project |
 | `enter` (project row) | follow logs across the selected project (`esc` back) |
@@ -64,6 +65,19 @@ mounts. Scroll with `↑↓` / `j k`, `pgup` / `pgdn`, or `g` / `G`; use `←→
 long lines and `ctrl+r` to refresh the snapshot. Press `enter` to follow logs,
 then `esc` to return to details. From details, `esc` or `q` returns to the list
 with its filter, sort, and selection preserved. Environment variables are omitted.
+
+Press `e` from a container row in Containers, Stats, or Projects, or from its
+details pane, to open a shell. The prompt defaults to `/bin/sh`; replace it with
+an executable available in the container, such as `/bin/bash` or `powershell.exe`.
+Enter only the executable, without arguments. Docker must be installed in PATH,
+and the container must be running and not paused or restarting. This runs
+`docker exec -it CONTAINER EXECUTABLE` using the Docker CLI's environment and
+context settings. Images without a shell need an executable they actually contain.
+
+The shell takes over the terminal. Type `exit` or press `ctrl+d` to return to the
+same dashboard view, filter, sort, and selection; container lists and open details
+refresh afterward. Errors appear in the status, including recent Docker stderr
+when the process fails. Cancelling the prompt leaves the dashboard unchanged.
 
 In the log viewer, press `/` to search and filter buffered logs with a regular
 expression. Matches are highlighted and only matching lines are shown, including
