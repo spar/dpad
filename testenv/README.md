@@ -89,6 +89,9 @@ dn
    **Exited (137)** in red and drops off the Stats tab. The shell loop ignores
    SIGTERM, so docker has to kill it. Press `S` to bring it back.
 6. Press `3` for the Stats tab, then `c`/`m`/`n`/`i`/`p` to re-sort live.
+   Select `cpu-hog` or `mem-hog` to see two-minute CPU/memory history, averages,
+   and peaks below the table. History fills as samples arrive; enlarge a small
+   terminal to at least 80 columns to see the panel.
 7. Press `2` for Images and `?` for help.
 8. Press `4` for Projects. The `dn-demo` project shows service containers,
    running/total counts, and unhealthy containers. Press `space` on the project

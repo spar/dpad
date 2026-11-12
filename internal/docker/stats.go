@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/events"
@@ -31,8 +32,10 @@ type Stats struct {
 // StatsUpdate is emitted by WatchStats: either a fresh sample or notice that
 // the container's stream has ended (Gone).
 type StatsUpdate struct {
-	Stats Stats
-	Gone  bool
+	Stats      Stats
+	Gone       bool
+	Generation uint64
+	SampledAt  time.Time
 }
 
 // Calc derives display values from a raw stats response, using the same
@@ -129,8 +132,9 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 		// streams maps a container ID to its live stream. A restart replaces
 		// the entry while the old stream may still be shutting down, so each
 		// stream compares against its own handle before touching the entry.
-		streams = map[string]*statsStream{}
-		wg      sync.WaitGroup
+		streams        = map[string]*statsStream{}
+		wg             sync.WaitGroup
+		nextGeneration uint64
 	)
 
 	start := func(id, name string) {
@@ -140,10 +144,24 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 			return
 		}
 		cctx, cancel := context.WithCancel(ctx)
-		h := &statsStream{cancel}
+		nextGeneration++
+		h := &statsStream{cancel: cancel, generation: nextGeneration}
 		streams[id] = h
 		wg.Go(func() {
-			c.streamStats(cctx, id, name, out)
+			c.streamStats(cctx, id, name, func(st Stats, at time.Time) bool {
+				mu.Lock()
+				defer mu.Unlock()
+				// Replaced streams must not enqueue samples after a newer stream ends.
+				if streams[id] != h {
+					return false
+				}
+				select {
+				case out <- StatsUpdate{Stats: st, Generation: h.generation, SampledAt: at}:
+					return true
+				case <-ctx.Done():
+					return false
+				}
+			})
 			cancel()
 			mu.Lock()
 			defer mu.Unlock()
@@ -155,7 +173,7 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 			}
 			// Sent under mu so a new stream for id can't emit a sample first.
 			select {
-			case out <- StatsUpdate{Stats: Stats{ID: id, Name: name}, Gone: true}:
+			case out <- StatsUpdate{Stats: Stats{ID: id, Name: name}, Gone: true, Generation: h.generation}:
 			case <-ctx.Done():
 			}
 		})
@@ -213,9 +231,12 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 }
 
 // statsStream is one container's live stats stream in WatchStats.
-type statsStream struct{ cancel context.CancelFunc }
+type statsStream struct {
+	cancel     context.CancelFunc
+	generation uint64
+}
 
-func (c *Client) streamStats(ctx context.Context, id, name string, out chan<- StatsUpdate) {
+func (c *Client) streamStats(ctx context.Context, id, name string, emit func(Stats, time.Time) bool) {
 	res, err := c.api.ContainerStats(ctx, id, client.ContainerStatsOptions{Stream: true})
 	if err != nil {
 		return
@@ -227,9 +248,7 @@ func (c *Client) streamStats(ctx context.Context, id, name string, out chan<- St
 		if err := dec.Decode(&raw); err != nil {
 			return
 		}
-		select {
-		case out <- StatsUpdate{Stats: Calc(id, name, &raw)}:
-		case <-ctx.Done():
+		if !emit(Calc(id, name, &raw), raw.Read) {
 			return
 		}
 	}

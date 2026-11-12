@@ -92,6 +92,40 @@ func TestWatchStatsDie(t *testing.T) {
 	tr.waitShown(t, "web", true)
 }
 
+func TestWatchStatsGenerationsChangeOnRestart(t *testing.T) {
+	f := newFakeEngine("web")
+	tr := watch(t, f)
+	next := func() StatsUpdate {
+		t.Helper()
+		select {
+		case u := <-tr.ch:
+			return u
+		case <-time.After(3 * time.Second):
+			t.Fatal("no stats sample")
+			return StatsUpdate{}
+		}
+	}
+	first := next()
+	if !first.SampledAt.Equal(time.Unix(1000, 123456789)) {
+		t.Fatal("daemon timestamp was lost from stream update")
+	}
+	if first.Generation == 0 || first.Gone {
+		t.Fatal("initial sample has no stream identity")
+	}
+	f.send(events.ActionDie, "web")
+	f.send(events.ActionStart, "web")
+	for {
+		u := next()
+		if u.Gone {
+			continue
+		}
+		if u.Generation <= first.Generation {
+			t.Fatalf("restart reused stream generation: %d", u.Generation)
+		}
+		break
+	}
+}
+
 func TestWatchStatsResubscribes(t *testing.T) {
 	f := newFakeEngine("web")
 	tr := watch(t, f)

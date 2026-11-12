@@ -3,8 +3,6 @@ package tui
 import (
 	"context"
 	"fmt"
-	"maps"
-	"slices"
 	"strings"
 	"time"
 
@@ -24,15 +22,17 @@ type (
 // StatsView shows live, sortable resource usage for running containers.
 type StatsView struct {
 	list[docker.Stats]
-	ctx      context.Context
-	client   dockerClient
-	ch       <-chan docker.StatsUpdate
-	data     map[string]docker.Stats
-	watching bool // WatchStats requested
+	ctx          context.Context
+	client       dockerClient
+	ch           <-chan docker.StatsUpdate
+	data         map[string]docker.Stats
+	watching     bool // WatchStats requested
+	history      map[string]*statsHistory
+	historyCache statsHistoryCache
 }
 
 func NewStatsView(ctx context.Context, c dockerClient, key sortx.Key, reverse bool) *StatsView {
-	return &StatsView{ctx: ctx, client: c, data: map[string]docker.Stats{}, list: list[docker.Stats]{
+	return &StatsView{ctx: ctx, client: c, data: map[string]docker.Stats{}, history: map[string]*statsHistory{}, list: list[docker.Stats]{
 		columns: render.StatsColumns,
 		keys:    sortx.StatsKeys,
 		sortCol: map[sortx.Key]int{sortx.Name: 0, sortx.CPU: 1, sortx.Mem: 3, sortx.Net: 6, sortx.IO: 7, sortx.PIDs: 8},
@@ -101,22 +101,74 @@ func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case statsStartedMsg:
 		v.ch = msg.ch
+		clear(v.data)
+		clear(v.history)
+		v.historyCache = statsHistoryCache{}
 		v.setItems(nil, nil)
 		return waitStats(v.ch)
 	case statsBatchMsg:
+		now := time.Now()
 		for _, u := range msg {
+			h := v.history[u.Stats.ID]
+			if h != nil && u.Generation < h.generation {
+				continue
+			}
 			if u.Gone {
 				delete(v.data, u.Stats.ID)
+				delete(v.history, u.Stats.ID)
+				if v.historyCache.history == h {
+					v.historyCache = statsHistoryCache{}
+				}
 			} else {
+				if !v.noHighlight {
+					if h == nil || h.generation != u.Generation {
+						h = &statsHistory{generation: u.Generation}
+						v.history[u.Stats.ID] = h
+					}
+					if !h.add(u.Stats, u.SampledAt, now) {
+						continue
+					}
+				}
 				v.data[u.Stats.ID] = u.Stats
 			}
 		}
-		v.setItems(slices.Collect(maps.Values(v.data)), nil)
+		items := v.items[:0]
+		for _, s := range v.data {
+			items = append(items, s)
+		}
+		v.setItems(items, nil)
 		return waitStats(v.ch)
 	case statsErrMsg:
 		v.err = msg.err
 	}
 	return nil
+}
+
+func (v *StatsView) historyVisible() bool { return !v.noHighlight && v.width >= 80 && v.height >= 10 }
+
+func (v *StatsView) SetSize(width, height int) {
+	v.list.SetSize(width, height)
+	if v.historyVisible() {
+		v.page = max(height-7, 1)
+	}
+}
+
+func (v *StatsView) View() string {
+	if !v.historyVisible() || v.err != nil || !v.loaded {
+		return v.list.View()
+	}
+	id, name, ok := v.Selected()
+	if !ok {
+		return v.list.View()
+	}
+	panel := v.historyPanel(id, name, time.Now())
+	if panel == "" {
+		return v.list.View()
+	}
+	height := v.height - 5
+	table := v.view(height)
+	padding := max(height-strings.Count(table, "\n")-1, 0)
+	return table + strings.Repeat("\n", padding) + "\n\n" + panel
 }
 
 // statsShortcuts are single keys that pick a sort key directly.

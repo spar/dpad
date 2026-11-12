@@ -110,6 +110,10 @@ func (l *list[T]) SetFilter(filter string) {
 func (l *list[T]) Filter() string { return l.filter }
 
 func (l *list[T]) View() string {
+	return l.view(l.height)
+}
+
+func (l *list[T]) view(height int) string {
 	switch {
 	case l.err != nil:
 		return render.Error.Render("error: " + l.err.Error())
@@ -129,7 +133,7 @@ func (l *list[T]) View() string {
 		sel = -1
 	}
 	t := render.Table{Columns: l.sortedColumns(), Rows: cells, Width: l.width}
-	return t.Window(sel, l.height)
+	return t.Window(sel, height)
 }
 
 // sortedColumns returns the columns with an arrow on the sorted one's header:

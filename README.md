@@ -25,7 +25,7 @@ make demo-down
 
 | Command | What it adds over docker |
 |---|---|
-| `dn` | Full-screen TUI: Containers / Images / Stats / Projects tabs, filtering, container details, follow logs, container shells, start/stop/restart |
+| `dn` | Full-screen TUI: Containers / Images / Stats / Projects tabs, stats history, filtering, container/image details, logs, shells, confirmed actions |
 | `dn ps [-a] [--sort name\|created\|status] [-r]` | Shows state colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
 | `dn images [--sort size\|created\|name] [-r]` | Shows human sizes and a total-size footer; dangling images are dimmed |
 | `dn stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream]` | Live sorting (keys `c m n i p a`, `r` to reverse), with CPU and memory colored by threshold plus usage bars |
@@ -125,6 +125,24 @@ a refresh and a new confirmation. Removal never forces deletion or prunes parent
 images. Success returns to the refreshed list with the same filter/sort and
 selection, or the adjacent row when the selected reference was removed. Image
 sizes include shared layers and are not a guarantee of disk space reclaimed.
+
+The TUI Stats tab shows CPU and memory sparklines for the selected container,
+with average and peak usage over the last two minutes of received samples.
+History starts when Stats is first opened and stays in memory for this session.
+Each container has 120 fixed one-second buckets; samples within a second are
+aggregated, and compressed chart columns retain their peaks so short spikes stay
+visible. Blank columns mean no samples in that interval; dots mean measured zero.
+CPU scales to at least 100% and expands for multi-core usage; memory scales to its
+recent peak. Both scales are shown below the charts. Averages use received
+samples and do not fill missing intervals. Restarted/reconnected streams start
+fresh history, and stopped containers' history is discarded.
+
+The panel follows selection through sorting/filtering. It hides automatically
+below 80 columns or 10 body rows. Standalone `dn stats`, snapshots, and piped
+output keep their existing table format without history storage. History uses
+about 6 KiB per tracked container plus map overhead, adds no Docker requests,
+and retains the existing batched stats redraws; only the selected container's
+chart is rendered.
 
 ## Colors
 Output is plain when piped, when `NO_COLOR` is set, or with `--no-color`.
