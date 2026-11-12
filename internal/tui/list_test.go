@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
-	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
 
+	"dockernext/internal/docker"
 	"dockernext/internal/render"
 	"dockernext/internal/sortx"
 )
@@ -85,39 +84,15 @@ func BenchmarkContainersView(b *testing.B) {
 func TestContainersReloadOnChange(t *testing.T) {
 	f := &fakeClient{containers: []container.Summary{{ID: "1", Names: []string{"/web"}}}}
 	v := NewContainersView(context.Background(), f)
-	ch := make(chan struct{}, 1)
-	ch <- struct{}{}
-	cmd := v.Update(containersWatchMsg{ch: ch})
-	changed, ok := cmd().(containersChangedMsg)
-	if !ok {
-		t.Fatalf("a change signal should produce containersChangedMsg")
+	cmd := v.Update(eventsBatchMsg{updates: []docker.EventUpdate{{Event: docker.ContainerEvent{ID: "1", Action: "start"}}, {Event: docker.ContainerEvent{ID: "2", Action: "die"}}}})
+	if cmd == nil {
+		t.Fatal("event batch did not refresh containers")
 	}
-	// The change reloads containers (and keeps waiting for more changes).
-	for _, msg := range runBatch(v.Update(changed)) {
-		v.Update(msg)
-	}
+	v.Update(cmd())
+
 	if !v.loaded || len(v.items) != 1 {
 		t.Errorf("containers not reloaded after a change: %v", v.items)
 	}
-}
-
-// runBatch runs the commands in a tea.Batch that finish promptly.
-func runBatch(cmd tea.Cmd) []tea.Msg {
-	var out []tea.Msg
-	batch, ok := cmd().(tea.BatchMsg)
-	if !ok {
-		return nil
-	}
-	for _, c := range batch {
-		done := make(chan tea.Msg, 1)
-		go func() { done <- c() }()
-		select {
-		case m := <-done:
-			out = append(out, m)
-		case <-time.After(200 * time.Millisecond):
-		}
-	}
-	return out
 }
 
 func TestSortedColumnsMarksSortedHeader(t *testing.T) {

@@ -38,7 +38,7 @@ type dockerClient interface {
 	Restart(ctx context.Context, id string) error
 	Logs(ctx context.Context, id string, opts docker.LogOptions, out chan<- docker.LogLine) error
 	WatchStats(ctx context.Context) (<-chan docker.StatsUpdate, error)
-	ContainerChanges(ctx context.Context) (<-chan struct{}, error)
+	WatchEvents(ctx context.Context) <-chan docker.EventUpdate
 }
 
 var _ dockerClient = (*docker.Client)(nil)

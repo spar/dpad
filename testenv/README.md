@@ -111,6 +111,11 @@ dn
 10. Press `2` for Images and `d` to inspect an image's tags, metadata, and containers
     using it. Press `esc`, then `x` to read the removal confirmation and `n` to
     cancel. Images used by stopped containers are protected from deletion too.
+11. Press `5` for Events to see lifecycle and health changes recorded since opening
+    the TUI. Filter with `/dn-demo`, or search `die`, `unhealthy`, or a service name.
+    Restart a demo container in another terminal and watch the new events arrive.
+    Navigate to keep an older event selected, `g` to follow newest arrivals again,
+    or `enter` to inspect that event's container. The latest 1,000 records are kept.
 
 **Passthrough:**
 ```sh
