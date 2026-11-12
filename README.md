@@ -185,6 +185,21 @@ Output is plain when piped, when `NO_COLOR` is set, or with `--no-color`.
 (`docker context use …`), so it talks to the same daemon as `docker`. That
 includes colima, Docker Desktop, and remote contexts.
 
+The TUI shows its bound context/endpoint and connection state below the tabs.
+A single daemon ping runs every two seconds with a two-second timeout. Failed
+probes retry with backoff from one to five seconds; recovery refreshes lists and
+open details without resetting filters or selection. In list tabs, `ctrl+r` refreshes and
+requests an immediate connection check. The endpoint stays fixed for the session;
+restart `dn` after switching contexts.
+
+Live Stats retries failed startup and interrupted container streams automatically,
+also with one-to-five-second backoff. Samples that stop advancing for five seconds
+show `—` and lose their old rates/history; the summary counts available streams
+and excludes unavailable values. One shared watchdog restarts streams with no
+progress for ten seconds. Recovered streams establish fresh rate/history
+baselines. This applies to both the Stats tab and standalone `dn stats`, where
+`ctrl+r` retries a failed watcher immediately. Quitting cancels background work.
+
 ## Layout
 ```
 cmd/                  cobra commands, passthrough routing

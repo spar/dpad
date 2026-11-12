@@ -26,6 +26,8 @@ const pollInterval = 10 * time.Second
 
 // dockerClient is what the TUI needs from docker.Client, so tests can fake it.
 type dockerClient interface {
+	ConnectionLabel() string
+	Ping(context.Context) error
 	Containers(ctx context.Context, all bool) ([]container.Summary, error)
 	Images(ctx context.Context) ([]image.Summary, error)
 	ImageDetails(ctx context.Context, id string) (docker.ImageInfo, error)

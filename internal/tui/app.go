@@ -51,10 +51,13 @@ type App struct {
 	help          bool
 	flash         string
 	flashErr      bool
+	daemon        daemonConnection
 }
 
 // Run starts the TUI and blocks until the user quits.
 func Run(ctx context.Context, c dockerClient) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	fi := textinput.New()
 	fi.Prompt = "/"
 	tabs := []tab{
@@ -63,7 +66,7 @@ func Run(ctx context.Context, c dockerClient) error {
 		NewStatsView(ctx, c, sortx.CPU, false),
 		NewProjectsView(),
 	}
-	app := &App{ctx: ctx, client: c, tabs: tabs, filter: fi}
+	app := &App{ctx: ctx, client: c, tabs: tabs, filter: fi, daemon: daemonConnection{label: c.ConnectionLabel()}}
 	app.resize(120, 30)
 	_, err := tea.NewProgram(app, programOptions(ctx)...).Run()
 	return err
@@ -74,10 +77,11 @@ func (a *App) Init() tea.Cmd {
 	for _, t := range a.tabs {
 		cmds = append(cmds, t.Init())
 	}
+	cmds = append(cmds, a.probeDaemon())
 	return tea.Batch(append(cmds, a.tabs[a.active].Focus())...)
 }
 
-func (a *App) bodyHeight() int { return max(a.height-3, 1) }
+func (a *App) bodyHeight() int { return max(a.height-4, 1) }
 
 func (a *App) resize(width, height int) {
 	a.width, a.height = width, height
@@ -106,6 +110,13 @@ func (a *App) setFilter(f string) {
 
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case daemonProbeMsg:
+		return a, a.applyDaemonProbe(msg)
+	case daemonProbeTickMsg:
+		if msg.generation != a.daemon.generation {
+			return a, nil
+		}
+		return a, a.probeDaemon()
 	case tea.WindowSizeMsg:
 		a.resize(msg.Width, msg.Height)
 		return a, nil
@@ -263,7 +274,7 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "?":
 		a.help = true
 	case "ctrl+r":
-		return func() tea.Msg { return refreshMsg{} }
+		return tea.Batch(func() tea.Msg { return refreshMsg{} }, a.probeDaemon())
 	case "enter":
 		if _, ok := a.tabs[a.active].(*ImagesView); ok {
 			return a.openSelectedImage()
@@ -362,7 +373,7 @@ func (a *App) render() string {
 	if n := a.bodyHeight() - lipgloss.Height(body); n > 0 {
 		body += strings.Repeat("\n", n)
 	}
-	return strings.Join([]string{a.tabBar(), body, render.Dim.Render(status), a.footer()}, "\n")
+	return strings.Join([]string{a.tabBar(), a.connectionBar(), body, render.Dim.Render(status), a.footer()}, "\n")
 }
 
 func (a *App) tabBar() string {

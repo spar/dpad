@@ -3,6 +3,8 @@ package docker
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"maps"
 	"slices"
 	"strings"
@@ -29,14 +31,16 @@ type Stats struct {
 	PIDs       uint64
 }
 
-// StatsUpdate is emitted by WatchStats: either a fresh sample or notice that
-// the container's stream has ended (Gone).
+// StatsUpdate reports a fresh sample, a retrying stream (Unavailable), or a
+// container removed from the running set (Gone).
 type StatsUpdate struct {
-	Stats      Stats
-	Rates      Rates
-	Gone       bool
-	Generation uint64
-	SampledAt  time.Time
+	Stats       Stats
+	Rates       Rates
+	Gone        bool
+	Generation  uint64
+	SampledAt   time.Time
+	Unavailable bool
+	Err         error
 }
 
 // Calc derives display values from a raw stats response, using the same
@@ -127,6 +131,10 @@ func (c *Client) StatsSnapshot(ctx context.Context) ([]Stats, error) {
 // WatchStats streams stats for all running containers, following containers as
 // they start and stop. The channel is closed when ctx is cancelled.
 func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
+	return c.watchStats(ctx, 10*time.Second)
+}
+
+func (c *Client) watchStats(ctx context.Context, idleTimeout time.Duration) (<-chan StatsUpdate, error) {
 	out := make(chan StatsUpdate, 64)
 	var (
 		mu sync.Mutex
@@ -149,20 +157,73 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 		h := &statsStream{cancel: cancel, generation: nextGeneration}
 		streams[id] = h
 		wg.Go(func() {
-			c.streamStats(cctx, id, name, func(st Stats, rates Rates, at time.Time) bool {
+			delay := resubscribeDelay
+			for cctx.Err() == nil {
+				attemptCtx, attemptCancel := context.WithCancel(cctx)
 				mu.Lock()
-				defer mu.Unlock()
-				// Replaced streams must not enqueue samples after a newer stream ends.
 				if streams[id] != h {
-					return false
+					mu.Unlock()
+					attemptCancel()
+					break
 				}
+				h.attemptCancel, h.lastProgress, h.sourceAt = attemptCancel, time.Now(), time.Time{}
+				mu.Unlock()
+				err := c.streamStats(attemptCtx, id, name, func(st Stats, rates Rates, at time.Time) bool {
+					mu.Lock()
+					defer mu.Unlock()
+					// Replaced streams must not enqueue samples after a newer stream ends.
+					if streams[id] != h {
+						return false
+					}
+					select {
+					case out <- StatsUpdate{Stats: st, Rates: rates, Generation: h.generation, SampledAt: at}:
+						if at.IsZero() || h.sourceAt.IsZero() || at.After(h.sourceAt) {
+							h.lastProgress = time.Now()
+							h.sourceAt = at
+						}
+						delay = resubscribeDelay
+						return true
+					case <-ctx.Done():
+						return false
+					}
+				})
+				if attemptCtx.Err() != nil && cctx.Err() == nil {
+					err = errors.New("stats stream timed out")
+				}
+				attemptCancel()
+				if cctx.Err() != nil {
+					break
+				}
+				mu.Lock()
+				if streams[id] != h {
+					mu.Unlock()
+					break
+				}
+				h.attemptCancel = nil
 				select {
-				case out <- StatsUpdate{Stats: st, Rates: rates, Generation: h.generation, SampledAt: at}:
-					return true
-				case <-ctx.Done():
-					return false
+				case out <- StatsUpdate{Stats: Stats{ID: id, Name: name}, Generation: h.generation, Unavailable: true, Err: err}:
+				case <-cctx.Done():
 				}
-			})
+				mu.Unlock()
+				timer := time.NewTimer(delay)
+				select {
+				case <-cctx.Done():
+					timer.Stop()
+				case <-timer.C:
+				}
+				if cctx.Err() != nil {
+					break
+				}
+				delay = min(delay*2, maxResubscribeDelay)
+				mu.Lock()
+				if streams[id] != h {
+					mu.Unlock()
+					break
+				}
+				nextGeneration++
+				h.generation = nextGeneration
+				mu.Unlock()
+			}
 			cancel()
 			mu.Lock()
 			defer mu.Unlock()
@@ -196,7 +257,9 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 	// Start streams for running containers and stop streams for ones that
 	// are gone; runs on every (re)subscription to events.
 	resync := func() error {
-		list, err := c.Containers(ctx, false)
+		requestCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		list, err := c.Containers(requestCtx, false)
 		if err != nil {
 			return err
 		}
@@ -223,6 +286,25 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 	if err != nil {
 		return nil, err
 	}
+	wg.Go(func() {
+		ticker := time.NewTicker(min(time.Second, idleTimeout/2))
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case now := <-ticker.C:
+				mu.Lock()
+				for _, h := range streams {
+					if h.attemptCancel != nil && now.Sub(h.lastProgress) >= idleTimeout {
+						h.attemptCancel()
+						h.attemptCancel = nil
+					}
+				}
+				mu.Unlock()
+			}
+		}
+	})
 	go func() {
 		loop()
 		wg.Wait()
@@ -233,14 +315,17 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 
 // statsStream is one container's live stats stream in WatchStats.
 type statsStream struct {
-	cancel     context.CancelFunc
-	generation uint64
+	cancel        context.CancelFunc
+	generation    uint64
+	attemptCancel context.CancelFunc
+	lastProgress  time.Time
+	sourceAt      time.Time
 }
 
-func (c *Client) streamStats(ctx context.Context, id, name string, emit func(Stats, Rates, time.Time) bool) {
+func (c *Client) streamStats(ctx context.Context, id, name string, emit func(Stats, Rates, time.Time) bool) error {
 	res, err := c.api.ContainerStats(ctx, id, client.ContainerStatsOptions{Stream: true})
 	if err != nil {
-		return
+		return err
 	}
 	defer res.Body.Close()
 	dec := json.NewDecoder(res.Body)
@@ -248,12 +333,12 @@ func (c *Client) streamStats(ctx context.Context, id, name string, emit func(Sta
 	for {
 		var raw container.StatsResponse
 		if err := dec.Decode(&raw); err != nil {
-			return
+			return err
 		}
 		st := Calc(id, name, &raw)
 		rates := tracker.update(st, raw.Read, len(raw.Networks), blockRateSources(raw.BlkioStats.IoServiceBytesRecursive))
 		if !emit(st, rates, raw.Read) {
-			return
+			return io.EOF
 		}
 	}
 }

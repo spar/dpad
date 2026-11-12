@@ -105,6 +105,10 @@ func StatsRateRow(s docker.Stats, r docker.Rates) []string {
 	return statsRow(s, net, block)
 }
 
+func UnavailableStatsRow(s docker.Stats) []string {
+	return []string{Bold.Render(s.Name), "—", "", "—", "—", "", "— / —", "— / —", "—"}
+}
+
 func statsRow(s docker.Stats, net, block string) []string {
 	return []string{
 		Bold.Render(s.Name),

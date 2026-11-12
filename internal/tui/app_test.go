@@ -16,6 +16,7 @@ import (
 
 func newTestApp() *App {
 	a := &App{
+		ctx:    context.Background(),
 		tabs:   []tab{NewContainersView(context.Background(), nil), NewImagesView(context.Background(), nil), NewStatsView(context.Background(), nil, sortx.CPU, false), NewProjectsView()},
 		filter: textinput.New(),
 	}
