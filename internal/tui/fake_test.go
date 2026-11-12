@@ -67,6 +67,6 @@ func (f *fakeClient) WatchStats(context.Context) (<-chan docker.StatsUpdate, err
 	return make(chan docker.StatsUpdate), nil
 }
 
-func (f *fakeClient) ContainerChanges(context.Context) (<-chan struct{}, error) {
-	return make(chan struct{}), nil
+func (f *fakeClient) WatchEvents(context.Context) <-chan docker.EventUpdate {
+	return make(chan docker.EventUpdate)
 }

@@ -17,7 +17,7 @@ import (
 func newTestApp() *App {
 	a := &App{
 		ctx:    context.Background(),
-		tabs:   []tab{NewContainersView(context.Background(), nil), NewImagesView(context.Background(), nil), NewStatsView(context.Background(), nil, sortx.CPU, false), NewProjectsView()},
+		tabs:   []tab{NewContainersView(context.Background(), nil), NewImagesView(context.Background(), nil), NewStatsView(context.Background(), nil, sortx.CPU, false), NewProjectsView(), NewEventsView(context.Background(), nil)},
 		filter: textinput.New(),
 	}
 	a.resize(120, 30)
@@ -48,7 +48,7 @@ func TestAppSwitchTabs(t *testing.T) {
 	for _, tt := range []struct {
 		key  string
 		want int
-	}{{"3", 2}, {"1", 0}, {"tab", 1}, {"4", 3}, {"0", 3}, {"tab", 0}} {
+	}{{"3", 2}, {"1", 0}, {"tab", 1}, {"4", 3}, {"0", 3}, {"tab", 4}, {"tab", 0}} {
 		press(a, tt.key)
 		if a.active != tt.want {
 			t.Errorf("after %q active = %d, want %d", tt.key, a.active, tt.want)

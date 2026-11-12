@@ -18,12 +18,7 @@ type (
 		items []container.Summary
 		err   error
 	}
-	containersTickMsg  struct{}
-	containersWatchMsg struct {
-		ch  <-chan struct{}
-		err error
-	}
-	containersChangedMsg struct{ ch <-chan struct{} }
+	containersTickMsg struct{}
 	// refreshMsg asks list tabs to reload now (e.g. after start/stop).
 	refreshMsg struct{}
 )
@@ -31,8 +26,9 @@ type (
 // ContainersView lists all containers with state colors.
 type ContainersView struct {
 	list[container.Summary]
-	ctx    context.Context
-	client dockerClient
+	ctx              context.Context
+	client           dockerClient
+	loading, pending bool
 }
 
 func NewContainersView(ctx context.Context, c dockerClient) *ContainersView {
@@ -57,53 +53,39 @@ func NewContainersView(ctx context.Context, c dockerClient) *ContainersView {
 func (v *ContainersView) Title() string { return "Containers" }
 
 func (v *ContainersView) load() tea.Cmd {
+	if v.loading {
+		v.pending = true
+		return nil
+	}
+	v.loading = true
 	return func() tea.Msg {
-		items, err := v.client.Containers(v.ctx, true)
+		ctx, cancel := context.WithTimeout(v.ctx, 5*time.Second)
+		defer cancel()
+		items, err := v.client.Containers(ctx, true)
 		return containersMsg{items, err}
 	}
 }
 
-// Init follows daemon events, which also trigger the first load.
-func (v *ContainersView) Init() tea.Cmd { return tea.Batch(v.watch(), tick(containersTickMsg{})) }
-
-func (v *ContainersView) watch() tea.Cmd {
-	return func() tea.Msg {
-		ch, err := v.client.ContainerChanges(v.ctx)
-		return containersWatchMsg{ch, err}
-	}
-}
-
-// changeDebounce gives a burst of events (e.g. compose up) time to finish
-// before reloading.
-const changeDebounce = 100 * time.Millisecond
-
-func waitChange(ch <-chan struct{}) tea.Cmd {
-	return func() tea.Msg {
-		if _, ok := <-ch; !ok {
-			return nil
-		}
-		time.Sleep(changeDebounce)
-		select {
-		case <-ch:
-		default:
-		}
-		return containersChangedMsg{ch}
-	}
-}
+// Event batches from EventsView also refresh this list, sharing its subscription.
+func (v *ContainersView) Init() tea.Cmd { return tea.Batch(v.load(), tick(containersTickMsg{})) }
 
 func (v *ContainersView) Focus() tea.Cmd { return nil }
 
 func (v *ContainersView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case containersMsg:
+		v.loading = false
 		v.setItems(msg.items, msg.err)
-	case containersWatchMsg:
-		if msg.err != nil {
-			return v.load() // keep going on the poll alone
+		if v.pending {
+			v.pending = false
+			return v.load()
 		}
-		return waitChange(msg.ch)
-	case containersChangedMsg:
-		return tea.Batch(v.load(), waitChange(msg.ch))
+	case eventsBatchMsg:
+		for _, u := range msg.updates {
+			if u.Subscribed || u.Event.ID != "" {
+				return v.load()
+			}
+		}
 	case containersTickMsg:
 		return tea.Batch(v.load(), tick(containersTickMsg{}))
 	case refreshMsg:

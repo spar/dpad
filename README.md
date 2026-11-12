@@ -25,7 +25,7 @@ make demo-down
 
 | Command | What it adds over docker |
 |---|---|
-| `dn` | Full-screen TUI: Containers / Images / Stats / Projects tabs, stats history, filtering, container/image details, logs, shells, confirmed actions |
+| `dn` | Full-screen TUI: Containers / Images / Stats / Projects / Events tabs, stats history, filtering, container/image details, logs, shells, confirmed actions |
 | `dn ps [-a] [--sort name\|created\|status] [-r]` | Shows state colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
 | `dn images [--sort size\|created\|name] [-r]` | Shows human sizes and a total-size footer; dangling images are dimmed |
 | `dn stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream] [--totals]` | Live sorting, CPU/memory usage bars, network/disk throughput; `t` toggles I/O rates/totals |
@@ -45,7 +45,7 @@ These cases go to `docker` unchanged:
 ### TUI keys
 | Key | Action |
 |---|---|
-| `tab` / `shift+tab` / `1-4` | switch tab |
+| `tab` / `shift+tab` / `1-5` | switch tab |
 | `↑↓` `j k` `pgup pgdn` `g G` | move |
 | `/` | filter the current tab (`enter` keeps, `esc` clears) |
 | `s` / `r` | cycle sort key / reverse |
@@ -56,6 +56,8 @@ These cases go to `docker` unchanged:
 | `space` (Projects) | expand/collapse the selected project |
 | `enter` (project row) | follow logs across the selected project (`esc` back) |
 | `enter` (Images) | inspect the selected image |
+| `d` / `enter` (Events) | inspect the event's container |
+| `r` / `g` (Events) | reverse time order / return to newest and follow arrivals |
 | `x` (Images or image details) | confirm removal of the selected tag or image |
 | `S` / `x` / `R` | start (or unpause) / stop / restart (asks y/N) |
 | `ctrl+r` | refresh |
@@ -142,6 +144,31 @@ a refresh and a new confirmation. Removal never forces deletion or prunes parent
 images. Success returns to the refreshed list with the same filter/sort and
 selection, or the adjacent row when the selected reference was removed. Image
 sizes include shared layers and are not a guarantee of disk space reclaimed.
+
+The Events tab (`5`) records container lifecycle and health events from TUI
+startup, including create, start, stop, restart, die, destroy, pause/unpause,
+rename, update, kill, OOM, and health changes. Rows show local timestamps,
+container names, Compose project/service labels, and exit codes, signals, or
+image names when available. No per-event container inspection is needed; names
+and project labels come from the event itself. Noisy exec events are excluded.
+
+Use `/` for a case-insensitive substring filter by container name/ID, project,
+service, event type, or image. Newest arrivals appear first; navigating keeps
+the selected event fixed while new events arrive. `r` reverses order, and `g`
+returns to the newest event and follows arrivals. `d` or `enter` opens current
+container details; `esc` returns with the timeline filter/order/selection intact.
+Destroyed containers can still have events in the timeline, but their details
+are unavailable. Shell and lifecycle actions are offered on the current
+container lists, rather than historical event rows.
+
+The session keeps the latest 1,000 records in a fixed ring, replacing the oldest
+as new records arrive. Collection shares the container-list event subscription,
+uses bounded queues, and batches updates at most ten times per second.
+Interrupted subscriptions retry with one-to-five-second backoff, retaining the
+buffer and view settings. A `stream gap` record marks an interruption: events
+missed during disconnection are not replayed. Filters also apply to these gap
+records; clear the filter or search `stream gap` to see them. This is an in-memory
+session timeline, not a persistent audit log or historical event fetch.
 
 The TUI Stats tab shows CPU and memory sparklines for the selected container,
 with average and peak usage over the last two minutes of received samples.

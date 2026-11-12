@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"charm.land/bubbles/v2/textinput"
@@ -34,7 +35,7 @@ var (
 	keyStyle    = lipgloss.NewStyle().Bold(true)
 )
 
-// App is the full-screen TUI with Containers / Images / Stats / Projects tabs.
+// App is the full-screen TUI with Containers / Images / Stats / Projects / Events tabs.
 type App struct {
 	ctx           context.Context
 	client        dockerClient
@@ -65,6 +66,7 @@ func Run(ctx context.Context, c dockerClient) error {
 		NewImagesView(ctx, c),
 		NewStatsView(ctx, c, sortx.CPU, false),
 		NewProjectsView(),
+		NewEventsView(ctx, c),
 	}
 	app := &App{ctx: ctx, client: c, tabs: tabs, filter: fi, daemon: daemonConnection{label: c.ConnectionLabel()}}
 	app.resize(120, 30)
@@ -259,6 +261,13 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		return a.imageDetails.Update(msg)
 	}
 
+	if _, ok := a.tabs[a.active].(*EventsView); ok {
+		switch key {
+		case "e", "S", "x", "R":
+			return nil
+		}
+	}
+
 	switch key {
 	case "q":
 		return tea.Quit
@@ -276,6 +285,9 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "ctrl+r":
 		return tea.Batch(func() tea.Msg { return refreshMsg{} }, a.probeDaemon())
 	case "enter":
+		if _, ok := a.tabs[a.active].(*EventsView); ok {
+			return a.openSelectedContainer()
+		}
 		if _, ok := a.tabs[a.active].(*ImagesView); ok {
 			return a.openSelectedImage()
 		}
@@ -295,11 +307,7 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		if _, ok := a.tabs[a.active].(*ImagesView); ok {
 			return a.openSelectedImage()
 		}
-		if id, name, ok := a.tabs[a.active].Selected(); ok {
-			var cmd tea.Cmd
-			a.details, cmd = NewDetailsView(a.ctx, a.client, id, name, a.width, a.bodyHeight())
-			return cmd
-		}
+		return a.openSelectedContainer()
 	case "e":
 		if id, name, ok := a.tabs[a.active].Selected(); ok {
 			return a.openShell(id, name)
@@ -321,6 +329,15 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			return a.switchTab(int(key[0] - '1'))
 		}
 		return a.tabs[a.active].HandleKey(key)
+	}
+	return nil
+}
+
+func (a *App) openSelectedContainer() tea.Cmd {
+	if id, name, ok := a.tabs[a.active].Selected(); ok {
+		var cmd tea.Cmd
+		a.details, cmd = NewDetailsView(a.ctx, a.client, id, name, a.width, a.bodyHeight())
+		return cmd
 	}
 	return nil
 }
@@ -413,6 +430,10 @@ func (a *App) footer() string {
 	case a.imageDetails != nil:
 		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "x", "remove tag/image")
 	}
+	if _, ok := a.tabs[a.active].(*EventsView); ok {
+		return hints("tab", "switch", "/", "filter", "r", "reverse time", "g", "top/follow", "d/enter", "container details", "?", "help", "q", "quit")
+	}
+
 	keys := []string{"tab", "switch", "/", "filter", "s/r", "sort: " + string(a.tabs[a.active].SortKey())}
 	if stats, ok := a.tabs[a.active].(*StatsView); ok {
 		mode := "totals"
@@ -446,12 +467,15 @@ func (a *App) helpView() string {
 		{fmt.Sprintf("tab / shift+tab, 1-%d", len(a.tabs)), "switch tabs"},
 		{"↑↓ / j k, pgup/pgdn, g/G", "move selection"},
 		{"/", "filter (enter keeps, esc clears)"},
-		{"enter", "follow container/project logs, or inspect selected image"},
+		{"enter", "follow container/project logs, or inspect selected image/event"},
 		{"d", "inspect selected container or image"},
 		{"e", "open a shell in the selected container (choose executable, enter to open)"},
 		{"S / x / R", "start (or unpause) / stop / restart selected container"},
 		{"ctrl+r", "refresh now"},
 		{"q, ctrl+c", "quit"},
+	}
+	if _, ok := a.tabs[a.active].(*EventsView); ok {
+		global = slices.DeleteFunc(global, func(h [2]string) bool { return h[0] == "e" || h[0] == "S / x / R" })
 	}
 	rows := [][]string{}
 	for _, h := range append(global, a.tabs[a.active].Help()...) {
