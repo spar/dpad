@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/events"
@@ -68,7 +69,7 @@ func (f *fakeEngine) ContainerStats(ctx context.Context, id string, _ client.Con
 	f.mu.Unlock()
 	pr, pw := io.Pipe()
 	go func() {
-		_ = json.NewEncoder(pw).Encode(container.StatsResponse{PidsStats: container.PidsStats{Current: 1}})
+		_ = json.NewEncoder(pw).Encode(container.StatsResponse{Read: time.Unix(1000, 123456789), PidsStats: container.PidsStats{Current: 1}})
 		<-ctx.Done()
 		if hold != nil {
 			<-hold
