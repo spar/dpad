@@ -43,6 +43,7 @@ type App struct {
 	confirm       *pending
 	logs          *LogsView
 	details       *DetailsView
+	shell         *shellPrompt
 	help          bool
 	flash         string
 	flashErr      bool
@@ -85,6 +86,9 @@ func (a *App) resize(width, height int) {
 	if a.details != nil {
 		a.details.SetSize(a.width, a.bodyHeight())
 	}
+	if a.shell != nil {
+		a.shell.input.SetWidth(max(width-38, 1))
+	}
 }
 
 // setFilter sets the active tab's filter and the input showing it.
@@ -100,6 +104,31 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case tea.KeyPressMsg:
 		return a, a.handleKey(msg)
+	case shellReadyMsg:
+		if a.shell == nil || a.shell != msg.prompt {
+			return a, nil
+		}
+		if msg.err != nil {
+			a.shell.launching = false
+			a.flash, a.flashErr = msg.err.Error(), true
+			return a, nil
+		}
+		p := a.shell
+		a.shell = nil
+		return a, tea.Exec(msg.process, func(err error) tea.Msg {
+			return shellDoneMsg{name: p.name, executable: p.input.Value(), err: err}
+		})
+	case shellDoneMsg:
+		a.flash = fmt.Sprintf("shell %s in %s: exited", msg.executable, msg.name)
+		a.flashErr = msg.err != nil
+		if msg.err != nil {
+			a.flash += ": " + msg.err.Error()
+		}
+		cmds := []tea.Cmd{func() tea.Msg { return refreshMsg{} }}
+		if a.details != nil {
+			cmds = append(cmds, a.details.load())
+		}
+		return a, tea.Batch(cmds...)
 	case actionDoneMsg:
 		a.flash, a.flashErr = msg.text, msg.err != nil
 		if msg.err != nil {
@@ -109,6 +138,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	var cmds []tea.Cmd
+	if a.shell != nil && !a.shell.launching {
+		var cmd tea.Cmd
+		a.shell.input, cmd = a.shell.input.Update(msg)
+		cmds = append(cmds, cmd)
+	}
 	for _, t := range a.tabs {
 		cmds = append(cmds, t.Update(msg))
 	}
@@ -129,6 +163,8 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	a.flash = ""
 
 	switch {
+	case a.shell != nil:
+		return a.updateShell(msg)
 	case a.confirm != nil:
 		p := a.confirm
 		a.confirm = nil
@@ -171,6 +207,8 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		return a.logs.Update(msg)
 	case a.details != nil:
 		switch key {
+		case "e":
+			return a.openShell(a.details.id, a.details.name)
 		case "esc", "q":
 			a.details.Close()
 			a.details = nil
@@ -221,6 +259,10 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			var cmd tea.Cmd
 			a.details, cmd = NewDetailsView(a.ctx, a.client, id, name, a.width, a.bodyHeight())
 			return cmd
+		}
+	case "e":
+		if id, name, ok := a.tabs[a.active].Selected(); ok {
+			return a.openShell(id, name)
 		}
 	case "S":
 		a.ask("start", a.client.Start)
@@ -301,6 +343,11 @@ func (a *App) tabBar() string {
 
 func (a *App) footer() string {
 	switch {
+	case a.shell != nil:
+		if a.shell.launching {
+			return render.Dim.Render("checking container… · esc cancel")
+		}
+		return a.shell.input.View() + " " + render.Dim.Render("enter open · esc cancel")
 	case a.confirm != nil:
 		return render.Warn.Render(fmt.Sprintf("%s container %s? (y/N)", a.confirm.verb, a.confirm.name))
 	case a.filtering:
@@ -311,11 +358,11 @@ func (a *App) footer() string {
 		}
 		return hints("esc", "back", "/", "regex filter", "ctrl+l", "clear filter", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/follow")
 	case a.details != nil:
-		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "enter", "logs")
+		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "enter", "logs", "e", "shell")
 	}
 	keys := []string{"tab", "switch", "/", "filter", "s/r", "sort: " + string(a.tabs[a.active].SortKey())}
 	if _, _, ok := a.tabs[a.active].Selected(); ok {
-		keys = append(keys, "d", "details", "enter", "logs", "S/x/R", "start/stop/restart")
+		keys = append(keys, "d", "details", "enter", "logs", "e", "shell", "S/x/R", "start/stop/restart")
 	} else if projects, ok := a.tabs[a.active].(*ProjectsView); ok && projects.selectedProject() != nil {
 		keys = append(keys, "space", "expand/collapse", "enter", "project logs")
 	}
@@ -337,6 +384,7 @@ func (a *App) helpView() string {
 		{"/", "filter (enter keeps, esc clears)"},
 		{"enter", "follow logs of selected container or project"},
 		{"d", "inspect selected container's details"},
+		{"e", "open a shell in the selected container (choose executable, enter to open)"},
 		{"S / x / R", "start (or unpause) / stop / restart selected container"},
 		{"ctrl+r", "refresh now"},
 		{"q, ctrl+c", "quit"},
