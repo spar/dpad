@@ -25,7 +25,7 @@ make demo-down
 
 | Command | What it adds over docker |
 |---|---|
-| `dn` | Full-screen TUI: Containers / Images / Stats / Projects / Events tabs, stats history, filtering, container/image details, logs, shells, confirmed actions |
+| `dn` | Full-screen TUI: Containers / Images / Stats / Projects / Events / Volumes tabs, stats history, filtering, resource details, logs, shells, confirmed actions |
 | `dn ps [-a] [--sort name\|created\|status] [-r]` | Shows state colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
 | `dn images [--sort size\|created\|name] [-r]` | Shows human sizes and a total-size footer; dangling images are dimmed |
 | `dn stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream] [--totals]` | Live sorting, CPU/memory usage bars, network/disk throughput; `t` toggles I/O rates/totals |
@@ -45,7 +45,7 @@ These cases go to `docker` unchanged:
 ### TUI keys
 | Key | Action |
 |---|---|
-| `tab` / `shift+tab` / `1-5` | switch tab |
+| `tab` / `shift+tab` / `1-6` | switch tab |
 | `↑↓` `j k` `pgup pgdn` `g G` | move |
 | `/` | filter the current tab (`enter` keeps, `esc` clears) |
 | `s` / `r` | cycle sort key / reverse |
@@ -57,6 +57,7 @@ These cases go to `docker` unchanged:
 | `enter` (project row) | follow logs across the selected project (`esc` back) |
 | `enter` (Images) | inspect the selected image |
 | `d` / `enter` (Events) | inspect the event's container |
+| `d` / `enter` (Volumes) | inspect the selected volume and its container references |
 | `r` / `g` (Events) | reverse time order / return to newest and follow arrivals |
 | `x` (Images or image details) | confirm removal of the selected tag or image |
 | `S` / `x` / `R` | start (or unpause) / stop / restart (asks y/N) |
@@ -169,6 +170,30 @@ buffer and view settings. A `stream gap` record marks an interruption: events
 missed during disconnection are not replayed. Filters also apply to these gap
 records; clear the filter or search `stream gap` to see them. This is an in-memory
 session timeline, not a persistent audit log or historical event fetch.
+
+The read-only Volumes tab (`6`) lists named and anonymous volumes with driver,
+Compose project, and container usage. It loads on opening the tab and refreshes
+when revisited or with `ctrl+r`. Filter with `/` by volume name, driver, project,
+or the name/ID of a referencing container. Names sort alphabetically; `r` reverses
+the order. In narrow terminals, the project column hides while project filtering
+remains available.
+
+Usage counts running and stopped containers reported by the selected daemon.
+A container mounting the same volume at several paths counts once, and bind
+mounts/tmpfs are excluded. `unreferenced` means no references were reported;
+failed container lookups show `unknown`. Usage describes container references,
+not disk space, and does not include references on other daemon hosts. Driver
+warnings remain visible in the status.
+
+Press `d` or `enter` for driver, scope, creation time, mountpoint, labels, and each
+referencing container's state and mount destinations (`ro`/`rw`). Mountpoints are
+paths on the daemon host. Scroll/pan as in other details panes; `ctrl+r` refreshes
+metadata and shared container usage, and `esc` returns with filter, order, and
+selection preserved. Volume removal and pruning are not offered.
+
+The tab reuses the dashboard's container lookup and builds a volume-to-container
+index once per container refresh. Opening details adds one volume inspection,
+without per-volume container scans, disk-size requests, or extra event streams.
 
 The TUI Stats tab shows CPU and memory sparklines for the selected container,
 with average and peak usage over the last two minutes of received samples.

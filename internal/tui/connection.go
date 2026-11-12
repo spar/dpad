@@ -83,6 +83,9 @@ func (a *App) applyDaemonProbe(msg daemonProbeMsg) tea.Cmd {
 		if a.imageDetails != nil {
 			cmds = append(cmds, a.imageDetails.load())
 		}
+		if a.volumeDetails != nil {
+			cmds = append(cmds, a.volumeDetails.load())
+		}
 	}
 	return tea.Batch(cmds...)
 }

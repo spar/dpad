@@ -116,6 +116,10 @@ dn
     Restart a demo container in another terminal and watch the new events arrive.
     Navigate to keep an older event selected, `g` to follow newest arrivals again,
     or `enter` to inspect that event's container. The latest 1,000 records are kept.
+12. Press `6` for Volumes. Filter by a volume, Compose project, or referencing
+    container name; `enter` shows metadata and each container's mount destinations.
+    Running and stopped references both count. `ctrl+r` refreshes and `esc` returns
+    to the list. This tab is read-only and does not remove or prune volumes.
 
 **Passthrough:**
 ```sh
