@@ -90,6 +90,10 @@ dn
    SIGTERM, so docker has to kill it. Press `S` to bring it back.
 6. Press `3` for the Stats tab, then `c`/`m`/`n`/`i`/`p` to re-sort live.
 7. Press `2` for Images and `?` for help.
+8. Press `4` for Projects. The `dn-demo` project shows service containers,
+   running/total counts, and unhealthy containers. Press `space` on the project
+   row to collapse/expand it, or `enter` for merged project logs. Try `/` with
+   `(?i)error|warn`, then `enter`; use `ctrl+l` to clear and `esc` to return.
 
 **Passthrough:**
 ```sh

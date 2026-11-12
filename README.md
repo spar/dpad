@@ -25,7 +25,7 @@ make demo-down
 
 | Command | What it adds over docker |
 |---|---|
-| `dn` | Full-screen TUI: Containers / Images / Stats tabs, filtering, container details, follow logs, start/stop/restart |
+| `dn` | Full-screen TUI: Containers / Images / Stats / Projects tabs, filtering, container details, follow logs, start/stop/restart |
 | `dn ps [-a] [--sort name\|created\|status] [-r]` | Shows state colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
 | `dn images [--sort size\|created\|name] [-r]` | Shows human sizes and a total-size footer; dangling images are dimmed |
 | `dn stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream]` | Live sorting (keys `c m n i p a`, `r` to reverse), with CPU and memory colored by threshold plus usage bars |
@@ -45,12 +45,14 @@ These cases go to `docker` unchanged:
 ### TUI keys
 | Key | Action |
 |---|---|
-| `tab` / `shift+tab` / `1-3` | switch tab |
+| `tab` / `shift+tab` / `1-4` | switch tab |
 | `↑↓` `j k` `pgup pgdn` `g G` | move |
 | `/` | filter the current tab (`enter` keeps, `esc` clears) |
 | `s` / `r` | cycle sort key / reverse |
 | `d` | open details of the selected container (`esc` back) |
 | `enter` | follow logs of the selected container (`esc` back) |
+| `space` (Projects) | expand/collapse the selected project |
+| `enter` (project row) | follow logs across the selected project (`esc` back) |
 | `S` / `x` / `R` | start (or unpause) / stop / restart (asks y/N) |
 | `ctrl+r` | refresh |
 | `?` | help |
@@ -71,6 +73,23 @@ cancel changes, or `ctrl+l` outside the prompt to clear it. Invalid expressions
 show an error and keep the last valid results. Filtering searches the current
 buffer (up to 5,000 lines); it does not fetch older logs. `esc` or `q` outside
 the prompt returns to the previous view.
+
+The Projects tab groups containers by their Compose project and service labels,
+with a running/total count and an unhealthy count for each project. Project state
+is `running` when all containers run, `partial` when some run, and `inactive`
+when none run. Containers without Compose project labels remain in Containers.
+Project lists update with Docker events and the regular container refresh.
+Filtering by a project, service, container name/ID, image, or state keeps the full
+matching project visible so its counts and log targets stay consistent.
+
+Press `space` on a project row to collapse or expand it, or `enter` to follow its
+containers' logs with colored name prefixes. Lines appear as they arrive; regex
+filtering and scrolling work as in single-container logs. Each container starts
+with its last 500 lines, sharing the 5,000-line viewer buffer. Log sources are the
+project's containers when the viewer opens; reopen it after recreating or adding
+containers. Source errors appear in the status while other streams continue.
+Select an individual container row for details, logs, or confirmed lifecycle
+actions; project rows do not perform bulk start/stop/restart actions.
 
 ## Colors
 Output is plain when piped, when `NO_COLOR` is set, or with `--no-color`.

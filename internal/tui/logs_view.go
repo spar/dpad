@@ -2,8 +2,10 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/textinput"
@@ -22,6 +24,11 @@ const (
 )
 
 type (
+	logTarget     struct{ id, name string }
+	logFailureMsg struct {
+		ch  <-chan docker.LogLine
+		err error
+	}
 	bufferedLog struct {
 		line    docker.LogLine
 		text    string
@@ -41,7 +48,7 @@ type (
 	}
 )
 
-// LogsView follows one container's logs in a scrollable pane.
+// LogsView follows container logs in a scrollable, filterable pane.
 type LogsView struct {
 	name          string
 	ch            chan docker.LogLine
@@ -58,6 +65,9 @@ type LogsView struct {
 	pattern       *regexp.Regexp
 	searchErr     error
 	visible       int
+	failures      chan error
+	prefixWidth   int
+	colors        render.NameColors
 
 	// Paging glides to target over a few frames; gen invalidates stale frames.
 	target    int
@@ -66,20 +76,50 @@ type LogsView struct {
 }
 
 func NewLogsView(ctx context.Context, c dockerClient, id, name string, width, height int) (*LogsView, tea.Cmd) {
+	return newLogsView(ctx, c, []logTarget{{id: id, name: name}}, name, width, height)
+}
+
+func newLogsView(ctx context.Context, c dockerClient, targets []logTarget, name string, width, height int) (*LogsView, tea.Cmd) {
 	ctx, cancel := context.WithCancel(ctx)
 	v := &LogsView{
-		name:   name,
-		ch:     make(chan docker.LogLine, 512),
-		errc:   make(chan error, 1),
-		cancel: cancel,
-		vp:     viewport.New(viewport.WithWidth(width), viewport.WithHeight(height)),
-		search: textinput.New(),
+		name:     name,
+		ch:       make(chan docker.LogLine, 512),
+		errc:     make(chan error, 1),
+		cancel:   cancel,
+		vp:       viewport.New(viewport.WithWidth(width), viewport.WithHeight(height)),
+		search:   textinput.New(),
+		failures: make(chan error, len(targets)),
+		colors:   render.NameColors{},
 	}
 	v.search.Prompt = "/"
 	v.search.Placeholder = "regex (e.g. ERROR|WARN, (?i)timeout)"
 	v.search.SetWidth(max(width-lipgloss.Width(logSearchHints)-2, 1))
+	results := make(chan error, len(targets))
+	for _, target := range targets {
+		if len(targets) > 1 {
+			v.prefixWidth = max(v.prefixWidth, len(target.name))
+		}
+		v.colors.Style(target.name)
+		go func() {
+			err := c.Logs(ctx, target.id, docker.LogOptions{Follow: true, Tail: "500"}, v.ch)
+			if ctx.Err() != nil {
+				err = nil
+			}
+			if err != nil {
+				err = fmt.Errorf("%s: %w", target.name, err)
+				v.failures <- err
+			}
+			results <- err
+		}()
+	}
 	go func() {
-		v.errc <- c.Logs(ctx, id, docker.LogOptions{Follow: true, Tail: "500"}, v.ch)
+		var errs []error
+		for range targets {
+			if err := <-results; err != nil {
+				errs = append(errs, err)
+			}
+		}
+		v.errc <- errors.Join(errs...)
 		close(v.ch)
 	}()
 	return v, v.wait()
@@ -95,9 +135,15 @@ const logFlushInterval = 50 * time.Millisecond
 func (v *LogsView) wait() tea.Cmd {
 	ch, errc := v.ch, v.errc
 	return func() tea.Msg {
-		l, ok := <-ch
-		if !ok {
-			return logEndMsg{ch, <-errc}
+		var l docker.LogLine
+		select {
+		case err := <-v.failures:
+			return logFailureMsg{ch, err}
+		case line, ok := <-ch:
+			if !ok {
+				return logEndMsg{ch, <-errc}
+			}
+			l = line
 		}
 		batch := []docker.LogLine{l}
 		flush := time.After(logFlushInterval)
@@ -147,7 +193,11 @@ func (v *LogsView) setQuery(query string) {
 func (v *LogsView) renderLine(line docker.LogLine) bufferedLog {
 	entry := bufferedLog{line: line, matches: v.pattern == nil || v.pattern.MatchString(line.Text)}
 	if entry.matches {
-		entry.text = render.LogLine(line, lipgloss.Style{}, 0, false, v.pattern)
+		style := lipgloss.Style{}
+		if v.prefixWidth > 0 {
+			style = v.colors.Style(line.Container)
+		}
+		entry.text = render.LogLine(line, style, v.prefixWidth, false, v.pattern)
 	}
 	return entry
 }
@@ -172,6 +222,12 @@ func (v *LogsView) rebuild() {
 
 func (v *LogsView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
+	case logFailureMsg:
+		if msg.ch != v.ch {
+			return nil
+		}
+		v.err = errors.Join(v.err, msg.err)
+		return v.wait()
 	case logBatchMsg:
 		if msg.ch != v.ch {
 			return nil
@@ -319,7 +375,7 @@ func (v *LogsView) Status() string {
 	}
 	switch {
 	case v.err != nil:
-		s += " · " + render.Error.Render(v.err.Error())
+		s += " · " + render.Error.Render(strings.ReplaceAll(v.err.Error(), "\n", " · "))
 	case v.ended:
 		s += " · stream ended"
 	case v.vp.AtBottom():

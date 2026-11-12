@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -14,6 +16,99 @@ import (
 	"dockernext/internal/docker"
 	"dockernext/internal/render"
 )
+
+type multiLogClient struct {
+	fakeClient
+	stream func(context.Context, string, docker.LogOptions, chan<- docker.LogLine) error
+}
+
+func (c *multiLogClient) Logs(ctx context.Context, id string, opts docker.LogOptions, out chan<- docker.LogLine) error {
+	return c.stream(ctx, id, opts, out)
+}
+
+func nextLogMessage(t *testing.T, cmd tea.Cmd) tea.Msg {
+	t.Helper()
+	out := make(chan tea.Msg, 1)
+	go func() { out <- cmd() }()
+	select {
+	case msg := <-out:
+		return msg
+	case <-time.After(2 * time.Second):
+		t.Fatal("log command did not finish")
+		return nil
+	}
+}
+
+func TestProjectLogsMergePrefixAndFilter(t *testing.T) {
+	c := &multiLogClient{stream: func(ctx context.Context, id string, opts docker.LogOptions, out chan<- docker.LogLine) error {
+		if !opts.Follow || opts.Tail != "500" {
+			t.Errorf("unexpected log options: %+v", opts)
+		}
+		select {
+		case out <- docker.LogLine{Container: id, Text: "ERROR from " + id, Stderr: id == "db"}:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}}
+	v, cmd := newLogsView(context.Background(), c, []logTarget{{id: "web", name: "web"}, {id: "db", name: "db"}}, "project shop", 100, 10)
+	defer v.Close()
+	for !v.ended {
+		cmd = v.Update(nextLogMessage(t, cmd))
+	}
+	if len(v.lines) != 2 || v.err != nil {
+		t.Fatalf("not all project logs arrived: %s", v.Status())
+	}
+	text := ansi.Strip(v.View())
+	if !strings.Contains(text, "web │ ERROR from web") || !strings.Contains(text, "db  ┃ ERROR from db") {
+		t.Fatalf("project logs lost source names or stderr marker: %q", text)
+	}
+	if v.colors["web"].Render("source") == v.colors["db"].Render("source") {
+		t.Fatal("source colors are not distinct")
+	}
+	v.setQuery("from web")
+	if v.visible != 1 || strings.Contains(ansi.Strip(v.View()), "from db") {
+		t.Fatal("merged logs did not filter")
+	}
+	v.setQuery("")
+	if v.visible != 2 {
+		t.Fatal("clearing filter did not restore merged logs")
+	}
+}
+
+func TestProjectLogFailuresRemainVisibleWhileOtherSourcesFollow(t *testing.T) {
+	stopped := make(chan struct{})
+	c := &multiLogClient{stream: func(ctx context.Context, id string, _ docker.LogOptions, _ chan<- docker.LogLine) error {
+		if id == "bad" {
+			return errors.New("logging disabled")
+		}
+		defer close(stopped)
+		<-ctx.Done()
+		return ctx.Err()
+	}}
+	v, cmd := newLogsView(context.Background(), c, []logTarget{{id: "bad", name: "bad"}, {id: "live", name: "live"}}, "project shop", 100, 10)
+	defer v.Close()
+	cmd = v.Update(nextLogMessage(t, cmd))
+	if v.ended || !strings.Contains(v.Status(), "bad: logging disabled") {
+		t.Fatalf("source failure hidden while following: %s", v.Status())
+	}
+	v.setQuery("does-not-match")
+	if !strings.Contains(v.Status(), "logging disabled") {
+		t.Fatal("filter hid source failure")
+	}
+	v.Close()
+	for !v.ended {
+		cmd = v.Update(nextLogMessage(t, cmd))
+	}
+	select {
+	case <-stopped:
+	default:
+		t.Fatal("closing view did not cancel all source streams")
+	}
+	if strings.Contains(v.Status(), "context canceled") {
+		t.Fatal("normal cancellation was shown as an error")
+	}
+}
 
 func newTestLogsView(height int) *LogsView {
 	return &LogsView{

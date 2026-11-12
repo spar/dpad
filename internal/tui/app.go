@@ -9,6 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"dockernext/internal/docker"
 	"dockernext/internal/render"
 	"dockernext/internal/sortx"
 )
@@ -30,7 +31,7 @@ var (
 	keyStyle    = lipgloss.NewStyle().Bold(true)
 )
 
-// App is the full-screen TUI with Containers / Images / Stats tabs.
+// App is the full-screen TUI with Containers / Images / Stats / Projects tabs.
 type App struct {
 	ctx           context.Context
 	client        dockerClient
@@ -55,6 +56,7 @@ func Run(ctx context.Context, c dockerClient) error {
 		NewContainersView(ctx, c),
 		NewImagesView(ctx, c),
 		NewStatsView(ctx, c, sortx.CPU, false),
+		NewProjectsView(),
 	}
 	app := &App{ctx: ctx, client: c, tabs: tabs, filter: fi}
 	app.resize(120, 30)
@@ -198,6 +200,17 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "ctrl+r":
 		return func() tea.Msg { return refreshMsg{} }
 	case "enter":
+		if projects, ok := a.tabs[a.active].(*ProjectsView); ok {
+			if p := projects.selectedProject(); p != nil {
+				targets := make([]logTarget, len(p.containers))
+				for i, c := range p.containers {
+					targets[i] = logTarget{id: c.ID, name: docker.ContainerName(c.Names)}
+				}
+				var cmd tea.Cmd
+				a.logs, cmd = newLogsView(a.ctx, a.client, targets, "project "+p.name, a.width, a.bodyHeight())
+				return cmd
+			}
+		}
 		if id, name, ok := a.tabs[a.active].Selected(); ok {
 			var cmd tea.Cmd
 			a.logs, cmd = NewLogsView(a.ctx, a.client, id, name, a.width, a.bodyHeight())
@@ -303,6 +316,8 @@ func (a *App) footer() string {
 	keys := []string{"tab", "switch", "/", "filter", "s/r", "sort: " + string(a.tabs[a.active].SortKey())}
 	if _, _, ok := a.tabs[a.active].Selected(); ok {
 		keys = append(keys, "d", "details", "enter", "logs", "S/x/R", "start/stop/restart")
+	} else if projects, ok := a.tabs[a.active].(*ProjectsView); ok && projects.selectedProject() != nil {
+		keys = append(keys, "space", "expand/collapse", "enter", "project logs")
 	}
 	return hints(append(keys, "?", "help", "q", "quit")...)
 }
@@ -320,7 +335,7 @@ func (a *App) helpView() string {
 		{fmt.Sprintf("tab / shift+tab, 1-%d", len(a.tabs)), "switch tabs"},
 		{"↑↓ / j k, pgup/pgdn, g/G", "move selection"},
 		{"/", "filter (enter keeps, esc clears)"},
-		{"enter", "follow logs of selected container"},
+		{"enter", "follow logs of selected container or project"},
 		{"d", "inspect selected container's details"},
 		{"S / x / R", "start (or unpause) / stop / restart selected container"},
 		{"ctrl+r", "refresh now"},
