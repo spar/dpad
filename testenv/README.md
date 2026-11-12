@@ -99,6 +99,12 @@ dn
    running/total counts, and unhealthy containers. Press `space` on the project
    row to collapse/expand it, or `enter` for merged project logs. Try `/` with
    `(?i)error|warn`, then `enter`; use `ctrl+l` to clear and `esc` to return.
+   Keep project logs open while running
+   `docker compose -f testenv/compose.yaml up -d --scale logger-text=2` in another
+   terminal: new sources join automatically. Try `restart logger-text` or
+   `up -d --force-recreate logger-text` with the same Compose file; the viewer
+   follows replacement sources and retains its filter and buffer. Scale back to
+   one when finished.
 9. Select a running container such as `dn-demo-web-1` and press `e`, then `enter`
    to open `/bin/sh`. Run `pwd`, then `exit` to return to the dashboard. Try a
    stopped or paused container to see the preflight error; `esc` cancels the prompt.
