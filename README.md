@@ -25,7 +25,7 @@ make demo-down
 
 | Command | What it adds over docker |
 |---|---|
-| `dn` | Full-screen TUI: Containers / Images / Stats / Projects / Events / Volumes tabs, stats history, filtering, resource details, logs, shells, confirmed actions |
+| `dn` | Full-screen TUI: Containers / Images / Stats / Projects / Events / Volumes / Networks tabs, stats history, filtering, resource details, logs, shells, confirmed actions |
 | `dn ps [-a] [--sort name\|created\|status] [-r]` | Shows state colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
 | `dn images [--sort size\|created\|name] [-r]` | Shows human sizes and a total-size footer; dangling images are dimmed |
 | `dn stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream] [--totals]` | Live sorting, CPU/memory usage bars, network/disk throughput; `t` toggles I/O rates/totals |
@@ -45,7 +45,7 @@ These cases go to `docker` unchanged:
 ### TUI keys
 | Key | Action |
 |---|---|
-| `tab` / `shift+tab` / `1-6` | switch tab |
+| `tab` / `shift+tab` / `1-7` | switch tab |
 | `↑↓` `j k` `pgup pgdn` `g G` | move |
 | `/` | filter the current tab (`enter` keeps, `esc` clears) |
 | `s` / `r` | cycle sort key / reverse |
@@ -58,6 +58,8 @@ These cases go to `docker` unchanged:
 | `enter` (Images) | inspect the selected image |
 | `d` / `enter` (Events) | inspect the event's container |
 | `d` / `enter` (Volumes) | inspect the selected volume and its container references |
+| `d` / `enter` (Networks) | inspect the selected network |
+| `tab` (network details) | switch metadata / endpoints; `d` or `enter` on an endpoint opens container details |
 | `r` / `g` (Events) | reverse time order / return to newest and follow arrivals |
 | `x` (Images or image details) | confirm removal of the selected tag or image |
 | `S` / `x` / `R` | start (or unpause) / stop / restart (asks y/N) |
@@ -194,6 +196,34 @@ selection preserved. Volume removal and pruning are not offered.
 The tab reuses the dashboard's container lookup and builds a volume-to-container
 index once per container refresh. Opening details adds one volume inspection,
 without per-volume container scans, disk-size requests, or extra event streams.
+
+The read-only Networks tab (`7`) lists network name, driver, scope, Compose
+project, and attached/configured container counts. `/` filters by network name/ID,
+driver, scope, project, or a configured container's name/ID; `r` reverses name
+order. In narrow terminals, scope/project columns hide while filtering still
+includes those fields.
+
+Counts reuse the dashboard's container data: attached means a nonempty endpoint
+ID was reported, while configured also includes stopped/created containers with
+network references. Failed container lookups show `unknown`, not zero. These are
+snapshots from the selected daemon, not cluster-wide totals; host/none networks
+may have configured containers without ordinary attached endpoints.
+
+Press `d` or `enter` for ID, creation time, internal/attachable/ingress flags,
+IPv4/IPv6 settings, IPAM subnets/gateways/ranges, and labels. `tab` switches to
+the endpoint table with container names and IP/MAC addresses. At narrow widths,
+the selected endpoint's IPv6 address appears below the table. Move with the
+usual navigation keys and press `d` or `enter` for its container details. `esc`
+returns to the same endpoint selection, then to the filtered network list.
+Endpoints that have disappeared or do not identify a local container can report
+an inspection error.
+
+Network lists load on first opening, tab revisits, and `ctrl+r`; details make one
+network inspection request and remain a snapshot until refreshed with `ctrl+r`
+(also refreshing shared container data). Metadata scrolls and pans like other
+details panes. No per-network container scans or extra event subscriptions are
+added. Creating/removing networks and connecting/disconnecting containers are not
+offered in the TUI.
 
 The TUI Stats tab shows CPU and memory sparklines for the selected container,
 with average and peak usage over the last two minutes of received samples.

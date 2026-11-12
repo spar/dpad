@@ -6,6 +6,7 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/api/types/volume"
 
 	"dockernext/internal/docker"
@@ -24,6 +25,9 @@ type fakeClient struct {
 	volumeInfo     volume.Volume
 	volumeErr      error
 	volumeWarnings []string
+	networks       []network.Summary
+	networkInfo    network.Inspect
+	networkErr     error
 
 	mu      sync.Mutex
 	actions []string // "verb id"
@@ -83,4 +87,13 @@ func (f *fakeClient) Volumes(context.Context) ([]volume.Volume, []string, error)
 func (f *fakeClient) Volume(_ context.Context, name string) (volume.Volume, error) {
 	_ = f.record("volume inspect", name)
 	return f.volumeInfo, f.volumeErr
+}
+
+func (f *fakeClient) Networks(context.Context) ([]network.Summary, error) {
+	_ = f.record("networks", "")
+	return f.networks, f.networkErr
+}
+func (f *fakeClient) Network(_ context.Context, id string) (network.Inspect, error) {
+	_ = f.record("network inspect", id)
+	return f.networkInfo, f.networkErr
 }
