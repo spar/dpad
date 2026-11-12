@@ -91,6 +91,21 @@ func SplitRepoTag(rt string) (string, string) {
 }
 
 func StatsRow(s docker.Stats) []string {
+	return statsRow(s, fmt.Sprintf("%s / %s", Size(int64(s.NetRx)), Size(int64(s.NetTx))), fmt.Sprintf("%s / %s", Size(int64(s.BlockRead)), Size(int64(s.BlockWrite))))
+}
+
+func StatsRateRow(s docker.Stats, r docker.Rates) []string {
+	net, block := "— / —", "— / —"
+	if r.NetValid {
+		net = byteRatePair(r.NetRx, r.NetTx)
+	}
+	if r.BlockValid {
+		block = byteRatePair(r.BlockRead, r.BlockWrite)
+	}
+	return statsRow(s, net, block)
+}
+
+func statsRow(s docker.Stats, net, block string) []string {
 	return []string{
 		Bold.Render(s.Name),
 		PercentStyle(s.CPUPercent).Render(fmt.Sprintf("%.2f%%", s.CPUPercent)),
@@ -98,8 +113,8 @@ func StatsRow(s docker.Stats) []string {
 		fmt.Sprintf("%s / %s", BinSize(s.MemUsage), BinSize(s.MemLimit)),
 		PercentStyle(s.MemPercent).Render(fmt.Sprintf("%.2f%%", s.MemPercent)),
 		Bar(s.MemPercent, barWidth),
-		fmt.Sprintf("%s / %s", Size(int64(s.NetRx)), Size(int64(s.NetTx))),
-		fmt.Sprintf("%s / %s", Size(int64(s.BlockRead)), Size(int64(s.BlockWrite))),
+		net,
+		block,
 		fmt.Sprint(s.PIDs),
 	}
 }

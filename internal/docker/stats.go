@@ -33,6 +33,7 @@ type Stats struct {
 // the container's stream has ended (Gone).
 type StatsUpdate struct {
 	Stats      Stats
+	Rates      Rates
 	Gone       bool
 	Generation uint64
 	SampledAt  time.Time
@@ -66,10 +67,10 @@ func Calc(id, name string, s *container.StatsResponse) Stats {
 		st.NetTx += n.TxBytes
 	}
 	for _, e := range s.BlkioStats.IoServiceBytesRecursive {
-		switch strings.ToLower(e.Op) {
-		case "read":
+		switch {
+		case strings.EqualFold(e.Op, "read"):
 			st.BlockRead += e.Value
-		case "write":
+		case strings.EqualFold(e.Op, "write"):
 			st.BlockWrite += e.Value
 		}
 	}
@@ -148,7 +149,7 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 		h := &statsStream{cancel: cancel, generation: nextGeneration}
 		streams[id] = h
 		wg.Go(func() {
-			c.streamStats(cctx, id, name, func(st Stats, at time.Time) bool {
+			c.streamStats(cctx, id, name, func(st Stats, rates Rates, at time.Time) bool {
 				mu.Lock()
 				defer mu.Unlock()
 				// Replaced streams must not enqueue samples after a newer stream ends.
@@ -156,7 +157,7 @@ func (c *Client) WatchStats(ctx context.Context) (<-chan StatsUpdate, error) {
 					return false
 				}
 				select {
-				case out <- StatsUpdate{Stats: st, Generation: h.generation, SampledAt: at}:
+				case out <- StatsUpdate{Stats: st, Rates: rates, Generation: h.generation, SampledAt: at}:
 					return true
 				case <-ctx.Done():
 					return false
@@ -236,19 +237,22 @@ type statsStream struct {
 	generation uint64
 }
 
-func (c *Client) streamStats(ctx context.Context, id, name string, emit func(Stats, time.Time) bool) {
+func (c *Client) streamStats(ctx context.Context, id, name string, emit func(Stats, Rates, time.Time) bool) {
 	res, err := c.api.ContainerStats(ctx, id, client.ContainerStatsOptions{Stream: true})
 	if err != nil {
 		return
 	}
 	defer res.Body.Close()
 	dec := json.NewDecoder(res.Body)
+	var tracker rateTracker
 	for {
 		var raw container.StatsResponse
 		if err := dec.Decode(&raw); err != nil {
 			return
 		}
-		if !emit(Calc(id, name, &raw), raw.Read) {
+		st := Calc(id, name, &raw)
+		rates := tracker.update(st, raw.Read, len(raw.Networks), blockRateSources(raw.BlkioStats.IoServiceBytesRecursive))
+		if !emit(st, rates, raw.Read) {
 			return
 		}
 	}

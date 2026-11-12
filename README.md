@@ -28,7 +28,7 @@ make demo-down
 | `dn` | Full-screen TUI: Containers / Images / Stats / Projects tabs, stats history, filtering, container/image details, logs, shells, confirmed actions |
 | `dn ps [-a] [--sort name\|created\|status] [-r]` | Shows state colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
 | `dn images [--sort size\|created\|name] [-r]` | Shows human sizes and a total-size footer; dangling images are dimmed |
-| `dn stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream]` | Live sorting (keys `c m n i p a`, `r` to reverse), with CPU and memory colored by threshold plus usage bars |
+| `dn stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream] [--totals]` | Live sorting, CPU/memory usage bars, network/disk throughput; `t` toggles I/O rates/totals |
 | `dn logs [-f] [-n N] [-t] [--since T] [--grep RE] C1 [C2...]` | Interleaves several containers with colored name prefixes, highlights log levels (plain, JSON, logfmt, and nginx formats), marks stderr with `┃`, and highlights `--grep` matches |
 
 Sorts default to the natural direction for each key: biggest first for numbers,
@@ -49,6 +49,7 @@ These cases go to `docker` unchanged:
 | `↑↓` `j k` `pgup pgdn` `g G` | move |
 | `/` | filter the current tab (`enter` keeps, `esc` clears) |
 | `s` / `r` | cycle sort key / reverse |
+| `t` (Stats) | toggle network/disk rates and cumulative totals; sorting follows the mode |
 | `d` | open details of the selected container or image (`esc` back) |
 | `e` | choose a shell executable for the selected container (`enter` opens, `esc` cancels) |
 | `enter` | follow logs of the selected container (`esc` back) |
@@ -139,10 +140,26 @@ fresh history, and stopped containers' history is discarded.
 
 The panel follows selection through sorting/filtering. It hides automatically
 below 80 columns or 10 body rows. Standalone `dn stats`, snapshots, and piped
-output keep their existing table format without history storage. History uses
+output omit history storage. History uses
 about 6 KiB per tracked container plus map overhead, adds no Docker requests,
 and retains the existing batched stats redraws; only the selected container's
 chart is rendered.
+
+Live Stats shows network RX/TX and disk read/write throughput in bytes/sec.
+Press `t` to toggle cumulative byte totals; `dn stats --totals` starts standalone
+live stats in totals mode. `n` and `i` sort by combined network/disk throughput
+in rates mode, or cumulative bytes in totals mode. Unavailable rates sort after
+measured rates even when sorting is reversed. Snapshots (`--no-stream`) and piped
+output always show and sort by totals because throughput requires two samples.
+
+Rates are interval averages from daemon timestamps and counter differences, not
+lifetime totals divided by uptime. First samples, missing timestamps/counters,
+counter resets, changes in the number of interfaces or disk counters, and gaps
+over ten seconds show
+`—` while establishing a new baseline. Non-increasing timestamps are ignored for
+rate calculation. A valid idle interval shows `0B/s`; unavailable network or disk
+counters remain `—`. Each new stats stream starts fresh. Calculation adds no
+Docker requests, timers, or growing buffers.
 
 ## Colors
 Output is plain when piped, when `NO_COLOR` is set, or with `--no-color`.
