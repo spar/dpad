@@ -35,7 +35,7 @@ var (
 	keyStyle    = lipgloss.NewStyle().Bold(true)
 )
 
-// App is the full-screen TUI with Containers / Images / Stats / Projects / Events tabs.
+// App is the full-screen TUI with Containers / Images / Stats / Projects / Events / Volumes tabs.
 type App struct {
 	ctx           context.Context
 	client        dockerClient
@@ -48,6 +48,7 @@ type App struct {
 	logs          *LogsView
 	details       *DetailsView
 	imageDetails  *ImageDetailsView
+	volumeDetails *VolumeDetailsView
 	shell         *shellPrompt
 	help          bool
 	flash         string
@@ -67,6 +68,7 @@ func Run(ctx context.Context, c dockerClient) error {
 		NewStatsView(ctx, c, sortx.CPU, false),
 		NewProjectsView(),
 		NewEventsView(ctx, c),
+		NewVolumesView(ctx, c),
 	}
 	app := &App{ctx: ctx, client: c, tabs: tabs, filter: fi, daemon: daemonConnection{label: c.ConnectionLabel()}}
 	app.resize(120, 30)
@@ -98,6 +100,9 @@ func (a *App) resize(width, height int) {
 	}
 	if a.imageDetails != nil {
 		a.imageDetails.SetSize(a.width, a.bodyHeight())
+	}
+	if a.volumeDetails != nil {
+		a.volumeDetails.SetSize(a.width, a.bodyHeight())
 	}
 	if a.shell != nil {
 		a.shell.input.SetWidth(max(width-38, 1))
@@ -179,6 +184,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if a.imageDetails != nil {
 		cmds = append(cmds, a.imageDetails.Update(msg))
 	}
+	if a.volumeDetails != nil {
+		cmds = append(cmds, a.volumeDetails.Update(msg))
+	}
 	return a, tea.Batch(cmds...)
 }
 
@@ -246,6 +254,14 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			return cmd
 		}
 		return a.details.Update(msg)
+	case a.volumeDetails != nil:
+		if key == "esc" || key == "q" {
+			a.volumeDetails.Close()
+			a.volumeDetails = nil
+			return nil
+		}
+		return a.volumeDetails.Update(msg)
+
 	case a.imageDetails != nil:
 		switch key {
 		case "esc", "q":
@@ -285,6 +301,9 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "ctrl+r":
 		return tea.Batch(func() tea.Msg { return refreshMsg{} }, a.probeDaemon())
 	case "enter":
+		if _, ok := a.tabs[a.active].(*VolumesView); ok {
+			return a.openSelectedVolume()
+		}
 		if _, ok := a.tabs[a.active].(*EventsView); ok {
 			return a.openSelectedContainer()
 		}
@@ -304,6 +323,9 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			return cmd
 		}
 	case "d":
+		if _, ok := a.tabs[a.active].(*VolumesView); ok {
+			return a.openSelectedVolume()
+		}
 		if _, ok := a.tabs[a.active].(*ImagesView); ok {
 			return a.openSelectedImage()
 		}
@@ -371,6 +393,8 @@ func (a *App) render() string {
 		body, status = a.details.View(), a.details.Status()
 	case a.imageDetails != nil:
 		body, status = a.imageDetails.View(), a.imageDetails.Status()
+	case a.volumeDetails != nil:
+		body, status = a.volumeDetails.View(), a.volumeDetails.Status()
 	default:
 		t := a.tabs[a.active]
 		body, status = t.View(), t.Status()
@@ -403,7 +427,23 @@ func (a *App) tabBar() string {
 			parts = append(parts, tabInactive.Render(label))
 		}
 	}
-	return strings.Join(parts, " ")
+	bar := strings.Join(parts, " ")
+	if a.width > 0 && lipgloss.Width(bar) > a.width {
+		parts = parts[1:]
+		bar = strings.Join(parts, " ")
+		if lipgloss.Width(bar) > a.width {
+			for i := range parts {
+				if i != a.active {
+					parts[i] = tabInactive.Render(fmt.Sprint(i + 1))
+				}
+			}
+			bar = strings.Join(parts, " ")
+			if lipgloss.Width(bar) > a.width {
+				bar = parts[a.active]
+			}
+		}
+	}
+	return bar
 }
 
 func (a *App) footer() string {
@@ -427,6 +467,9 @@ func (a *App) footer() string {
 		return hints("esc", "back", "/", "regex filter", "ctrl+l", "clear filter", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/follow")
 	case a.details != nil:
 		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "enter", "logs", "e", "shell")
+	case a.volumeDetails != nil:
+		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh")
+
 	case a.imageDetails != nil:
 		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "x", "remove tag/image")
 	}
@@ -448,6 +491,10 @@ func (a *App) footer() string {
 		if _, ok := images.SelectedImage(); ok {
 			keys = append(keys, "d/enter", "image details", "x", "remove tag/image")
 		}
+	} else if volumes, ok := a.tabs[a.active].(*VolumesView); ok {
+		if _, ok := volumes.SelectedVolume(); ok {
+			keys = append(keys, "d/enter", "volume details")
+		}
 	} else if projects, ok := a.tabs[a.active].(*ProjectsView); ok && projects.selectedProject() != nil {
 		keys = append(keys, "space", "expand/collapse", "enter", "project logs")
 	}
@@ -467,14 +514,16 @@ func (a *App) helpView() string {
 		{fmt.Sprintf("tab / shift+tab, 1-%d", len(a.tabs)), "switch tabs"},
 		{"↑↓ / j k, pgup/pgdn, g/G", "move selection"},
 		{"/", "filter (enter keeps, esc clears)"},
-		{"enter", "follow container/project logs, or inspect selected image/event"},
-		{"d", "inspect selected container or image"},
+		{"enter", "follow container/project logs, or inspect selected image, volume, or event"},
+		{"d", "inspect selected container, image, or volume"},
 		{"e", "open a shell in the selected container (choose executable, enter to open)"},
 		{"S / x / R", "start (or unpause) / stop / restart selected container"},
 		{"ctrl+r", "refresh now"},
 		{"q, ctrl+c", "quit"},
 	}
-	if _, ok := a.tabs[a.active].(*EventsView); ok {
+	_, eventsTab := a.tabs[a.active].(*EventsView)
+	_, volumesTab := a.tabs[a.active].(*VolumesView)
+	if eventsTab || volumesTab {
 		global = slices.DeleteFunc(global, func(h [2]string) bool { return h[0] == "e" || h[0] == "S / x / R" })
 	}
 	rows := [][]string{}

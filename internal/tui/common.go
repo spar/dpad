@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/colorprofile"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/api/types/volume"
 
 	"dockernext/internal/docker"
 	"dockernext/internal/render"
@@ -26,6 +27,8 @@ const pollInterval = 10 * time.Second
 
 // dockerClient is what the TUI needs from docker.Client, so tests can fake it.
 type dockerClient interface {
+	Volumes(context.Context) ([]volume.Volume, []string, error)
+	Volume(context.Context, string) (volume.Volume, error)
 	ConnectionLabel() string
 	Ping(context.Context) error
 	Containers(ctx context.Context, all bool) ([]container.Summary, error)

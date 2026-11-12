@@ -6,19 +6,24 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/api/types/volume"
 
 	"dockernext/internal/docker"
 )
 
 // fakeClient records container actions; list calls return fixed data.
 type fakeClient struct {
-	containers []container.Summary
-	images     []image.Summary
-	inspect    container.InspectResponse
-	inspectErr error
-	imageInfo  docker.ImageInfo
-	imageErr   error
-	pingErr    error
+	containers     []container.Summary
+	images         []image.Summary
+	inspect        container.InspectResponse
+	inspectErr     error
+	imageInfo      docker.ImageInfo
+	imageErr       error
+	pingErr        error
+	volumes        []volume.Volume
+	volumeInfo     volume.Volume
+	volumeErr      error
+	volumeWarnings []string
 
 	mu      sync.Mutex
 	actions []string // "verb id"
@@ -69,4 +74,13 @@ func (f *fakeClient) WatchStats(context.Context) (<-chan docker.StatsUpdate, err
 
 func (f *fakeClient) WatchEvents(context.Context) <-chan docker.EventUpdate {
 	return make(chan docker.EventUpdate)
+}
+
+func (f *fakeClient) Volumes(context.Context) ([]volume.Volume, []string, error) {
+	_ = f.record("volumes", "")
+	return f.volumes, f.volumeWarnings, f.volumeErr
+}
+func (f *fakeClient) Volume(_ context.Context, name string) (volume.Volume, error) {
+	_ = f.record("volume inspect", name)
+	return f.volumeInfo, f.volumeErr
 }
