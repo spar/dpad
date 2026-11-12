@@ -86,6 +86,9 @@ func (a *App) applyDaemonProbe(msg daemonProbeMsg) tea.Cmd {
 		if a.volumeDetails != nil {
 			cmds = append(cmds, a.volumeDetails.load())
 		}
+		if a.networkDetails != nil {
+			cmds = append(cmds, a.networkDetails.load())
+		}
 	}
 	return tea.Batch(cmds...)
 }

@@ -25,6 +25,8 @@ type Client struct {
 // substitute a fake daemon.
 type engine interface {
 	Close() error
+	NetworkList(context.Context, client.NetworkListOptions) (client.NetworkListResult, error)
+	NetworkInspect(context.Context, string, client.NetworkInspectOptions) (client.NetworkInspectResult, error)
 	VolumeList(context.Context, client.VolumeListOptions) (client.VolumeListResult, error)
 	VolumeInspect(context.Context, string, client.VolumeInspectOptions) (client.VolumeInspectResult, error)
 	Ping(context.Context, client.PingOptions) (client.PingResult, error)

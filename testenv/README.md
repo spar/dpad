@@ -120,6 +120,10 @@ dn
     container name; `enter` shows metadata and each container's mount destinations.
     Running and stopped references both count. `ctrl+r` refreshes and `esc` returns
     to the list. This tab is read-only and does not remove or prune volumes.
+13. Press `7` for Networks and filter by `dn-demo` or a container name. `enter`
+    opens network configuration; `tab` shows its endpoint IP/MAC addresses, and
+    `enter` on an endpoint opens container details. Use `esc` to return through
+    both panes. `ctrl+r` refreshes the network snapshot and shared container data.
 
 **Passthrough:**
 ```sh
