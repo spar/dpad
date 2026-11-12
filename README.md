@@ -25,7 +25,7 @@ make demo-down
 
 | Command | What it adds over docker |
 |---|---|
-| `dn` | Full-screen TUI: Containers / Images / Stats tabs, filtering, follow logs, start/stop/restart |
+| `dn` | Full-screen TUI: Containers / Images / Stats tabs, filtering, container details, follow logs, start/stop/restart |
 | `dn ps [-a] [--sort name\|created\|status] [-r]` | Shows state colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
 | `dn images [--sort size\|created\|name] [-r]` | Shows human sizes and a total-size footer; dangling images are dimmed |
 | `dn stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream]` | Live sorting (keys `c m n i p a`, `r` to reverse), with CPU and memory colored by threshold plus usage bars |
@@ -49,11 +49,19 @@ These cases go to `docker` unchanged:
 | `↑↓` `j k` `pgup pgdn` `g G` | move |
 | `/` | filter the current tab (`enter` keeps, `esc` clears) |
 | `s` / `r` | cycle sort key / reverse |
+| `d` | open details of the selected container (`esc` back) |
 | `enter` | follow logs of the selected container (`esc` back) |
 | `S` / `x` / `R` | start (or unpause) / stop / restart (asks y/N) |
 | `ctrl+r` | refresh |
 | `?` | help |
 | `q` | quit |
+
+Container details show state, exit code, OOM status, restart count, image,
+entrypoint, command, restart policy, health-check results, ports, networks, and
+mounts. Scroll with `↑↓` / `j k`, `pgup` / `pgdn`, or `g` / `G`; use `←→` to pan
+long lines and `ctrl+r` to refresh the snapshot. Press `enter` to follow logs,
+then `esc` to return to details. From details, `esc` or `q` returns to the list
+with its filter, sort, and selection preserved. Environment variables are omitted.
 
 ## Colors
 Output is plain when piped, when `NO_COLOR` is set, or with `--no-color`.

@@ -67,6 +67,12 @@ func (c *Client) Images(ctx context.Context) ([]image.Summary, error) {
 	return res.Items, err
 }
 
+// Inspect returns a container's configuration and current state.
+func (c *Client) Inspect(ctx context.Context, id string) (container.InspectResponse, error) {
+	res, err := c.api.ContainerInspect(ctx, id, client.ContainerInspectOptions{})
+	return res.Container, err
+}
+
 // Start starts a stopped container, or resumes a paused one.
 func (c *Client) Start(ctx context.Context, id string) error {
 	info, err := c.api.ContainerInspect(ctx, id, client.ContainerInspectOptions{})
