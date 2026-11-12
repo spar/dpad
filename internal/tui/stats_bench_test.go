@@ -16,7 +16,7 @@ func benchmarkStatsView(n int) (*StatsView, statsBatchMsg) {
 	v.SetSize(160, 35)
 	batch := make(statsBatchMsg, n)
 	for i := range batch {
-		batch[i] = docker.StatsUpdate{Stats: docker.Stats{ID: fmt.Sprintf("%064d", i), Name: fmt.Sprintf("container-%04d", i), CPUPercent: float64(i % 150), MemUsage: uint64(i+1) * 1024 * 1024, MemLimit: 1024 * 1024 * 1024}}
+		batch[i] = docker.StatsUpdate{Stats: docker.Stats{ID: fmt.Sprintf("%064d", i), Name: fmt.Sprintf("container-%04d", i), CPUPercent: float64(i % 150), MemUsage: uint64(i+1) * 1024 * 1024, MemLimit: 1024 * 1024 * 1024}, Rates: docker.Rates{NetRx: 1024, NetTx: 2048, BlockRead: 4096, BlockWrite: 8192, NetValid: true, BlockValid: true}}
 	}
 	v.Update(batch)
 	return v, batch
@@ -78,6 +78,16 @@ func BenchmarkStatsView(b *testing.B) {
 
 func BenchmarkStatsUpdateAndView(b *testing.B) {
 	v, batch := benchmarkStatsView(1000)
+	b.ReportAllocs()
+	for b.Loop() {
+		v.Update(batch)
+		v.View()
+	}
+}
+
+func BenchmarkStatsRateSortAndView(b *testing.B) {
+	v, batch := benchmarkStatsView(1000)
+	v.setSort(sortx.Net, false)
 	b.ReportAllocs()
 	for b.Loop() {
 		v.Update(batch)

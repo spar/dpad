@@ -407,6 +407,13 @@ func (a *App) footer() string {
 		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "x", "remove tag/image")
 	}
 	keys := []string{"tab", "switch", "/", "filter", "s/r", "sort: " + string(a.tabs[a.active].SortKey())}
+	if stats, ok := a.tabs[a.active].(*StatsView); ok {
+		mode := "totals"
+		if stats.totals {
+			mode = "rates"
+		}
+		keys = append(keys, "t", mode)
+	}
 	if _, _, ok := a.tabs[a.active].Selected(); ok {
 		keys = append(keys, "d", "details", "enter", "logs", "e", "shell", "S/x/R", "start/stop/restart")
 	} else if images, ok := a.tabs[a.active].(*ImagesView); ok {

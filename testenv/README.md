@@ -57,6 +57,7 @@ dn stats                     # cpu-hog on top in red, cpu-warm yellow
 #   press m → mem-hog (red), mem-warm (yellow) rise to the top
 #   press n → traffic / web (network)
 #   press i → disk-io (block I/O)
+#   live network/disk values are bytes/sec; press t to switch to cumulative totals
 #   press p → many-pids
 #   press r → reverse;  q → quit
 dn stats --no-stream --sort mem    # one snapshot
@@ -89,6 +90,7 @@ dn
    **Exited (137)** in red and drops off the Stats tab. The shell loop ignores
    SIGTERM, so docker has to kill it. Press `S` to bring it back.
 6. Press `3` for the Stats tab, then `c`/`m`/`n`/`i`/`p` to re-sort live.
+   Network/disk sorts follow the current rates/totals mode; press `t` to toggle.
    Select `cpu-hog` or `mem-hog` to see two-minute CPU/memory history, averages,
    and peaks below the table. History fills as samples arrive; enlarge a small
    terminal to at least 80 columns to see the panel.

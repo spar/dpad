@@ -10,6 +10,8 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
+
+	"dockernext/internal/docker"
 )
 
 func TestPorts(t *testing.T) {
@@ -88,6 +90,22 @@ func TestHighlightKeepsText(t *testing.T) {
 	out := highlight(line, regexp.MustCompile("db|ü"))
 	if got := ansi.Strip(out); got != line {
 		t.Errorf("highlight changed text: %q", got)
+	}
+}
+
+func TestStatsRatesDistinguishUnknownIdleAndTotals(t *testing.T) {
+	s := docker.Stats{Name: "web", NetRx: 1000, NetTx: 2000, BlockRead: 3000, BlockWrite: 4000}
+	if row := StatsRateRow(s, docker.Rates{}); row[6] != "— / —" || row[7] != "— / —" {
+		t.Fatal("unavailable throughput was shown as zero")
+	}
+	if row := StatsRateRow(s, docker.Rates{NetValid: true, BlockValid: true}); row[6] != "0B/s / 0B/s" || row[7] != "0B/s / 0B/s" {
+		t.Fatalf("idle throughput was not measured zero: %v", row)
+	}
+	if row := StatsRateRow(s, docker.Rates{NetRx: 1500, NetTx: 2500, NetValid: true}); !strings.Contains(row[6], "kB/s") || row[7] != "— / —" {
+		t.Fatalf("rate units/availability incorrect: %v", row)
+	}
+	if row := StatsRow(s); strings.Contains(row[6], "/s") || row[6] == "— / —" {
+		t.Fatal("snapshot/totals rendering changed")
 	}
 }
 

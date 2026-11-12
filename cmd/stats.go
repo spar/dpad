@@ -19,6 +19,7 @@ func newStatsCmd() *cobra.Command {
 		sortKey  string
 		reverse  bool
 		noStream bool
+		totals   bool
 	)
 	cmd := &cobra.Command{
 		Use:   "stats",
@@ -26,7 +27,9 @@ func newStatsCmd() *cobra.Command {
 		Long: `Live, sortable container resource usage.
 
 While running, press c/m/n/i/p/a to sort by cpu/mem/net/io/pids/name,
-r to reverse, q to quit. Output is a single snapshot when not a terminal.`,
+r to reverse, t to toggle I/O rates/totals, q to quit.
+Live I/O shows bytes/sec by default; --totals starts with cumulative totals.
+Snapshots and piped output always show totals because rates need two samples.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Selecting specific containers is docker's job.
 			if len(args) > 0 {
@@ -38,7 +41,7 @@ r to reverse, q to quit. Output is a single snapshot when not a terminal.`,
 			}
 			return withClient(cmd.Context(), func(ctx context.Context, c *docker.Client) error {
 				if !noStream && term.IsTerminal(int(os.Stdout.Fd())) {
-					return tui.RunStats(ctx, c, key, reverse)
+					return tui.RunStats(ctx, c, key, reverse, totals)
 				}
 				items, err := c.StatsSnapshot(ctx)
 				if err != nil {
@@ -55,6 +58,7 @@ r to reverse, q to quit. Output is a single snapshot when not a terminal.`,
 		},
 	}
 	cmd.Flags().BoolVar(&noStream, "no-stream", false, "print a single snapshot and exit")
+	cmd.Flags().BoolVar(&totals, "totals", false, "start live stats with cumulative I/O totals instead of rates (t toggles)")
 	addSortFlags(cmd, &sortKey, &reverse, sortx.CPU, sortx.StatsKeys)
 	return cmd
 }

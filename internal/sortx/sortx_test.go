@@ -45,6 +45,25 @@ func TestStats(t *testing.T) {
 	}
 }
 
+func TestStatsRatesSortActivityRatherThanTotals(t *testing.T) {
+	items := []docker.Stats{{ID: "old", Name: "old", NetRx: 1000000, BlockRead: 1000000}, {ID: "busy", Name: "busy", NetRx: 100, BlockRead: 100}, {ID: "missing", Name: "missing"}}
+	rates := map[string]docker.Rates{"old": {NetRx: 1, BlockRead: 1, NetValid: true, BlockValid: true}, "busy": {NetRx: 1000, BlockRead: 2000, NetValid: true, BlockValid: true}}
+	for _, key := range []Key{Net, IO} {
+		StatsByRates(items, key, false, rates)
+		if !slices.Equal(statNames(items), []string{"busy", "old", "missing"}) {
+			t.Fatalf("wrong rate order: %v", statNames(items))
+		}
+		StatsByRates(items, key, true, rates)
+		if !slices.Equal(statNames(items), []string{"old", "busy", "missing"}) {
+			t.Fatal("reverse rates should keep unavailable samples last")
+		}
+		Stats(items, key, false)
+		if items[0].ID != "old" {
+			t.Fatal("totals no longer sort by cumulative bytes")
+		}
+	}
+}
+
 func TestContainersByStatus(t *testing.T) {
 	items := []container.Summary{
 		{Names: []string{"/old"}, State: "exited"},

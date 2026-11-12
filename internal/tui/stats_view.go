@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -29,23 +30,50 @@ type StatsView struct {
 	watching     bool // WatchStats requested
 	history      map[string]*statsHistory
 	historyCache statsHistoryCache
+	rates        map[string]docker.Rates
+	totals       bool
 }
 
 func NewStatsView(ctx context.Context, c dockerClient, key sortx.Key, reverse bool) *StatsView {
-	return &StatsView{ctx: ctx, client: c, data: map[string]docker.Stats{}, history: map[string]*statsHistory{}, list: list[docker.Stats]{
+	v := &StatsView{ctx: ctx, client: c, data: map[string]docker.Stats{}, history: map[string]*statsHistory{}, rates: map[string]docker.Rates{}}
+	v.list = list[docker.Stats]{
 		columns: render.StatsColumns,
 		keys:    sortx.StatsKeys,
 		sortCol: map[sortx.Key]int{sortx.Name: 0, sortx.CPU: 1, sortx.Mem: 3, sortx.Net: 6, sortx.IO: 7, sortx.PIDs: 8},
 		key:     key,
 		reverse: reverse,
 		match:   func(s docker.Stats, f string) bool { return matches(f, s.Name, s.ID) },
-		sort:    sortx.Stats,
+		sort: func(items []docker.Stats, key sortx.Key, reverse bool) {
+			if v.totals {
+				sortx.Stats(items, key, reverse)
+			} else {
+				sortx.StatsByRates(items, key, reverse, v.rates)
+			}
+		},
 		rows: func(s docker.Stats) []row {
-			return []row{{key: s.ID, cells: render.StatsRow(s), id: s.ID, name: s.Name}}
+			var cells []string
+			if v.totals {
+				cells = render.StatsRow(s)
+			} else {
+				cells = render.StatsRateRow(s, v.rates[s.ID])
+			}
+			return []row{{key: s.ID, cells: cells, id: s.ID, name: s.Name}}
 		},
 		loading: "connecting…",
 		empty:   "no running containers",
-	}}
+	}
+	v.SetTotals(false)
+	return v
+}
+
+func (v *StatsView) SetTotals(totals bool) {
+	v.totals = totals
+	v.columns = slices.Clone(render.StatsColumns)
+	if !totals {
+		v.columns[6].Header = "NET RX / TX"
+		v.columns[7].Header = "DISK READ / WRITE"
+	}
+	v.rowCache = nil
 }
 
 func (v *StatsView) Title() string { return "Stats" }
@@ -103,6 +131,7 @@ func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 		v.ch = msg.ch
 		clear(v.data)
 		clear(v.history)
+		clear(v.rates)
 		v.historyCache = statsHistoryCache{}
 		v.setItems(nil, nil)
 		return waitStats(v.ch)
@@ -116,10 +145,12 @@ func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 			if u.Gone {
 				delete(v.data, u.Stats.ID)
 				delete(v.history, u.Stats.ID)
+				delete(v.rates, u.Stats.ID)
 				if v.historyCache.history == h {
 					v.historyCache = statsHistoryCache{}
 				}
 			} else {
+				v.rates[u.Stats.ID] = u.Rates
 				if !v.noHighlight {
 					if h == nil || h.generation != u.Generation {
 						h = &statsHistory{generation: u.Generation}
@@ -189,6 +220,10 @@ func shortcutHelp(sep string) (keys, sorts string) {
 }
 
 func (v *StatsView) HandleKey(key string) tea.Cmd {
+	if key == "t" {
+		v.SetTotals(!v.totals)
+		return nil
+	}
 	for _, sc := range statsShortcuts {
 		if sc.key == key {
 			v.setSort(sc.sort, v.reverse)
@@ -205,21 +240,26 @@ func (v *StatsView) Status() string {
 		cpu += s.CPUPercent
 		mem += s.MemUsage
 	}
-	return fmt.Sprintf("%d running · CPU %.1f%% · MEM %s · %s",
-		len(v.data), cpu, render.BinSize(mem), sortLabel(v.key, v.reverse))
+	mode := "rates"
+	if v.totals {
+		mode = "totals"
+	}
+	return fmt.Sprintf("%d running · CPU %.1f%% · MEM %s · I/O: %s · %s",
+		len(v.data), cpu, render.BinSize(mem), mode, sortLabel(v.key, v.reverse))
 }
 
 func (v *StatsView) Help() [][2]string {
 	keys, sorts := shortcutHelp(" / ")
-	return append([][2]string{{keys, "sort by " + sorts}}, v.list.Help()...)
+	return append([][2]string{{keys, "sort by " + sorts}, {"t", "toggle I/O rates / cumulative totals (sorting follows mode)"}}, v.list.Help()...)
 }
 
 // statsProgram runs StatsView on its own for `dn stats`.
 type statsProgram struct{ v *StatsView }
 
 // RunStats shows live stats inline until the user quits.
-func RunStats(ctx context.Context, c dockerClient, key sortx.Key, reverse bool) error {
+func RunStats(ctx context.Context, c dockerClient, key sortx.Key, reverse, totals bool) error {
 	v := NewStatsView(ctx, c, key, reverse)
+	v.SetTotals(totals)
 	v.noHighlight = true
 	v.SetSize(120, 28)
 	_, err := tea.NewProgram(statsProgram{v}, programOptions(ctx)...).Run()
@@ -246,6 +286,6 @@ func (p statsProgram) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (p statsProgram) View() tea.View {
 	keys, _ := shortcutHelp("/")
-	status := render.Dim.Render(p.v.Status() + "  ·  " + keys + " sort · r reverse · q quit")
+	status := render.Dim.Render(p.v.Status() + "  ·  " + keys + " sort · r reverse · t rates/totals · q quit")
 	return tea.NewView(strings.Join([]string{status, p.v.View()}, "\n"))
 }

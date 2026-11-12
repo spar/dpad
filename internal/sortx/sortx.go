@@ -90,6 +90,32 @@ func Stats(items []docker.Stats, key Key, reverse bool) {
 	})
 }
 
+func StatsByRates(items []docker.Stats, key Key, reverse bool, rates map[string]docker.Rates) {
+	if key != Net && key != IO {
+		Stats(items, key, reverse)
+		return
+	}
+	slices.SortStableFunc(items, func(a, b docker.Stats) int {
+		ra, rb := rates[a.ID], rates[b.ID]
+		va, vb := ra.NetValid, rb.NetValid
+		aTotal, bTotal := ra.NetRx+ra.NetTx, rb.NetRx+rb.NetTx
+		if key == IO {
+			va, vb = ra.BlockValid, rb.BlockValid
+			aTotal, bTotal = ra.BlockRead+ra.BlockWrite, rb.BlockRead+rb.BlockWrite
+		}
+		if va != vb {
+			if va {
+				return -1
+			}
+			return 1
+		}
+		if !va {
+			return order(cmp.Compare(a.Name, b.Name), reverse)
+		}
+		return order(cmp.Or(cmp.Compare(bTotal, aTotal), cmp.Compare(a.Name, b.Name)), reverse)
+	})
+}
+
 // containerStateRank orders states so active containers come first.
 var containerStateRank = map[container.ContainerState]int{
 	"running": 0, "restarting": 1, "paused": 2, "created": 3, "exited": 4, "dead": 5,

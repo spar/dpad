@@ -15,6 +15,10 @@ import (
 // Size formats bytes in decimal units, as docker does for images (e.g. "1.2GB").
 func Size(b int64) string { return units.HumanSizeWithPrecision(float64(b), 3) }
 
+func byteRatePair(a, b float64) string {
+	return units.HumanSizeWithPrecision(a, 3) + "/s / " + units.HumanSizeWithPrecision(b, 3) + "/s"
+}
+
 // BinSize formats bytes in binary units, as docker does for memory (e.g. "512MiB").
 func BinSize(b uint64) string { return units.BytesSize(float64(b)) }
 
