@@ -18,10 +18,14 @@ type fakeClient struct {
 	inspectErr error
 	imageInfo  docker.ImageInfo
 	imageErr   error
+	pingErr    error
 
 	mu      sync.Mutex
 	actions []string // "verb id"
 }
+
+func (f *fakeClient) ConnectionLabel() string    { return "test-daemon" }
+func (f *fakeClient) Ping(context.Context) error { return f.pingErr }
 
 func (f *fakeClient) Containers(context.Context, bool) ([]container.Summary, error) {
 	return f.containers, nil

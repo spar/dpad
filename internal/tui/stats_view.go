@@ -15,9 +15,15 @@ import (
 )
 
 type (
-	statsStartedMsg struct{ ch <-chan docker.StatsUpdate }
-	statsBatchMsg   []docker.StatsUpdate
-	statsErrMsg     struct{ err error }
+	statsStartedMsg struct {
+		ch         <-chan docker.StatsUpdate
+		generation uint64
+	}
+	statsBatchMsg []docker.StatsUpdate
+	statsErrMsg   struct {
+		err        error
+		generation uint64
+	}
 )
 
 // StatsView shows live, sortable resource usage for running containers.
@@ -32,10 +38,19 @@ type StatsView struct {
 	historyCache statsHistoryCache
 	rates        map[string]docker.Rates
 	totals       bool
+	health       map[string]statsHealth
+	requested    bool
+	watchGen     uint64
+	watchErr     error
+	retryDelay   time.Duration
+	endpoint     string
 }
 
 func NewStatsView(ctx context.Context, c dockerClient, key sortx.Key, reverse bool) *StatsView {
-	v := &StatsView{ctx: ctx, client: c, data: map[string]docker.Stats{}, history: map[string]*statsHistory{}, rates: map[string]docker.Rates{}}
+	v := &StatsView{ctx: ctx, client: c, data: map[string]docker.Stats{}, history: map[string]*statsHistory{}, rates: map[string]docker.Rates{}, health: map[string]statsHealth{}}
+	if c != nil {
+		v.endpoint = c.ConnectionLabel()
+	}
 	v.list = list[docker.Stats]{
 		columns: render.StatsColumns,
 		keys:    sortx.StatsKeys,
@@ -52,7 +67,9 @@ func NewStatsView(ctx context.Context, c dockerClient, key sortx.Key, reverse bo
 		},
 		rows: func(s docker.Stats) []row {
 			var cells []string
-			if v.totals {
+			if v.health[s.ID].err != nil {
+				cells = render.UnavailableStatsRow(s)
+			} else if v.totals {
 				cells = render.StatsRow(s)
 			} else {
 				cells = render.StatsRateRow(s, v.rates[s.ID])
@@ -83,16 +100,19 @@ func (v *StatsView) Init() tea.Cmd { return nil }
 // Focus starts watching stats the first time the tab is shown: that opens one
 // stream per running container, which isn't worth it if the tab never is.
 func (v *StatsView) Focus() tea.Cmd {
+	v.requested = true
 	if v.watching {
 		return nil
 	}
 	v.watching = true
+	v.watchGen++
+	gen := v.watchGen
 	return func() tea.Msg {
 		ch, err := v.client.WatchStats(v.ctx)
 		if err != nil {
-			return statsErrMsg{err}
+			return statsErrMsg{err: err, generation: gen}
 		}
-		return statsStartedMsg{ch}
+		return statsStartedMsg{ch: ch, generation: gen}
 	}
 }
 
@@ -105,21 +125,29 @@ const statsFlushInterval = time.Second
 // arrives within statsFlushInterval so the batch costs one re-render.
 func waitStats(ch <-chan docker.StatsUpdate) tea.Cmd {
 	return func() tea.Msg {
-		u, ok := <-ch
-		if !ok {
-			return nil
+		timer := time.NewTimer(statsFlushInterval)
+		defer timer.Stop()
+		var u docker.StatsUpdate
+		select {
+		case value, ok := <-ch:
+			if !ok {
+				return statsClosedMsg{ch}
+			}
+			u = value
+		case <-timer.C:
+			return statsTickMsg{ch}
 		}
 		batch := statsBatchMsg{u}
-		flush := time.After(statsFlushInterval)
+		timer.Reset(statsFlushInterval)
 		for {
 			select {
 			case u, ok := <-ch:
 				if !ok {
-					return batch
+					return statsSourceBatchMsg{ch: ch, batch: batch}
 				}
 				batch = append(batch, u)
-			case <-flush:
-				return batch
+			case <-timer.C:
+				return statsSourceBatchMsg{ch: ch, batch: batch}
 			}
 		}
 	}
@@ -127,11 +155,45 @@ func waitStats(ch <-chan docker.StatsUpdate) tea.Cmd {
 
 func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
+	case statsRetryMsg:
+		if msg.generation == v.watchGen {
+			return v.retryNow()
+		}
+		return nil
+	case refreshMsg:
+		return v.retryNow()
+	case statsClosedMsg:
+		if msg.ch != v.ch || v.ctx.Err() != nil {
+			return nil
+		}
+		v.watchErr = fmt.Errorf("stats connection closed")
+		for id, h := range v.health {
+			v.markUnavailable(id, h, v.watchErr)
+		}
+		v.rowCache = nil
+		return v.retryWatch()
+	case statsTickMsg:
+		if msg.ch != v.ch || v.ctx.Err() != nil {
+			return nil
+		}
+		v.expireSamples(time.Now())
+		return waitStats(v.ch)
+	case statsSourceBatchMsg:
+		if msg.ch != v.ch {
+			return nil
+		}
+		return v.Update(msg.batch)
 	case statsStartedMsg:
+		if msg.generation != v.watchGen {
+			return nil
+		}
 		v.ch = msg.ch
+		v.watchErr = nil
+		v.retryDelay = time.Second
 		clear(v.data)
 		clear(v.history)
 		clear(v.rates)
+		clear(v.health)
 		v.historyCache = statsHistoryCache{}
 		v.setItems(nil, nil)
 		return waitStats(v.ch)
@@ -139,18 +201,39 @@ func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 		now := time.Now()
 		for _, u := range msg {
 			h := v.history[u.Stats.ID]
-			if h != nil && u.Generation < h.generation {
+			health, known := v.health[u.Stats.ID]
+			if known && u.Generation < health.generation {
 				continue
 			}
 			if u.Gone {
 				delete(v.data, u.Stats.ID)
 				delete(v.history, u.Stats.ID)
 				delete(v.rates, u.Stats.ID)
+				delete(v.health, u.Stats.ID)
 				if v.historyCache.history == h {
 					v.historyCache = statsHistoryCache{}
 				}
+			} else if u.Unavailable {
+				if _, exists := v.data[u.Stats.ID]; !exists {
+					v.data[u.Stats.ID] = u.Stats
+				}
+				health.generation = u.Generation
+				err := u.Err
+				if err == nil {
+					err = fmt.Errorf("stats stream unavailable")
+				}
+				v.markUnavailable(u.Stats.ID, health, err)
 			} else {
-				v.rates[u.Stats.ID] = u.Rates
+				if known && u.Generation == health.generation && !u.SampledAt.IsZero() && !health.sourceAt.IsZero() && !u.SampledAt.After(health.sourceAt) {
+					delete(v.rates, u.Stats.ID)
+					continue
+				}
+				rates := u.Rates
+				if health.err != nil {
+					rates = docker.Rates{}
+				}
+				v.health[u.Stats.ID] = statsHealth{generation: u.Generation, received: now, sourceAt: u.SampledAt}
+				v.rates[u.Stats.ID] = rates
 				if !v.noHighlight {
 					if h == nil || h.generation != u.Generation {
 						h = &statsHistory{generation: u.Generation}
@@ -163,6 +246,7 @@ func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 				v.data[u.Stats.ID] = u.Stats
 			}
 		}
+		v.expireSamples(now)
 		items := v.items[:0]
 		for _, s := range v.data {
 			items = append(items, s)
@@ -170,7 +254,15 @@ func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 		v.setItems(items, nil)
 		return waitStats(v.ch)
 	case statsErrMsg:
-		v.err = msg.err
+		if msg.generation != v.watchGen || v.ctx.Err() != nil {
+			return nil
+		}
+		v.watchErr = msg.err
+		for id, h := range v.health {
+			v.markUnavailable(id, h, msg.err)
+		}
+		v.rowCache = nil
+		return v.retryWatch()
 	}
 	return nil
 }
@@ -185,6 +277,9 @@ func (v *StatsView) SetSize(width, height int) {
 }
 
 func (v *StatsView) View() string {
+	if v.watchErr != nil && len(v.data) == 0 {
+		return render.Error.Render("stats unavailable: "+connectionError(v.watchErr)) + "\n" + render.Dim.Render("reconnecting… (ctrl+r retries now)")
+	}
 	if !v.historyVisible() || v.err != nil || !v.loaded {
 		return v.list.View()
 	}
@@ -220,6 +315,9 @@ func shortcutHelp(sep string) (keys, sorts string) {
 }
 
 func (v *StatsView) HandleKey(key string) tea.Cmd {
+	if key == "ctrl+r" {
+		return v.retryNow()
+	}
 	if key == "t" {
 		v.SetTotals(!v.totals)
 		return nil
@@ -236,7 +334,14 @@ func (v *StatsView) HandleKey(key string) tea.Cmd {
 func (v *StatsView) Status() string {
 	var cpu float64
 	var mem uint64
-	for _, s := range v.data {
+	available := 0
+	var problem error
+	for id, s := range v.data {
+		if err := v.health[id].err; err != nil {
+			problem = err
+			continue
+		}
+		available++
 		cpu += s.CPUPercent
 		mem += s.MemUsage
 	}
@@ -244,8 +349,20 @@ func (v *StatsView) Status() string {
 	if v.totals {
 		mode = "totals"
 	}
-	return fmt.Sprintf("%d running · CPU %.1f%% · MEM %s · I/O: %s · %s",
-		len(v.data), cpu, render.BinSize(mem), mode, sortLabel(v.key, v.reverse))
+	usage := fmt.Sprintf("CPU %.1f%% · MEM %s", cpu, render.BinSize(mem))
+	if available == 0 && (len(v.data) > 0 || v.watchErr != nil) {
+		usage = "CPU — · MEM —"
+	}
+	status := fmt.Sprintf("%d/%d available · %s · I/O: %s · %s", available, len(v.data), usage, mode, sortLabel(v.key, v.reverse))
+	if v.watchErr != nil {
+		status += " · reconnecting: " + connectionError(v.watchErr)
+	} else if problem != nil {
+		status += " · recovering streams: " + connectionError(problem)
+	}
+	if v.noHighlight && v.endpoint != "" {
+		status = v.endpoint + " · " + status
+	}
+	return status
 }
 
 func (v *StatsView) Help() [][2]string {
@@ -258,6 +375,8 @@ type statsProgram struct{ v *StatsView }
 
 // RunStats shows live stats inline until the user quits.
 func RunStats(ctx context.Context, c dockerClient, key sortx.Key, reverse, totals bool) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	v := NewStatsView(ctx, c, key, reverse)
 	v.SetTotals(totals)
 	v.noHighlight = true

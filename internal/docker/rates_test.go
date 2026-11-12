@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"math"
 	"testing"
@@ -119,7 +120,9 @@ func TestStreamRatesResetForEachNewStream(t *testing.T) {
 	c := &Client{api: &rateEngine{data: data.Bytes()}}
 	for range 2 {
 		var samples []Rates
-		c.streamStats(t.Context(), "id", "web", func(_ Stats, r Rates, _ time.Time) bool { samples = append(samples, r); return true })
+		if err := c.streamStats(t.Context(), "id", "web", func(_ Stats, r Rates, _ time.Time) bool { samples = append(samples, r); return true }); !errors.Is(err, io.EOF) {
+			t.Fatalf("stream ended with %v, want EOF", err)
+		}
 		if len(samples) != 3 || samples[0].NetValid || !samples[1].NetValid || samples[1].NetRx != 1000 || samples[1].BlockWrite != 4000 || samples[2].BlockValid {
 			t.Fatalf("stream rates/reset incorrect: %+v", samples)
 		}

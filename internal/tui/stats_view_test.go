@@ -41,8 +41,8 @@ func TestWaitStatsBatchesUpdates(t *testing.T) {
 			time.Sleep(10 * time.Millisecond)
 		}
 	}()
-	batch, ok := waitStats(ch)().(statsBatchMsg)
-	if !ok || len(batch) != 3 {
+	batch, ok := waitStats(ch)().(statsSourceBatchMsg)
+	if !ok || len(batch.batch) != 3 {
 		t.Errorf("waitStats returned %v, want one batch of 3 staggered updates", batch)
 	}
 }

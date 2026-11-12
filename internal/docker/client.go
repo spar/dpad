@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -16,13 +17,15 @@ import (
 
 // Client is a thin wrapper around the Engine API client.
 type Client struct {
-	api engine
+	api   engine
+	label string
 }
 
 // engine is the part of the Engine API client dockernext uses, so tests can
 // substitute a fake daemon.
 type engine interface {
 	Close() error
+	Ping(context.Context, client.PingOptions) (client.PingResult, error)
 	ContainerList(context.Context, client.ContainerListOptions) (client.ContainerListResult, error)
 	ImageList(context.Context, client.ImageListOptions) (client.ImageListResult, error)
 	ImageInspect(context.Context, string, ...client.ImageInspectOption) (client.ImageInspectResult, error)
@@ -43,8 +46,11 @@ var _ engine = (*client.Client)(nil)
 // otherwise the endpoint of the current docker context.
 func New() (*Client, error) {
 	opts := []client.Opt{client.FromEnv} // API version negotiation is on by default
+	name := ""
 	if os.Getenv("DOCKER_HOST") == "" {
-		if host := contextHost(); host != "" {
+		contextName, host := contextEndpoint()
+		name = contextName
+		if host != "" {
 			opts = append(opts, client.WithHost(host))
 		}
 	}
@@ -52,7 +58,26 @@ func New() (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{api: api}, nil
+	return &Client{api: api, label: connectionLabel(name, api.DaemonHost())}, nil
+}
+
+func connectionLabel(name, host string) string {
+	if u, err := url.Parse(host); err == nil {
+		u.User = nil
+		u.RawQuery = ""
+		u.Fragment = ""
+		host = u.String()
+	}
+	if name != "" {
+		return name + " @ " + host
+	}
+	return host
+}
+
+func (c *Client) ConnectionLabel() string { return c.label }
+func (c *Client) Ping(ctx context.Context) error {
+	_, err := c.api.Ping(ctx, client.PingOptions{})
+	return err
 }
 
 func (c *Client) Close() error { return c.api.Close() }
@@ -102,11 +127,16 @@ func (c *Client) Restart(ctx context.Context, id string) error {
 // contextHost resolves the docker endpoint of the active docker context
 // (DOCKER_CONTEXT or currentContext in config.json). Returns "" for the default context.
 func contextHost() string {
+	_, host := contextEndpoint()
+	return host
+}
+
+func contextEndpoint() (string, string) {
 	cfgDir := os.Getenv("DOCKER_CONFIG")
 	if cfgDir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return ""
+			return "", ""
 		}
 		cfgDir = filepath.Join(home, ".docker")
 	}
@@ -122,13 +152,13 @@ func contextHost() string {
 		name = cfg.CurrentContext
 	}
 	if name == "" || name == "default" {
-		return ""
+		return "default", ""
 	}
 
 	sum := sha256.Sum256([]byte(name))
 	b, err := os.ReadFile(filepath.Join(cfgDir, "contexts", "meta", hex.EncodeToString(sum[:]), "meta.json"))
 	if err != nil {
-		return ""
+		return "", ""
 	}
 	var meta struct {
 		Endpoints map[string]struct {
@@ -136,7 +166,7 @@ func contextHost() string {
 		} `json:"Endpoints"`
 	}
 	if json.Unmarshal(b, &meta) != nil {
-		return ""
+		return "", ""
 	}
-	return meta.Endpoints["docker"].Host
+	return name, meta.Endpoints["docker"].Host
 }

@@ -117,6 +117,10 @@ func (v *ProjectsView) Focus() tea.Cmd { return nil }
 
 func (v *ProjectsView) Update(msg tea.Msg) tea.Cmd {
 	if msg, ok := msg.(containersMsg); ok {
+		if msg.err != nil {
+			v.err, v.loaded = msg.err, true
+			return nil
+		}
 		projects := make(map[string]*composeProject)
 		for _, c := range msg.items {
 			name := c.Labels[composeProjectLabel]
