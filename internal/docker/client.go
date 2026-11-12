@@ -25,6 +25,8 @@ type engine interface {
 	Close() error
 	ContainerList(context.Context, client.ContainerListOptions) (client.ContainerListResult, error)
 	ImageList(context.Context, client.ImageListOptions) (client.ImageListResult, error)
+	ImageInspect(context.Context, string, ...client.ImageInspectOption) (client.ImageInspectResult, error)
+	ImageRemove(context.Context, string, client.ImageRemoveOptions) (client.ImageRemoveResult, error)
 	ContainerInspect(context.Context, string, client.ContainerInspectOptions) (client.ContainerInspectResult, error)
 	ContainerStart(context.Context, string, client.ContainerStartOptions) (client.ContainerStartResult, error)
 	ContainerStop(context.Context, string, client.ContainerStopOptions) (client.ContainerStopResult, error)

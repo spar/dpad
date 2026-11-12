@@ -49,11 +49,13 @@ These cases go to `docker` unchanged:
 | `↑↓` `j k` `pgup pgdn` `g G` | move |
 | `/` | filter the current tab (`enter` keeps, `esc` clears) |
 | `s` / `r` | cycle sort key / reverse |
-| `d` | open details of the selected container (`esc` back) |
+| `d` | open details of the selected container or image (`esc` back) |
 | `e` | choose a shell executable for the selected container (`enter` opens, `esc` cancels) |
 | `enter` | follow logs of the selected container (`esc` back) |
 | `space` (Projects) | expand/collapse the selected project |
 | `enter` (project row) | follow logs across the selected project (`esc` back) |
+| `enter` (Images) | inspect the selected image |
+| `x` (Images or image details) | confirm removal of the selected tag or image |
 | `S` / `x` / `R` | start (or unpause) / stop / restart (asks y/N) |
 | `ctrl+r` | refresh |
 | `?` | help |
@@ -104,6 +106,25 @@ project's containers when the viewer opens; reopen it after recreating or adding
 containers. Source errors appear in the status while other streams continue.
 Select an individual container row for details, logs, or confirmed lifecycle
 actions; project rows do not perform bulk start/stop/restart actions.
+
+In Images, the usage column counts containers by image ID, including stopped
+containers. `unused` means none reference the image; a failed usage refresh shows
+`unknown`, not `unused`. Press `d` or `enter` for tags, digests, creation date,
+OS/architecture, size, configuration, labels, and the names/states of containers
+using the image. Environment variables are omitted. Scroll and pan as in container
+details, `ctrl+r` refreshes, and `esc` or `q` returns to Images.
+
+Press `x` on an image row or in image details to remove the selected reference,
+then `y` to confirm. With multiple tags, this removes only the selected tag and
+keeps other tags and image data. Removing the last tag or an untagged image may
+delete image data; the confirmation states which operation will happen. Deletion
+is refused while any running or stopped container references the image. Tag
+removal from a multi-tag image still follows Docker's normal conflict checks.
+Image identity and tag state are rechecked after confirmation; changes require
+a refresh and a new confirmation. Removal never forces deletion or prunes parent
+images. Success returns to the refreshed list with the same filter/sort and
+selection, or the adjacent row when the selected reference was removed. Image
+sizes include shared layers and are not a guarantee of disk space reclaimed.
 
 ## Colors
 Output is plain when piped, when `NO_COLOR` is set, or with `--no-color`.
