@@ -14,6 +14,8 @@ import (
 type fakeClient struct {
 	containers []container.Summary
 	images     []image.Summary
+	inspect    container.InspectResponse
+	inspectErr error
 
 	mu      sync.Mutex
 	actions []string // "verb id"
@@ -24,6 +26,11 @@ func (f *fakeClient) Containers(context.Context, bool) ([]container.Summary, err
 }
 
 func (f *fakeClient) Images(context.Context) ([]image.Summary, error) { return f.images, nil }
+
+func (f *fakeClient) Inspect(_ context.Context, id string) (container.InspectResponse, error) {
+	_ = f.record("inspect", id)
+	return f.inspect, f.inspectErr
+}
 
 func (f *fakeClient) record(verb, id string) error {
 	f.mu.Lock()

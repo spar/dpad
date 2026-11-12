@@ -82,6 +82,8 @@ dn
 1. Press `/`, type `dn-demo`, then `enter` to keep only demo containers.
 2. Press `s` a few times to cycle the sort between name, created, and status.
 3. Select `dn-demo-logger-json-1` and press `enter` to follow its logs. Press `esc` to go back.
+   Press `d` to inspect its configuration, networks, and mounts. Use `ctrl+r` to
+   refresh, `enter` to open logs from details, and `esc` to return.
 4. Select `dn-demo-paused-1` and press `S` then `y`. It unpauses and turns green.
 5. Select `dn-demo-cpu-hog-1` and press `x` then `y`. After about 10s it shows
    **Exited (137)** in red and drops off the Stats tab. The shell loop ignores

@@ -41,6 +41,7 @@ type App struct {
 	filtering     bool
 	confirm       *pending
 	logs          *LogsView
+	details       *DetailsView
 	help          bool
 	flash         string
 	flashErr      bool
@@ -79,6 +80,9 @@ func (a *App) resize(width, height int) {
 	if a.logs != nil {
 		a.logs.SetSize(a.width, a.bodyHeight())
 	}
+	if a.details != nil {
+		a.details.SetSize(a.width, a.bodyHeight())
+	}
 }
 
 // setFilter sets the active tab's filter and the input showing it.
@@ -108,6 +112,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	if a.logs != nil {
 		cmds = append(cmds, a.logs.Update(msg))
+	}
+	if a.details != nil {
+		cmds = append(cmds, a.details.Update(msg))
 	}
 	return a, tea.Batch(cmds...)
 }
@@ -157,6 +164,18 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			return nil
 		}
 		return a.logs.Update(msg)
+	case a.details != nil:
+		switch key {
+		case "esc", "q":
+			a.details.Close()
+			a.details = nil
+			return nil
+		case "enter":
+			var cmd tea.Cmd
+			a.logs, cmd = NewLogsView(a.ctx, a.client, a.details.id, a.details.name, a.width, a.bodyHeight())
+			return cmd
+		}
+		return a.details.Update(msg)
 	}
 
 	switch key {
@@ -179,6 +198,12 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		if id, name, ok := a.tabs[a.active].Selected(); ok {
 			var cmd tea.Cmd
 			a.logs, cmd = NewLogsView(a.ctx, a.client, id, name, a.width, a.bodyHeight())
+			return cmd
+		}
+	case "d":
+		if id, name, ok := a.tabs[a.active].Selected(); ok {
+			var cmd tea.Cmd
+			a.details, cmd = NewDetailsView(a.ctx, a.client, id, name, a.width, a.bodyHeight())
 			return cmd
 		}
 	case "S":
@@ -221,6 +246,8 @@ func (a *App) render() string {
 		body = a.helpView()
 	case a.logs != nil:
 		body, status = a.logs.View(), a.logs.Status()
+	case a.details != nil:
+		body, status = a.details.View(), a.details.Status()
 	default:
 		t := a.tabs[a.active]
 		body, status = t.View(), t.Status()
@@ -264,10 +291,12 @@ func (a *App) footer() string {
 		return a.filter.View()
 	case a.logs != nil:
 		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/follow")
+	case a.details != nil:
+		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "enter", "logs")
 	}
 	keys := []string{"tab", "switch", "/", "filter", "s/r", "sort: " + string(a.tabs[a.active].SortKey())}
 	if _, _, ok := a.tabs[a.active].Selected(); ok {
-		keys = append(keys, "enter", "logs", "S/x/R", "start/stop/restart")
+		keys = append(keys, "d", "details", "enter", "logs", "S/x/R", "start/stop/restart")
 	}
 	return hints(append(keys, "?", "help", "q", "quit")...)
 }
@@ -286,6 +315,7 @@ func (a *App) helpView() string {
 		{"↑↓ / j k, pgup/pgdn, g/G", "move selection"},
 		{"/", "filter (enter keeps, esc clears)"},
 		{"enter", "follow logs of selected container"},
+		{"d", "inspect selected container's details"},
 		{"S / x / R", "start (or unpause) / stop / restart selected container"},
 		{"ctrl+r", "refresh now"},
 		{"q, ctrl+c", "quit"},
