@@ -102,9 +102,25 @@ matching project visible so its counts and log targets stay consistent.
 Press `space` on a project row to collapse or expand it, or `enter` to follow its
 containers' logs with colored name prefixes. Lines appear as they arrive; regex
 filtering and scrolling work as in single-container logs. Each container starts
-with its last 500 lines, sharing the 5,000-line viewer buffer. Log sources are the
-project's containers when the viewer opens; reopen it after recreating or adding
-containers. Source errors appear in the status while other streams continue.
+with its last 500 lines, sharing the 5,000-line viewer buffer. Project log sessions
+follow Compose labels as containers are added, scaled down, recreated, or
+restarted. The existing Docker event subscription and ten-second polling fallback
+update membership. Empty projects stay open waiting for new containers.
+
+Interrupted project sources reconnect with backoff of 1, 2, 4, then at most 5
+seconds, resuming from the last daemon timestamp. Bounded fingerprint matching
+suppresses replay at that timestamp while preserving new lines with the same
+timestamp. Recovery depends on logs Docker still retains; replay suppression
+tracks up to 256 records at the last timestamp per source. After a successful
+history read, stopped sources wait for a restart. Source counts, joins, leaves, retries,
+and errors appear in the status while healthy sources continue. A failed
+container-list refresh retains known sources until discovery recovers.
+
+Membership changes and reconnects preserve the filter, buffered logs, and paused
+scroll position while those lines remain in the buffer. Closing the viewer
+cancels all readers and pending retries. One timer serves retry scheduling for
+the session; snapshots and status updates coalesce, and log batches retain the
+existing redraw limit. Colors are stable by container name across recreation.
 Select an individual container row for details, logs, or confirmed lifecycle
 actions; project rows do not perform bulk start/stop/restart actions.
 

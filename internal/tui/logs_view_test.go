@@ -237,6 +237,21 @@ func TestLogsFilterPreservesFollowAndPausedScroll(t *testing.T) {
 	}
 }
 
+func TestLogsEvictionPreservesPausedVisibleLine(t *testing.T) {
+	v := newTestLogsView(4)
+	texts := make([]string, maxLogLines)
+	for i := range texts {
+		texts[i] = fmt.Sprintf("line %04d", i)
+	}
+	addLogLines(v, texts...)
+	v.vp.SetYOffset(100)
+	before := ansi.Strip(v.View())
+	addLogLines(v, "new line")
+	if v.vp.YOffset() != 99 || ansi.Strip(v.View()) != before {
+		t.Fatal("buffer eviction moved paused content")
+	}
+}
+
 func TestLogsWaitBatchesSteadyStream(t *testing.T) {
 	v := &LogsView{ch: make(chan docker.LogLine), errc: make(chan error, 1)}
 	go func() {

@@ -270,12 +270,8 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		}
 		if projects, ok := a.tabs[a.active].(*ProjectsView); ok {
 			if p := projects.selectedProject(); p != nil {
-				targets := make([]logTarget, len(p.containers))
-				for i, c := range p.containers {
-					targets[i] = logTarget{id: c.ID, name: docker.ContainerName(c.Names)}
-				}
 				var cmd tea.Cmd
-				a.logs, cmd = newLogsView(a.ctx, a.client, targets, "project "+p.name, a.width, a.bodyHeight())
+				a.logs, cmd = newProjectLogsView(a.ctx, a.client, p.name, p.containers, a.width, a.bodyHeight())
 				return cmd
 			}
 		}

@@ -12,6 +12,7 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/moby/moby/api/types/container"
 
 	"dockernext/internal/docker"
 	"dockernext/internal/render"
@@ -68,6 +69,8 @@ type LogsView struct {
 	failures      chan error
 	prefixWidth   int
 	colors        render.NameColors
+	project       *projectLogSession
+	projectState  projectLogStatus
 
 	// Paging glides to target over a few frames; gen invalidates stale frames.
 	target    int
@@ -80,20 +83,8 @@ func NewLogsView(ctx context.Context, c dockerClient, id, name string, width, he
 }
 
 func newLogsView(ctx context.Context, c dockerClient, targets []logTarget, name string, width, height int) (*LogsView, tea.Cmd) {
-	ctx, cancel := context.WithCancel(ctx)
-	v := &LogsView{
-		name:     name,
-		ch:       make(chan docker.LogLine, 512),
-		errc:     make(chan error, 1),
-		cancel:   cancel,
-		vp:       viewport.New(viewport.WithWidth(width), viewport.WithHeight(height)),
-		search:   textinput.New(),
-		failures: make(chan error, len(targets)),
-		colors:   render.NameColors{},
-	}
-	v.search.Prompt = "/"
-	v.search.Placeholder = "regex (e.g. ERROR|WARN, (?i)timeout)"
-	v.search.SetWidth(max(width-lipgloss.Width(logSearchHints)-2, 1))
+	v, ctx := newLogPane(ctx, name, width, height)
+	v.failures = make(chan error, len(targets))
 	results := make(chan error, len(targets))
 	for _, target := range targets {
 		if len(targets) > 1 {
@@ -125,6 +116,30 @@ func newLogsView(ctx context.Context, c dockerClient, targets []logTarget, name 
 	return v, v.wait()
 }
 
+func newProjectLogsView(ctx context.Context, c dockerClient, project string, items []container.Summary, width, height int) (*LogsView, tea.Cmd) {
+	v, ctx := newLogPane(ctx, "project "+project, width, height)
+	v.prefixWidth = 1
+	v.project = newProjectLogSession(ctx, c, project, items, v.ch, v.errc)
+	return v, v.wait()
+}
+
+func newLogPane(ctx context.Context, name string, width, height int) (*LogsView, context.Context) {
+	ctx, cancel := context.WithCancel(ctx)
+	v := &LogsView{
+		name:   name,
+		ch:     make(chan docker.LogLine, 512),
+		errc:   make(chan error, 1),
+		cancel: cancel,
+		vp:     viewport.New(viewport.WithWidth(width), viewport.WithHeight(height)),
+		search: textinput.New(),
+		colors: render.NameColors{},
+	}
+	v.search.Prompt = "/"
+	v.search.Placeholder = "regex (e.g. ERROR|WARN, (?i)timeout)"
+	v.search.SetWidth(max(width-lipgloss.Width(logSearchHints)-2, 1))
+	return v, ctx
+}
+
 // logFlushInterval is how long wait collects lines before handing them over.
 // Re-rendering the pane costs a pass over every buffered line, so a busy
 // container is redrawn at most about 20 times a second, not once per line.
@@ -134,9 +149,15 @@ const logFlushInterval = 50 * time.Millisecond
 // (or until maxLogBatch) so the batch costs one re-render.
 func (v *LogsView) wait() tea.Cmd {
 	ch, errc := v.ch, v.errc
+	var projectStatus <-chan projectLogStatus
+	if v.project != nil {
+		projectStatus = v.project.status
+	}
 	return func() tea.Msg {
 		var l docker.LogLine
 		select {
+		case status := <-projectStatus:
+			return projectLogStatusMsg{ch: ch, status: status}
 		case err := <-v.failures:
 			return logFailureMsg{ch, err}
 		case line, ok := <-ch:
@@ -195,7 +216,11 @@ func (v *LogsView) renderLine(line docker.LogLine) bufferedLog {
 	if entry.matches {
 		style := lipgloss.Style{}
 		if v.prefixWidth > 0 {
-			style = v.colors.Style(line.Container)
+			if v.project != nil {
+				style = render.StableNameStyle(line.Container)
+			} else {
+				style = v.colors.Style(line.Container)
+			}
 		}
 		entry.text = render.LogLine(line, style, v.prefixWidth, false, v.pattern)
 	}
@@ -222,6 +247,17 @@ func (v *LogsView) rebuild() {
 
 func (v *LogsView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
+	case containersMsg:
+		if v.project != nil {
+			v.project.update(projectLogSnapshot(msg))
+		}
+		return nil
+	case projectLogStatusMsg:
+		if msg.ch != v.ch {
+			return nil
+		}
+		v.projectState = msg.status
+		return v.wait()
 	case logFailureMsg:
 		if msg.ch != v.ch {
 			return nil
@@ -232,10 +268,35 @@ func (v *LogsView) Update(msg tea.Msg) tea.Cmd {
 		if msg.ch != v.ch {
 			return nil
 		}
+		following := v.vp.AtBottom() && !v.animating
+		if v.project != nil {
+			width := v.prefixWidth
+			for _, line := range msg.lines {
+				width = max(width, len(line.Container))
+			}
+			if width != v.prefixWidth {
+				v.prefixWidth = width
+				for i := range v.lines {
+					v.lines[i] = v.renderLine(v.lines[i].line)
+				}
+			}
+		}
 		for _, line := range msg.lines {
 			v.lines = append(v.lines, v.renderLine(line))
 		}
 		if over := len(v.lines) - maxLogLines; over > 0 {
+			if !following {
+				visible := 0
+				for _, line := range v.lines[:over] {
+					if line.matches {
+						visible++
+					}
+				}
+				v.vp.SetYOffset(max(v.vp.YOffset()-visible, 0))
+				if v.animating {
+					v.target = max(v.target-visible, 0)
+				}
+			}
 			v.lines = v.lines[over:]
 		}
 		v.rebuild()
@@ -367,6 +428,15 @@ func (v *LogsView) View() string { return v.vp.View() }
 
 func (v *LogsView) Status() string {
 	s := "logs: " + render.Accent.Render(v.name)
+	if v.project != nil {
+		s += fmt.Sprintf(" · %d sources (%d following, %d reconnecting)", v.projectState.sources, v.projectState.following, v.projectState.retrying)
+		if v.projectState.notice != "" {
+			s += " · " + v.projectState.notice
+		}
+		if v.projectState.err != "" {
+			s += " · " + render.Error.Render("last error: "+strings.ReplaceAll(v.projectState.err, "\n", " · "))
+		}
+	}
 	if v.query != "" {
 		s += fmt.Sprintf(" · filter: %s · %d/%d buffered lines", v.query, v.visible, len(v.lines))
 	}
@@ -378,6 +448,10 @@ func (v *LogsView) Status() string {
 		s += " · " + render.Error.Render(strings.ReplaceAll(v.err.Error(), "\n", " · "))
 	case v.ended:
 		s += " · stream ended"
+	case v.project != nil && v.projectState.sources == 0 && v.vp.AtBottom():
+		s += " · waiting for containers"
+	case v.project != nil && v.projectState.following == 0 && v.projectState.retrying == 0 && v.vp.AtBottom():
+		s += " · waiting for sources to start"
 	case v.vp.AtBottom():
 		s += " · following"
 	default:

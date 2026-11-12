@@ -9,6 +9,15 @@ import (
 	"dockernext/internal/docker"
 )
 
+// StableNameStyle keeps dynamic source colors stable without retaining names.
+func StableNameStyle(name string) lipgloss.Style {
+	hash := uint32(2166136261)
+	for i := range len(name) {
+		hash = (hash ^ uint32(name[i])) * 16777619
+	}
+	return fg(namePalette[hash%uint32(len(namePalette))])
+}
+
 type Level int
 
 const (
