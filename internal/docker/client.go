@@ -56,7 +56,6 @@ var _ engine = (*client.Client)(nil)
 // otherwise the endpoint of the current docker context. An ssh:// endpoint is
 // reached through an ssh tunnel to the remote daemon socket.
 func New() (*Client, error) {
-	opts := []client.Opt{client.FromEnv} // API version negotiation is on by default
 	name, host := "", os.Getenv("DOCKER_HOST")
 	if host == "" {
 		var err error
@@ -64,14 +63,35 @@ func New() (*Client, error) {
 		if err != nil {
 			return nil, err
 		}
-		if host != "" && !isSSHHost(host) {
-			opts = append(opts, client.WithHost(host))
-		}
+	}
+	return newClient(context.Background(), name, host, []client.Opt{client.FromEnv})
+}
+
+// NewForContext selects a context for this client without changing Docker's
+// saved selection or process environment.
+func NewForContext(ctx context.Context, name string) (*Client, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	dir, err := dockerConfigDir()
+	if err != nil {
+		return nil, err
+	}
+	name, host, err := readContextEndpoint(dir, name)
+	if err != nil {
+		return nil, err
+	}
+	return newClient(ctx, name, host, []client.Opt{client.WithTLSClientConfigFromEnv(), client.WithAPIVersionFromEnv()})
+}
+
+func newClient(ctx context.Context, name, host string, opts []client.Opt) (*Client, error) {
+	if host != "" && !isSSHHost(host) {
+		opts = append(opts, client.WithHost(host))
 	}
 	var tunnel *sshTunnel
 	if isSSHHost(host) {
 		var err error
-		if tunnel, err = startSSHTunnel(host); err != nil {
+		if tunnel, err = startSSHTunnelContext(ctx, host); err != nil {
 			return nil, err
 		}
 		opts = append(opts, client.WithHost("unix://"+tunnel.socket), client.WithDialContext(tunnel.dial))
@@ -170,13 +190,9 @@ func (c *Client) Restart(ctx context.Context, id string) error {
 // contextEndpoint resolves DOCKER_CONTEXT or currentContext in config.json.
 // Only the default context may fall back to the SDK's default endpoint.
 func contextEndpoint() (string, string, error) {
-	cfgDir := os.Getenv("DOCKER_CONFIG")
-	if cfgDir == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", "", err
-		}
-		cfgDir = filepath.Join(home, ".docker")
+	cfgDir, err := dockerConfigDir()
+	if err != nil {
+		return "", "", err
 	}
 
 	name := os.Getenv("DOCKER_CONTEXT")
@@ -195,6 +211,10 @@ func contextEndpoint() (string, string, error) {
 		}
 		name = cfg.CurrentContext
 	}
+	return readContextEndpoint(cfgDir, name)
+}
+
+func readContextEndpoint(cfgDir, name string) (string, string, error) {
 	if name == "" || name == "default" {
 		return "default", "", nil
 	}

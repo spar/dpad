@@ -90,6 +90,10 @@ func (p *sshProcess) running() bool {
 }
 
 func startSSHTunnel(host string) (*sshTunnel, error) {
+	return startSSHTunnelContext(context.Background(), host)
+}
+
+func startSSHTunnelContext(ctx context.Context, host string) (*sshTunnel, error) {
 	target, err := parseSSHHost(host)
 	if err != nil {
 		return nil, err
@@ -103,7 +107,7 @@ func startSSHTunnel(host string) (*sshTunnel, error) {
 	t := &sshTunnel{target: target, dir: dir, socket: filepath.Join(dir, "docker.sock")}
 	// The first start may prompt for a password or host key, which ssh does on
 	// the terminal; the TUI hasn't taken it over yet.
-	if t.proc, err = t.start(context.Background(), false); err != nil {
+	if t.proc, err = t.start(ctx, false); err != nil {
 		_ = os.RemoveAll(dir)
 		return nil, err
 	}

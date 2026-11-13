@@ -29,6 +29,7 @@ const pollInterval = 10 * time.Second
 
 // dockerClient is what the TUI needs from docker.Client, so tests can fake it.
 type dockerClient interface {
+	Close() error
 	Networks(context.Context) ([]network.Summary, error)
 	Network(context.Context, string) (network.Inspect, error)
 	Volumes(context.Context) ([]volume.Volume, []string, error)

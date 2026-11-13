@@ -66,6 +66,7 @@ These cases go to `docker` unchanged:
 | `x` (Images or image details) | confirm removal of the selected tag or image |
 | `S` / `x` / `R` | start (or unpause) / stop / restart (asks y/N) |
 | `ctrl+r` | refresh |
+| `c` (list tabs) | choose a Docker context for this session |
 | `?` | help |
 | `q` | quit |
 
@@ -379,8 +380,23 @@ The TUI shows its bound context/endpoint and connection state below the tabs.
 A single daemon ping runs every two seconds with a two-second timeout. Failed
 probes retry with backoff from one to five seconds; recovery refreshes lists and
 open details without resetting filters or selection. In list tabs, `ctrl+r` refreshes and
-requests an immediate connection check. The endpoint stays fixed for the session;
-restart `dn` after switching contexts.
+requests an immediate connection check. Changing the Docker CLI's current context
+outside `dn` leaves this dashboard bound to its existing daemon.
+
+Press `c` from a list tab to choose a saved Docker context. Use the usual navigation
+keys or `/` to filter by context name or endpoint, then `enter` to switch; `esc`
+cancels. The selection overrides `DOCKER_HOST` and `DOCKER_CONTEXT` for this `dn`
+session without changing the Docker CLI's saved current context. The `default`
+choice uses the platform's default Docker socket.
+
+Switching cancels the old daemon's requests, stats and event subscriptions, closes
+its connection, and opens fresh views on the selected daemon. The active tab is
+kept, while filters, selections, cached resources, stats history, and the event
+timeline reset. Finish pending container actions and close details/logs before
+opening the picker. SSH authentication prompts appear between dashboard sessions.
+If opening the selected context fails, the previous daemon reopens with fresh
+views and an error message. An unreachable daemon shows the existing disconnected
+state and retry behavior after selection.
 
 Live Stats retries failed startup and interrupted container streams automatically,
 also with one-to-five-second backoff. Samples that stop advancing for five seconds

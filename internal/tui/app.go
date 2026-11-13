@@ -37,31 +37,41 @@ var (
 
 // App is the full-screen TUI with Containers / Images / Stats / Projects / Events / Volumes / Networks tabs.
 type App struct {
-	ctx            context.Context
-	client         dockerClient
-	tabs           []tab
-	active         int
-	width, height  int
-	filter         textinput.Model // edits the active tab's filter
-	filtering      bool
-	confirm        *pending
-	logs           *LogsView
-	details        *DetailsView
-	imageDetails   *ImageDetailsView
-	volumeDetails  *VolumeDetailsView
-	networkDetails *NetworkDetailsView
-	projectAction  *projectActionView
-	shell          *shellPrompt
-	help           bool
-	flash          string
-	flashErr       bool
-	daemon         daemonConnection
+	ctx             context.Context
+	client          dockerClient
+	tabs            []tab
+	active          int
+	width, height   int
+	filter          textinput.Model // edits the active tab's filter
+	filtering       bool
+	confirm         *pending
+	logs            *LogsView
+	details         *DetailsView
+	imageDetails    *ImageDetailsView
+	volumeDetails   *VolumeDetailsView
+	networkDetails  *NetworkDetailsView
+	projectAction   *projectActionView
+	shell           *shellPrompt
+	contextPicker   *contextPicker
+	nextContext     string
+	actionsInFlight int
+	help            bool
+	flash           string
+	flashErr        bool
+	daemon          daemonConnection
 }
 
 // Run starts the TUI and blocks until the user quits.
 func Run(ctx context.Context, c dockerClient) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	return runSessions(ctx, c, func(app *App) error {
+		_, err := tea.NewProgram(app, programOptions(app.ctx)...).Run()
+		return err
+	}, func(ctx context.Context, name string) (dockerClient, error) {
+		return docker.NewForContext(ctx, name)
+	})
+}
+
+func newApp(ctx context.Context, c dockerClient) *App {
 	fi := textinput.New()
 	fi.Prompt = "/"
 	stats := NewStatsView(ctx, c, sortx.CPU, false)
@@ -77,8 +87,35 @@ func Run(ctx context.Context, c dockerClient) error {
 	}
 	app := &App{ctx: ctx, client: c, tabs: tabs, filter: fi, daemon: daemonConnection{label: c.ConnectionLabel()}}
 	app.resize(120, 30)
-	_, err := tea.NewProgram(app, programOptions(ctx)...).Run()
-	return err
+	return app
+}
+
+// Each daemon gets its own program queue as well as its own request context.
+// Late replies and timers from a previous session cannot enter the next one.
+func runSessions(ctx context.Context, c dockerClient, run func(*App) error, connect func(context.Context, string) (dockerClient, error)) error {
+	defer func() { _ = c.Close() }()
+	active, flash := 0, ""
+	for {
+		sessionCtx, cancel := context.WithCancel(ctx)
+		app := newApp(sessionCtx, c)
+		app.active, app.flash, app.flashErr = active, flash, flash != ""
+		err := run(app)
+		cancel()
+		if err != nil || app.nextContext == "" {
+			return err
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		active = app.active
+		next, err := connect(ctx, app.nextContext)
+		if err != nil {
+			flash = fmt.Sprintf("cannot switch to %s: %s", app.nextContext, connectionError(err))
+			continue
+		}
+		_ = c.Close()
+		c, flash = next, ""
+	}
 }
 
 func (a *App) Init() tea.Cmd {
@@ -118,6 +155,9 @@ func (a *App) resize(width, height int) {
 	if a.shell != nil {
 		a.shell.input.SetWidth(max(width-38, 1))
 	}
+	if a.contextPicker != nil {
+		a.contextPicker.SetSize(width, a.bodyHeight())
+	}
 }
 
 // setFilter sets the active tab's filter and the input showing it.
@@ -128,6 +168,16 @@ func (a *App) setFilter(f string) {
 
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case contextsMsg:
+		if a.contextPicker == msg.picker {
+			a.contextPicker.setItems(msg.items, msg.err)
+			for _, c := range msg.items {
+				if c.Name+" @ "+c.Endpoint == a.daemon.label {
+					a.contextPicker.cur.key = c.Name
+				}
+			}
+		}
+		return a, nil
 	case daemonProbeMsg:
 		return a, a.applyDaemonProbe(msg)
 	case daemonProbeTickMsg:
@@ -166,6 +216,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, tea.Batch(cmds...)
 	case actionDoneMsg:
+		a.actionsInFlight = max(a.actionsInFlight-1, 0)
 		a.flash, a.flashErr = msg.text, msg.err != nil
 		if msg.err != nil {
 			a.flash = msg.err.Error()
@@ -178,6 +229,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	var cmds []tea.Cmd
+	if a.contextPicker != nil && a.contextPicker.filtering {
+		var cmd tea.Cmd
+		a.contextPicker.search, cmd = a.contextPicker.search.Update(msg)
+		cmds = append(cmds, cmd)
+	}
 	if a.shell != nil && !a.shell.launching {
 		var cmd tea.Cmd
 		a.shell.input, cmd = a.shell.input.Update(msg)
@@ -215,6 +271,8 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	a.flash = ""
 
 	switch {
+	case a.contextPicker != nil:
+		return a.updateContextPicker(msg)
 	case a.projectAction != nil:
 		v := a.projectAction
 		if key == "esc" || key == "q" || key == "n" {
@@ -237,6 +295,7 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			return nil
 		}
 		a.flash = fmt.Sprintf("%s %s…", p.verb, p.name)
+		a.actionsInFlight++
 		return func() tea.Msg {
 			err := p.run(a.ctx, p.id)
 			return actionDoneMsg{text: fmt.Sprintf("%s %s: done", p.verb, p.name), err: err, image: p.image}
@@ -331,6 +390,12 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	}
 
 	switch key {
+	case "c":
+		if a.actionsInFlight > 0 {
+			a.flash, a.flashErr = "wait for the container action to finish before switching contexts", true
+			return nil
+		}
+		return a.openContextPicker()
 	case "q":
 		return tea.Quit
 	case "tab", "right", "l":
@@ -465,6 +530,9 @@ func (a *App) View() tea.View {
 func (a *App) render() string {
 	var body, status string
 	switch {
+	case a.contextPicker != nil:
+		body = a.contextPicker.View()
+		status = "Choose a Docker context for this session · switching clears resource data"
 	case a.projectAction != nil:
 		body, status = a.projectAction.View(), a.projectAction.Status()
 	case a.help:
@@ -532,6 +600,11 @@ func (a *App) tabBar() string {
 
 func (a *App) footer() string {
 	switch {
+	case a.contextPicker != nil:
+		if a.contextPicker.filtering {
+			return a.contextPicker.search.View() + " " + render.Dim.Render("enter keep filter · esc cancel filter")
+		}
+		return hints("↑↓/j/k", "move", "/", "filter", "enter", "switch context", "esc", "cancel")
 	case a.projectAction != nil:
 		return a.projectAction.Footer()
 	case a.shell != nil:
@@ -566,10 +639,10 @@ func (a *App) footer() string {
 		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "x", "remove tag/image")
 	}
 	if _, ok := a.tabs[a.active].(*EventsView); ok {
-		return hints("tab", "switch", "/", "filter", "r", "reverse time", "g", "top/follow", "d/enter", "container details", "?", "help", "q", "quit")
+		return hints("tab", "switch", "c", "context", "/", "filter", "r", "reverse time", "g", "top/follow", "d/enter", "container details", "?", "help", "q", "quit")
 	}
 
-	keys := []string{"tab", "switch", "/", "filter", "s/r", "sort: " + string(a.tabs[a.active].SortKey())}
+	keys := []string{"tab", "switch", "c", "context", "/", "filter", "s/r", "sort: " + string(a.tabs[a.active].SortKey())}
 	if stats, ok := a.tabs[a.active].(*StatsView); ok {
 		view := "projects"
 		if stats.grouped {
@@ -614,6 +687,7 @@ func hints(pairs ...string) string {
 
 func (a *App) helpView() string {
 	global := [][2]string{
+		{"c", "choose Docker context for this session (from a list tab)"},
 		{fmt.Sprintf("tab / shift+tab, 1-%d", len(a.tabs)), "switch tabs"},
 		{"↑↓ / j k, pgup/pgdn, g/G", "move selection"},
 		{"/", "filter (enter keeps, esc clears)"},
