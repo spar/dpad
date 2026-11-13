@@ -42,12 +42,15 @@ type list[T any] struct {
 	width       int
 	height      int
 	page        int // rows moved by pgup/pgdn
+	top         int // first row in the viewport
 
 	// Cache of visible and its row keys; nil when items, filter or sort change.
 	rowCache                 []row
 	keyCache                 []string
 	rowVersion, tableVersion uint64
 	table                    *render.PreparedTable
+	tableRows                []row
+	tableColumns             []render.Column
 }
 
 // setItems replaces the list's items after a load.
@@ -126,14 +129,21 @@ func (l *list[T]) view(height int) string {
 	rows, keys := l.visible()
 	if len(rows) == 0 {
 		l.table = nil
+		l.tableRows, l.tableColumns = nil, nil
+		l.top = 0
 		return render.Dim.Render(l.empty)
 	}
 	if l.table == nil || l.tableVersion != l.rowVersion {
-		cells := make([][]string, len(rows))
-		for i, r := range rows {
-			cells[i] = r.cells
+		columns := l.sortedColumns()
+		if l.table == nil || !slices.Equal(columns, l.tableColumns) || !slices.EqualFunc(rows, l.tableRows, func(a, b row) bool { return slices.Equal(a.cells, b.cells) }) {
+			cells := make([][]string, len(rows))
+			for i, r := range rows {
+				cells[i] = r.cells
+			}
+			l.table = (render.Table{Columns: columns, Rows: cells, Width: l.width}).Prepare()
+			l.tableColumns = slices.Clone(columns)
 		}
-		l.table = (render.Table{Columns: l.sortedColumns(), Rows: cells, Width: l.width}).Prepare()
+		l.tableRows = rows
 		l.tableVersion = l.rowVersion
 	}
 	l.table.Width = l.width
@@ -141,7 +151,16 @@ func (l *list[T]) view(height int) string {
 	if l.noHighlight {
 		sel = -1
 	}
-	return l.table.Window(sel, height)
+	avail := max(height-1, 1)
+	l.top = min(l.top, max(len(rows)-avail, 0))
+	if sel < 0 {
+		l.top = 0
+	} else if sel < l.top {
+		l.top = sel
+	} else if sel >= l.top+avail {
+		l.top = sel - avail + 1
+	}
+	return l.table.WindowFrom(sel, height, l.top)
 }
 
 // sortedColumns returns the columns with an arrow on the sorted one's header:

@@ -10,6 +10,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
 	"github.com/moby/moby/api/types/volume"
 
 	"dockernext/internal/docker"
@@ -35,6 +36,13 @@ type VolumesView struct {
 	usageLoaded                 bool
 	usageErr                    error
 	warnings                    []string
+	usageSnapshot               []volumeMountSnapshot
+}
+
+type volumeMountSnapshot struct {
+	id, name, volume, destination string
+	state                         container.ContainerState
+	readOnly                      bool
 }
 
 func NewVolumesView(ctx context.Context, c dockerClient) *VolumesView {
@@ -93,10 +101,24 @@ func (v *VolumesView) Focus() tea.Cmd {
 }
 func (v *VolumesView) usageKnown() bool { return v.usageLoaded && v.usageErr == nil }
 func (v *VolumesView) indexUsage() {
-	clear(v.usage)
-	if v.requested && v.usageKnown() {
-		v.usage = docker.VolumeUsers(v.containers)
+	if !v.requested || !v.usageKnown() {
+		v.usage, v.usageSnapshot = nil, nil
+		v.rowCache = nil
+		return
 	}
+	snapshot := make([]volumeMountSnapshot, 0, len(v.containers))
+	for _, c := range v.containers {
+		for _, m := range c.Mounts {
+			if m.Type == mount.TypeVolume && m.Name != "" {
+				snapshot = append(snapshot, volumeMountSnapshot{c.ID, docker.ContainerName(c.Names), m.Name, m.Destination, c.State, !m.RW})
+			}
+		}
+	}
+	if v.usage != nil && slices.Equal(snapshot, v.usageSnapshot) {
+		return
+	}
+	v.usageSnapshot = snapshot
+	v.usage = docker.VolumeUsers(v.containers)
 	v.rowCache = nil
 }
 func (v *VolumesView) load() tea.Cmd {

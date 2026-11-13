@@ -186,7 +186,9 @@ uses bounded queues, and batches updates at most ten times per second.
 Over SSH, event updates batch at most four times per second and log updates at
 most ten times per second; log paging moves immediately without animation.
 SSH detection uses `SSH_CONNECTION`, `SSH_CLIENT`, or `SSH_TTY`. Table layouts
-are reused while navigating unchanged data. Automatic container-list refreshes
+are reused while navigating and across refreshes whose visible cells and columns
+are unchanged. Lists scroll when the selection leaves the visible page, keeping
+the viewport stable when moving within it. Automatic container-list refreshes
 coalesce Docker event bursts into at most one request per second; manual refresh
 and subscription recovery remain immediate.
 Interrupted subscriptions retry with one-to-five-second backoff, retaining the

@@ -38,6 +38,13 @@ func (p composeProject) state() string {
 type ProjectsView struct {
 	list[composeProject]
 	collapsed map[string]bool
+	snapshot  []projectContainerSnapshot
+}
+
+type projectContainerSnapshot struct {
+	id, name, project, service, image, status string
+	state                                     container.ContainerState
+	health                                    container.HealthStatus
 }
 
 func NewProjectsView() *ProjectsView {
@@ -121,6 +128,22 @@ func (v *ProjectsView) Update(msg tea.Msg) tea.Cmd {
 			v.err, v.loaded = msg.err, true
 			return nil
 		}
+		snapshot := make([]projectContainerSnapshot, 0, len(msg.items))
+		for _, c := range msg.items {
+			if c.Labels[composeProjectLabel] == "" {
+				continue
+			}
+			health := container.HealthStatus("")
+			if c.Health != nil {
+				health = c.Health.Status
+			}
+			snapshot = append(snapshot, projectContainerSnapshot{c.ID, docker.ContainerName(c.Names), c.Labels[composeProjectLabel], c.Labels[composeServiceLabel], c.Image, c.Status, c.State, health})
+		}
+		if v.loaded && slices.Equal(snapshot, v.snapshot) {
+			v.err = nil
+			return nil
+		}
+		v.snapshot = snapshot
 		projects := make(map[string]*composeProject)
 		for _, c := range msg.items {
 			name := c.Labels[composeProjectLabel]

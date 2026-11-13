@@ -207,3 +207,26 @@ func TestPreparedTableMatchesFreshAcrossViewports(t *testing.T) {
 		t.Fatal("prepared table retained mutable column headers")
 	}
 }
+
+func TestPrintableASCIITruncationMatchesANSI(t *testing.T) {
+	for _, s := range []string{"", "short", strings.Repeat("f", 64), "a b!c~d", "\x1b[31mred text\x1b[0m", "hello\tworld", "你好世界", "🙂🙂🙂", "e\u0301long", "♥️ test"} {
+		for _, limit := range []int{0, 1, 2, 5, 40, 80} {
+			if got, want := truncate(s, limit), ansi.Truncate(s, limit, "…"); got != want {
+				t.Fatalf("truncate(%q,%d)=%q want %q", s, limit, got, want)
+			}
+		}
+	}
+}
+
+func TestPreparedViewportStart(t *testing.T) {
+	tbl := (Table{Columns: []Column{{Header: "NAME"}}, Rows: [][]string{{"one"}, {"two"}, {"three"}, {"four"}}}).Prepare()
+	if got := ansi.Strip(tbl.WindowFrom(2, 3, 1)); got != "NAME\ntwo\nthree" {
+		t.Fatal(got)
+	}
+	if got := ansi.Strip(tbl.WindowFrom(-1, 3, -10)); got != "NAME\none\ntwo" {
+		t.Fatal(got)
+	}
+	if got := ansi.Strip(tbl.WindowFrom(-1, 3, 99)); got != "NAME" {
+		t.Fatal(got)
+	}
+}
