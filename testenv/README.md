@@ -89,7 +89,10 @@ dn
 5. Select `dn-demo-cpu-hog-1` and press `x` then `y`. After about 10s it shows
    **Exited (137)** in red and drops off the Stats tab. The shell loop ignores
    SIGTERM, so docker has to kill it. Press `S` to bring it back.
-6. Press `3` for the Stats tab, then `c`/`m`/`n`/`i`/`p` to re-sort live.
+6. Press `3` for the Stats tab. Compose projects start collapsed; select `dn-demo`
+   and press `space` or `enter` to see its service/container rows. `v` toggles the
+   flat view, and `/dn-demo` or a service name filters the project. Press
+   `c`/`m`/`n`/`i`/`p` to re-sort live.
    Network/disk sorts follow the current rates/totals mode; press `t` to toggle.
    Select `cpu-hog` or `mem-hog` to see two-minute CPU/memory history, averages,
    and peaks below the table. History fills as samples arrive; enlarge a small

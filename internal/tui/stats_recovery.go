@@ -47,11 +47,16 @@ func (v *StatsView) markUnavailable(id string, health statsHealth, err error) {
 }
 
 func (v *StatsView) expireSamples(now time.Time) {
+	changed := false
 	for id, h := range v.health {
 		if h.err == nil && !h.received.IsZero() && now.Sub(h.received) >= statsStaleAfter {
 			v.markUnavailable(id, h, errStatsStale)
 			v.rowCache = nil
+			changed = true
 		}
+	}
+	if changed && v.grouped {
+		v.rebuildItems()
 	}
 }
 

@@ -50,6 +50,8 @@ These cases go to `docker` unchanged:
 | `/` | filter the current tab (`enter` keeps, `esc` clears) |
 | `s` / `r` | cycle sort key / reverse |
 | `t` (Stats) | toggle network/disk rates and cumulative totals; sorting follows the mode |
+| `v` (Stats) | toggle Compose projects / flat containers |
+| `space` / `enter` (Stats project) | expand/collapse a project; `space` on a member returns to its project |
 | `d` | open details of the selected container or image (`esc` back) |
 | `e` | choose a shell executable for the selected container (`enter` opens, `esc` cancels) |
 | `enter` | follow logs of the selected container (`esc` back) |
@@ -225,7 +227,33 @@ details panes. No per-network container scans or extra event subscriptions are
 added. Creating/removing networks and connecting/disconnecting containers are not
 offered in the TUI.
 
-The TUI Stats tab shows CPU and memory sparklines for the selected container,
+The TUI Stats tab opens with collapsed Compose projects, making large container
+lists easier to navigate. Project rows summarize CPU, memory usage, I/O, and PIDs;
+`space` or `enter` expands a project into service/container rows. Containers without
+Compose labels stay visible as individual rows. Press `v` for the flat view and
+again to return to projects. Sorting applies to project summaries and to the
+containers within each expanded project; expansion and selection survive updates.
+
+`/` matches project, service, container name, or ID. A matching member keeps its
+whole project visible, including its summary and other members. This keeps totals
+consistent while making a project easy to find. Individual rows retain details,
+logs, shells, confirmed actions, and history; project headers only expand/collapse.
+
+The count on each project is available/tracked containers. Active Compose members
+waiting for their first sample are shown as unavailable. If any member's sample
+is missing or stale, the project summary shows `—` rather than a partial total.
+Network/disk rates require valid rates from every member for that component.
+Project memory shows summed usage only: limits and percentages are omitted because
+containers can share the same host memory limit. I/O values sum container counters
+or rates, including traffic between members. Summaries use current samples, not
+synchronized measurements. Stopped containers leave as discovery/streams update.
+
+Grouping reuses the dashboard's container labels and existing batched stats stream;
+it adds no Docker requests, streams, or per-project history buffers. Failed label
+refreshes retain known grouping and mark Compose metadata stale. Standalone
+`dn stats`, snapshots, and piped output keep their existing flat behavior.
+
+The TUI Stats tab also shows CPU and memory sparklines for the selected container,
 with average and peak usage over the last two minutes of received samples.
 History starts when Stats is first opened and stays in memory for this session.
 Each container has 120 fixed one-second buckets; samples within a second are

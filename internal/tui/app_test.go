@@ -20,6 +20,7 @@ func newTestApp() *App {
 		tabs:   []tab{NewContainersView(context.Background(), nil), NewImagesView(context.Background(), nil), NewStatsView(context.Background(), nil, sortx.CPU, false), NewProjectsView(), NewEventsView(context.Background(), nil), NewVolumesView(context.Background(), nil), NewNetworksView(context.Background(), nil)},
 		filter: textinput.New(),
 	}
+	a.tabs[2].(*StatsView).SetGrouped(true)
 	a.resize(120, 30)
 	return a
 }

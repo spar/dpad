@@ -63,10 +63,12 @@ func Run(ctx context.Context, c dockerClient) error {
 	defer cancel()
 	fi := textinput.New()
 	fi.Prompt = "/"
+	stats := NewStatsView(ctx, c, sortx.CPU, false)
+	stats.SetGrouped(true)
 	tabs := []tab{
 		NewContainersView(ctx, c),
 		NewImagesView(ctx, c),
-		NewStatsView(ctx, c, sortx.CPU, false),
+		stats,
 		NewProjectsView(),
 		NewEventsView(ctx, c),
 		NewVolumesView(ctx, c),
@@ -325,6 +327,9 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "ctrl+r":
 		return tea.Batch(func() tea.Msg { return refreshMsg{} }, a.probeDaemon())
 	case "enter":
+		if stats, ok := a.tabs[a.active].(*StatsView); ok && stats.toggleStatsProject(false) {
+			return nil
+		}
 		if _, ok := a.tabs[a.active].(*NetworksView); ok {
 			return a.openSelectedNetwork()
 		}
@@ -517,6 +522,11 @@ func (a *App) footer() string {
 
 	keys := []string{"tab", "switch", "/", "filter", "s/r", "sort: " + string(a.tabs[a.active].SortKey())}
 	if stats, ok := a.tabs[a.active].(*StatsView); ok {
+		view := "projects"
+		if stats.grouped {
+			view = "containers"
+		}
+		keys = append(keys, "v", view)
 		mode := "totals"
 		if stats.totals {
 			mode = "rates"
@@ -525,6 +535,8 @@ func (a *App) footer() string {
 	}
 	if _, _, ok := a.tabs[a.active].Selected(); ok {
 		keys = append(keys, "d", "details", "enter", "logs", "e", "shell", "S/x/R", "start/stop/restart")
+	} else if stats, ok := a.tabs[a.active].(*StatsView); ok && stats.selectedStatsProject() != nil {
+		keys = append(keys, "space/enter", "expand/collapse")
 	} else if images, ok := a.tabs[a.active].(*ImagesView); ok {
 		if _, ok := images.SelectedImage(); ok {
 			keys = append(keys, "d/enter", "image details", "x", "remove tag/image")
@@ -556,7 +568,7 @@ func (a *App) helpView() string {
 		{fmt.Sprintf("tab / shift+tab, 1-%d", len(a.tabs)), "switch tabs"},
 		{"↑↓ / j k, pgup/pgdn, g/G", "move selection"},
 		{"/", "filter (enter keeps, esc clears)"},
-		{"enter", "follow container/project logs, or inspect selected image, volume, network, or event"},
+		{"enter", "follow logs, expand a Stats project, or inspect resource details"},
 		{"d", "inspect selected container, image, volume, or network"},
 		{"e", "open a shell in the selected container (choose executable, enter to open)"},
 		{"S / x / R", "start (or unpause) / stop / restart selected container"},
