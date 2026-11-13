@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -56,7 +57,11 @@ func New() (*Client, error) {
 	opts := []client.Opt{client.FromEnv} // API version negotiation is on by default
 	name, host := "", os.Getenv("DOCKER_HOST")
 	if host == "" {
-		name, host = contextEndpoint()
+		var err error
+		name, host, err = contextEndpoint()
+		if err != nil {
+			return nil, err
+		}
 		if host != "" && !isSSHHost(host) {
 			opts = append(opts, client.WithHost(host))
 		}
@@ -148,19 +153,14 @@ func (c *Client) Restart(ctx context.Context, id string) error {
 	return err
 }
 
-// contextHost resolves the docker endpoint of the active docker context
-// (DOCKER_CONTEXT or currentContext in config.json). Returns "" for the default context.
-func contextHost() string {
-	_, host := contextEndpoint()
-	return host
-}
-
-func contextEndpoint() (string, string) {
+// contextEndpoint resolves DOCKER_CONTEXT or currentContext in config.json.
+// Only the default context may fall back to the SDK's default endpoint.
+func contextEndpoint() (string, string, error) {
 	cfgDir := os.Getenv("DOCKER_CONFIG")
 	if cfgDir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return "", ""
+			return "", "", err
 		}
 		cfgDir = filepath.Join(home, ".docker")
 	}
@@ -170,27 +170,37 @@ func contextEndpoint() (string, string) {
 		var cfg struct {
 			CurrentContext string `json:"currentContext"`
 		}
-		if b, err := os.ReadFile(filepath.Join(cfgDir, "config.json")); err == nil {
-			_ = json.Unmarshal(b, &cfg)
+		b, err := os.ReadFile(filepath.Join(cfgDir, "config.json"))
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return "", "", fmt.Errorf("read docker config: %w", err)
+		}
+		if err == nil {
+			if err := json.Unmarshal(b, &cfg); err != nil {
+				return "", "", fmt.Errorf("read docker config: %w", err)
+			}
 		}
 		name = cfg.CurrentContext
 	}
 	if name == "" || name == "default" {
-		return "default", ""
+		return "default", "", nil
 	}
 
 	sum := sha256.Sum256([]byte(name))
 	b, err := os.ReadFile(filepath.Join(cfgDir, "contexts", "meta", hex.EncodeToString(sum[:]), "meta.json"))
 	if err != nil {
-		return "", ""
+		return "", "", fmt.Errorf("read docker context %q: %w", name, err)
 	}
 	var meta struct {
 		Endpoints map[string]struct {
 			Host string `json:"Host"`
 		} `json:"Endpoints"`
 	}
-	if json.Unmarshal(b, &meta) != nil {
-		return "", ""
+	if err := json.Unmarshal(b, &meta); err != nil {
+		return "", "", fmt.Errorf("read docker context %q: %w", name, err)
 	}
-	return name, meta.Endpoints["docker"].Host
+	host := meta.Endpoints["docker"].Host
+	if host == "" {
+		return "", "", fmt.Errorf("docker context %q has no docker endpoint", name)
+	}
+	return name, host, nil
 }
