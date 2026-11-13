@@ -303,3 +303,8 @@ make vuln                          # govulncheck
 make run ARGS="ps -a"              # run from source
 ```
 See [docs/local-development.md](docs/local-development.md#5-development-loop).
+
+To run CI on two or three private Docker runners instead of GitHub's hosted
+runners, see [self-hosted runner setup](docs/self-hosted-runner.md). Set the
+repository Actions variable `CI_RUNNER=self-hosted` to enable them; leave it
+unset for the existing GitHub-hosted Linux/macOS checks.

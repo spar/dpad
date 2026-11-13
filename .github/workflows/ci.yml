@@ -8,38 +8,46 @@ on:
 permissions:
   contents: read
 
+# CI_RUNNER is an optional repository Actions variable, as in expense-tracker.
+# Set it to self-hosted (or a runner label); leave it unset for GitHub's runners.
 jobs:
   test:
     name: test (${{ matrix.os }}, Go ${{ matrix.go }})
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # Container runners are Linux; do not label those jobs as macOS tests.
+        os: ${{ fromJSON(vars.CI_RUNNER != '' && '["self-hosted"]' || '["ubuntu-latest", "macos-latest"]') }}
         go: ["1.26.x", stable] # the minimum in go.mod, and the latest
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ vars.CI_RUNNER || matrix.os }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go }}
+          cache: ${{ vars.CI_RUNNER == '' }}
       - run: go build ./...
       - run: go vet ./...
       - run: go test -race ./...
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
         with:
           go-version: stable
+          cache: ${{ vars.CI_RUNNER == '' }}
       - run: make lint
+      - name: Check runner lifecycle and cleanup
+        run: bash runner/test.sh
 
   vuln:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
         with:
           go-version: stable
+          cache: ${{ vars.CI_RUNNER == '' }}
       - run: make vuln
