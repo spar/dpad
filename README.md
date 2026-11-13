@@ -322,6 +322,11 @@ Output is plain when piped, when `NO_COLOR` is set, or with `--no-color`.
 (`docker context use …`), so it talks to the same daemon as `docker`. That
 includes colima, Docker Desktop, and remote contexts.
 
+`DOCKER_HOST` takes precedence over context selection. When it is unset,
+`DOCKER_CONTEXT` overrides the saved current context; `default` uses the default
+daemon endpoint. A missing or invalid selected context returns an error instead
+of connecting to the default daemon.
+
 ### Remote daemons over SSH
 Run `dn` on your laptop and point it at a server's daemon:
 
