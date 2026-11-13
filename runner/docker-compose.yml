@@ -1,0 +1,75 @@
+# Based on spar/expense-tracker/runner. Each service has its own state and caches.
+# Run two: docker compose up -d --build runner-1 runner-2
+# Run three: docker compose up -d --build
+name: dockernext-runner
+
+x-runner: &runner
+  build: .
+  image: dockernext-runner
+  restart: unless-stopped
+  init: true
+  stop_grace_period: 2m
+  # CI tests use fake engines and do not need the server's Docker socket or
+  # host networking. The work folders still use the template's same-path mounts.
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+x-environment: &environment
+  RUNNER_REPOSITORY_URL: ${RUNNER_REPOSITORY_URL:-https://github.com/spar/dockernext}
+  RUNNER_LABELS: ${RUNNER_LABELS:-dockernext}
+  RUNNER_TOKEN: ${RUNNER_TOKEN:-}
+  RUNNER_CACHE_LIMIT_GB: ${RUNNER_CACHE_LIMIT_GB:-10}
+
+services:
+  runner-1:
+    <<: *runner
+    container_name: dockernext-runner-1
+    environment:
+      <<: *environment
+      RUNNER_NAME: ${RUNNER_NAME_PREFIX:-dockernext}-1
+      RUNNER_WORK_DIR: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-1
+      RUNNER_TOOL_CACHE: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-1/_tool
+      GOPATH: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-1/_cache/go
+      GOCACHE: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-1/_cache/go-build
+      GOLANGCI_LINT_CACHE: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-1/_cache/golangci-lint
+    volumes:
+      - runner-1-state:/runner-state
+      - ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-1:${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-1
+
+  runner-2:
+    <<: *runner
+    container_name: dockernext-runner-2
+    environment:
+      <<: *environment
+      RUNNER_NAME: ${RUNNER_NAME_PREFIX:-dockernext}-2
+      RUNNER_WORK_DIR: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-2
+      RUNNER_TOOL_CACHE: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-2/_tool
+      GOPATH: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-2/_cache/go
+      GOCACHE: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-2/_cache/go-build
+      GOLANGCI_LINT_CACHE: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-2/_cache/golangci-lint
+    volumes:
+      - runner-2-state:/runner-state
+      - ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-2:${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-2
+
+  runner-3:
+    <<: *runner
+    container_name: dockernext-runner-3
+    environment:
+      <<: *environment
+      RUNNER_NAME: ${RUNNER_NAME_PREFIX:-dockernext}-3
+      RUNNER_WORK_DIR: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-3
+      RUNNER_TOOL_CACHE: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-3/_tool
+      GOPATH: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-3/_cache/go
+      GOCACHE: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-3/_cache/go-build
+      GOLANGCI_LINT_CACHE: ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-3/_cache/golangci-lint
+    volumes:
+      - runner-3-state:/runner-state
+      - ${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-3:${RUNNER_WORK_ROOT:-/opt/dockernext-actions-runner}/runner-3
+
+volumes:
+  runner-1-state:
+  runner-2-state:
+  runner-3-state:
