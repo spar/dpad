@@ -343,12 +343,31 @@ round trip per keypress; only data loads travel over SSH, in the background.
 This is smoother than running `dn` inside an SSH session.
 
 `dn` starts one `ssh` process that forwards a private local socket to the
-server's `/var/run/docker.sock`. Your `~/.ssh/config`, agent, and known hosts
-apply, and password or host-key prompts appear before the TUI opens. Your user
-on the server needs access to the socket (the `docker` group). If the
+server's `/var/run/docker.sock` by default. Your `~/.ssh/config`, agent, and
+known hosts apply, and password or host-key prompts appear before the TUI opens.
+Your user on the server needs access to the socket (typically through the
+`docker` group for a rootful daemon). If the
 connection drops, `dn` starts a new one without prompting, so key-based or
-agent authentication is needed for automatic recovery. Rootless and other
-non-default socket paths aren't supported yet.
+agent authentication is needed for automatic recovery.
+
+For rootless Docker or another socket location, append the absolute remote
+socket path to the SSH endpoint:
+
+```sh
+DOCKER_HOST=ssh://me@server/run/user/1000/docker.sock dn
+# or save it in a Docker context:
+docker context create rootless --docker host=ssh://me@server/run/user/1000/docker.sock
+docker context use rootless
+dn
+```
+
+Replace `1000` with the remote user's UID (`ssh me@server id -u`) and make sure
+their rootless daemon is running. The SSH user needs access to that socket;
+rootless Docker does not require membership in the `docker` group. The path is
+preserved when the tunnel reconnects. Paths must name an absolute socket file;
+use URL encoding for spaces, `#`, or `?`. Shell variables and `~` are not expanded
+on the remote host; use the actual path. `${...}` and NUL/newline characters are
+rejected because OpenSSH interprets environment expansions locally.
 
 Passthrough commands and the `e` shell run the local `docker` CLI, which
 handles `ssh://` endpoints itself; on macOS `brew install docker` is enough
