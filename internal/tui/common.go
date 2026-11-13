@@ -5,6 +5,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -126,6 +127,10 @@ func sortLabel(key sortx.Key, reverse bool) string {
 		return fmt.Sprintf("sort: %s (reversed)", key)
 	}
 	return "sort: " + string(key)
+}
+
+func remoteTerminal() bool {
+	return os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_CLIENT") != "" || os.Getenv("SSH_TTY") != ""
 }
 
 // programOptions are the Bubble Tea options shared by the TUI and dn stats.

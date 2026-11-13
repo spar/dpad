@@ -169,6 +169,12 @@ container lists, rather than historical event rows.
 The session keeps the latest 1,000 records in a fixed ring, replacing the oldest
 as new records arrive. Collection shares the container-list event subscription,
 uses bounded queues, and batches updates at most ten times per second.
+Over SSH, event updates batch at most four times per second and log updates at
+most ten times per second; log paging moves immediately without animation.
+SSH detection uses `SSH_CONNECTION`, `SSH_CLIENT`, or `SSH_TTY`. Table layouts
+are reused while navigating unchanged data. Automatic container-list refreshes
+coalesce Docker event bursts into at most one request per second; manual refresh
+and subscription recovery remain immediate.
 Interrupted subscriptions retry with one-to-five-second backoff, retaining the
 buffer and view settings. A `stream gap` record marks an interruption: events
 missed during disconnection are not replayed. Filters also apply to these gap

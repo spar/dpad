@@ -146,7 +146,11 @@ func waitEvents(ctx context.Context, ch <-chan docker.EventUpdate) tea.Cmd {
 		}
 		batch := make([]docker.EventUpdate, 0, 16)
 		batch = append(batch, first)
-		timer := time.NewTimer(eventBatchInterval)
+		interval := eventBatchInterval
+		if remoteTerminal() {
+			interval = 250 * time.Millisecond
+		}
+		timer := time.NewTimer(interval)
 		defer timer.Stop()
 		for {
 			if len(batch) == maxEventBatch {

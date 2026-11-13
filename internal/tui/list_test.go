@@ -88,7 +88,11 @@ func TestContainersReloadOnChange(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("event batch did not refresh containers")
 	}
-	v.Update(cmd())
+	reload := v.Update(containersEventRefreshMsg{generation: v.eventGeneration})
+	if reload == nil {
+		t.Fatal("event refresh did not reload")
+	}
+	v.Update(reload())
 
 	if !v.loaded || len(v.items) != 1 {
 		t.Errorf("containers not reloaded after a change: %v", v.items)
