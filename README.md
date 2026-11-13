@@ -183,8 +183,13 @@ container lists, rather than historical event rows.
 The session keeps the latest 1,000 records in a fixed ring, replacing the oldest
 as new records arrive. Collection shares the container-list event subscription,
 uses bounded queues, and batches updates at most ten times per second.
+The TUI renders at up to 120 frames per second, so a keypress reaches the
+terminal within about 8 ms; unchanged frames write nothing.
 Over SSH, event updates batch at most four times per second and log updates at
 most ten times per second; log paging moves immediately without animation.
+Each keypress still makes a round trip over the SSH connection; for the
+smoothest navigation, run `dn` locally against the remote daemon (see
+[Remote daemons over SSH](#remote-daemons-over-ssh)).
 SSH detection uses `SSH_CONNECTION`, `SSH_CLIENT`, or `SSH_TTY`. Table layouts
 are reused while navigating and across refreshes whose visible cells and columns
 are unchanged. Lists scroll when the selection leaves the visible page, keeping
@@ -316,6 +321,33 @@ Output is plain when piped, when `NO_COLOR` is set, or with `--no-color`.
 `dn` honors `DOCKER_HOST`, `DOCKER_CONTEXT`, and the current docker context
 (`docker context use …`), so it talks to the same daemon as `docker`. That
 includes colima, Docker Desktop, and remote contexts.
+
+### Remote daemons over SSH
+Run `dn` on your laptop and point it at a server's daemon:
+
+```sh
+DOCKER_HOST=ssh://me@server dn
+# or, with the docker CLI installed locally:
+docker context create home --docker host=ssh://me@server
+docker context use home
+dn
+```
+
+The TUI then draws locally, so moving through lists doesn't wait on a network
+round trip per keypress; only data loads travel over SSH, in the background.
+This is smoother than running `dn` inside an SSH session.
+
+`dn` starts one `ssh` process that forwards a private local socket to the
+server's `/var/run/docker.sock`. Your `~/.ssh/config`, agent, and known hosts
+apply, and password or host-key prompts appear before the TUI opens. Your user
+on the server needs access to the socket (the `docker` group). If the
+connection drops, `dn` starts a new one without prompting, so key-based or
+agent authentication is needed for automatic recovery. Rootless and other
+non-default socket paths aren't supported yet.
+
+Passthrough commands and the `e` shell run the local `docker` CLI, which
+handles `ssh://` endpoints itself; on macOS `brew install docker` is enough
+(no Docker Desktop needed).
 
 The TUI shows its bound context/endpoint and connection state below the tabs.
 A single daemon ping runs every two seconds with a two-second timeout. Failed

@@ -134,8 +134,10 @@ func remoteTerminal() bool {
 }
 
 // programOptions are the Bubble Tea options shared by the TUI and dn stats.
+// Frames are only written on the renderer's tick, so the frame rate bounds how
+// long a keypress waits to be drawn; unchanged frames write nothing.
 func programOptions(ctx context.Context) []tea.ProgramOption {
-	opts := []tea.ProgramOption{tea.WithContext(ctx)}
+	opts := []tea.ProgramOption{tea.WithContext(ctx), tea.WithFPS(120)}
 	if render.ColorDisabled() {
 		// Ascii keeps bold and reverse, so the selected row stays visible.
 		opts = append(opts, tea.WithColorProfile(colorprofile.Ascii))

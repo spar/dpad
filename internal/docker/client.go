@@ -6,9 +6,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
@@ -17,8 +19,9 @@ import (
 
 // Client is a thin wrapper around the Engine API client.
 type Client struct {
-	api   engine
-	label string
+	api    engine
+	tunnel *sshTunnel // set for ssh:// endpoints
+	label  string
 }
 
 // engine is the part of the Engine API client dockernext uses, so tests can
@@ -47,23 +50,38 @@ type engine interface {
 var _ engine = (*client.Client)(nil)
 
 // New connects to the same daemon the docker CLI would use: DOCKER_HOST if set,
-// otherwise the endpoint of the current docker context.
+// otherwise the endpoint of the current docker context. An ssh:// endpoint is
+// reached through an ssh tunnel to the remote daemon socket.
 func New() (*Client, error) {
 	opts := []client.Opt{client.FromEnv} // API version negotiation is on by default
-	name := ""
-	if os.Getenv("DOCKER_HOST") == "" {
-		contextName, host := contextEndpoint()
-		name = contextName
-		if host != "" {
+	name, host := "", os.Getenv("DOCKER_HOST")
+	if host == "" {
+		name, host = contextEndpoint()
+		if host != "" && !isSSHHost(host) {
 			opts = append(opts, client.WithHost(host))
 		}
 	}
+	var tunnel *sshTunnel
+	if isSSHHost(host) {
+		var err error
+		if tunnel, err = startSSHTunnel(host); err != nil {
+			return nil, err
+		}
+		opts = append(opts, client.WithHost("unix://"+tunnel.socket), client.WithDialContext(tunnel.dial))
+	}
 	api, err := client.New(opts...)
 	if err != nil {
+		_ = tunnel.Close()
 		return nil, err
 	}
-	return &Client{api: api, label: connectionLabel(name, api.DaemonHost())}, nil
+	daemon := api.DaemonHost()
+	if tunnel != nil {
+		daemon = host
+	}
+	return &Client{api: api, tunnel: tunnel, label: connectionLabel(name, daemon)}, nil
 }
+
+func isSSHHost(host string) bool { return strings.HasPrefix(host, "ssh://") }
 
 func connectionLabel(name, host string) string {
 	if u, err := url.Parse(host); err == nil {
@@ -84,7 +102,9 @@ func (c *Client) Ping(ctx context.Context) error {
 	return err
 }
 
-func (c *Client) Close() error { return c.api.Close() }
+func (c *Client) Close() error {
+	return errors.Join(c.api.Close(), c.tunnel.Close())
+}
 
 // Containers lists containers; all includes stopped ones.
 func (c *Client) Containers(ctx context.Context, all bool) ([]container.Summary, error) {

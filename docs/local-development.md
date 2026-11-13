@@ -135,6 +135,10 @@ go run . logs -f my-container      # same thing without make
 current `docker context`). As a quick sanity check, `./bin/dockernext ps -a` should
 list the same containers as `docker ps -a`.
 
+To work against Docker on another machine (for example a home server), run `dn`
+on your Mac with `DOCKER_HOST=ssh://me@server` instead of inside an SSH session.
+See [Remote daemons over SSH](../README.md#remote-daemons-over-ssh).
+
 ## 3. Install `dn` on your PATH
 
 ```sh
@@ -238,4 +242,5 @@ make build && ./bin/dockernext stats
 | `docker: unknown command: docker compose` | Compose isn't installed as a plugin. See [Prerequisites](#1-prerequisites), or run `make demo-up COMPOSE=docker-compose`. |
 | Demo containers fail with `/scripts/...: not found` | The engine can't see the repo directory. colima and Docker Desktop share your home directory by default, so clone under `~` or add the path to the engine's file-sharing settings. |
 | TUI looks garbled | Use a terminal with UTF-8 and 256 colors (iTerm2, the macOS Terminal, kitty, WezTerm, Windows Terminal). Over tmux, set `TERM=tmux-256color`. |
+| `ssh tunnel to …: Permission denied` | `dn` runs `ssh` with your `~/.ssh/config`. Check `ssh me@server docker ps` works first; your server user must be in the `docker` group. |
 | `go: go.mod requires go >= 1.26.7` | Upgrade Go (`brew upgrade go`). |
