@@ -81,8 +81,10 @@ details pane, to open a shell. The prompt defaults to `/bin/sh`; replace it with
 an executable available in the container, such as `/bin/bash` or `powershell.exe`.
 Enter only the executable, without arguments. Docker must be installed in PATH,
 and the container must be running and not paused or restarting. This runs
-`docker exec -it CONTAINER EXECUTABLE` using the Docker CLI's environment and
-context settings. Images without a shell need an executable they actually contain.
+`docker exec -it CONTAINER EXECUTABLE` with the dashboard's bound daemon endpoint
+and startup environment. Switching the Docker CLI's current context while `dn`
+is open does not redirect shells to another daemon. Images without a shell need
+an executable they actually contain.
 
 The shell takes over the terminal. Type `exit` or press `ctrl+d` to return to the
 same dashboard view, filter, sort, and selection; container lists and open details

@@ -82,7 +82,9 @@ func prepareShell(ctx context.Context, c dockerClient, id, executable string) (*
 	if info.State == nil || !info.State.Running || info.State.Paused || info.State.Restarting {
 		return nil, fmt.Errorf("container must be running and not paused or restarting to open a shell")
 	}
-	return &shellProcess{cmd: exec.CommandContext(ctx, path, "exec", "-it", id, executable)}, nil
+	cmd := exec.CommandContext(ctx, path, "exec", "-it", id, executable)
+	cmd.Env = c.CLIEnvironment()
+	return &shellProcess{cmd: cmd}, nil
 }
 
 // shellProcess keeps recent stderr available after the alternate screen returns.

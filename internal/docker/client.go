@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/moby/moby/api/types/container"
@@ -23,6 +24,7 @@ type Client struct {
 	api    engine
 	tunnel *sshTunnel // set for ssh:// endpoints
 	label  string
+	cliEnv []string
 }
 
 // engine is the part of the Engine API client dockernext uses, so tests can
@@ -83,7 +85,14 @@ func New() (*Client, error) {
 	if tunnel != nil {
 		daemon = host
 	}
-	return &Client{api: api, tunnel: tunnel, label: connectionLabel(name, daemon)}, nil
+	env := []string{"DOCKER_HOST=" + daemon, "DOCKER_CONTEXT="}
+	for _, entry := range os.Environ() {
+		key, _, _ := strings.Cut(entry, "=")
+		if !strings.EqualFold(key, "DOCKER_HOST") && !strings.EqualFold(key, "DOCKER_CONTEXT") {
+			env = append(env, entry)
+		}
+	}
+	return &Client{api: api, tunnel: tunnel, label: connectionLabel(name, daemon), cliEnv: env}, nil
 }
 
 func isSSHHost(host string) bool { return strings.HasPrefix(host, "ssh://") }
@@ -102,6 +111,11 @@ func connectionLabel(name, host string) string {
 }
 
 func (c *Client) ConnectionLabel() string { return c.label }
+
+// CLIEnvironment binds Docker subprocesses to this client's daemon and startup
+// settings, even if the saved current context changes while the TUI is open.
+func (c *Client) CLIEnvironment() []string { return slices.Clone(c.cliEnv) }
+
 func (c *Client) Ping(ctx context.Context) error {
 	_, err := c.api.Ping(ctx, client.PingOptions{})
 	return err
