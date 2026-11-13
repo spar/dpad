@@ -163,6 +163,9 @@ func testSSHTunnelServesAndRestarts(t *testing.T, socket string, fromContext boo
 	if c.ConnectionLabel() != label {
 		t.Errorf("label = %q", c.ConnectionLabel())
 	}
+	if !slices.Contains(c.CLIEnvironment(), "DOCKER_HOST="+endpoint) || !slices.Contains(c.CLIEnvironment(), "DOCKER_CONTEXT=") {
+		t.Fatal("CLI environment lost the original SSH user/socket or retained context selection")
+	}
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 	items, err := c.Containers(ctx, true)

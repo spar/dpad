@@ -3,8 +3,12 @@ package tui
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -33,7 +37,10 @@ func shellDockerFixture(t *testing.T) string {
 
 func TestPrepareShellChecksStateAndPassesLiteralArguments(t *testing.T) {
 	path := shellDockerFixture(t)
-	f := &fakeClient{inspect: container.InspectResponse{State: &container.State{Running: true}}}
+	f := &fakeClient{
+		inspect: container.InspectResponse{State: &container.State{Running: true}},
+		cliEnv:  []string{"DOCKER_HOST=unix:///bound.sock", "DOCKER_CONTEXT="},
+	}
 	executable := "/bin/sh; echo should-not-run"
 	p, err := prepareShell(context.Background(), f, "container-id", executable)
 	if err != nil {
@@ -42,8 +49,8 @@ func TestPrepareShellChecksStateAndPassesLiteralArguments(t *testing.T) {
 	if want := []string{path, "exec", "-it", "container-id", executable}; !reflect.DeepEqual(p.cmd.Args, want) {
 		t.Fatalf("shell arguments = %q, want %q", p.cmd.Args, want)
 	}
-	if p.cmd.Env != nil {
-		t.Fatal("shell must inherit Docker context and TLS environment")
+	if !reflect.DeepEqual(p.cmd.Env, f.cliEnv) {
+		t.Fatal("shell did not use the bound client's CLI environment")
 	}
 	for _, state := range []*container.State{nil, {}, {Running: true, Paused: true}, {Running: true, Restarting: true}} {
 		f.inspect.State = state
@@ -58,6 +65,75 @@ func TestPrepareShellChecksStateAndPassesLiteralArguments(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 	if _, err := prepareShell(context.Background(), f, "id", "/bin/sh"); err == nil || !strings.Contains(err.Error(), "docker CLI not found") {
 		t.Fatal("missing Docker CLI was not reported")
+	}
+}
+
+func TestShellStaysOnBoundDaemonAfterContextChanges(t *testing.T) {
+	path := shellDockerFixture(t)
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf '%s\\n' \"$DOCKER_HOST\" \"$DOCKER_CONTEXT\" \"$DOCKER_CONFIG\" \"$DOCKER_API_VERSION\" \"$DOCKER_TLS_VERIFY\" \"$DOCKER_CERT_PATH\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	daemon := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Api-Version", "1.47")
+		if strings.HasSuffix(r.URL.Path, "/containers/web/json") {
+			fmt.Fprint(w, `{"Id":"web","State":{"Running":true}}`)
+			return
+		}
+		fmt.Fprint(w, "OK")
+	}))
+	defer daemon.Close()
+	host := strings.Replace(daemon.URL, "http://", "tcp://", 1)
+	cfg := t.TempDir()
+	configPath := filepath.Join(cfg, "config.json")
+	sum := sha256.Sum256([]byte("bound"))
+	contextDir := filepath.Join(cfg, "contexts", "meta", hex.EncodeToString(sum[:]))
+	if err := os.MkdirAll(contextDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	metadata := filepath.Join(contextDir, "meta.json")
+	if err := os.WriteFile(metadata, []byte(`{"Endpoints":{"docker":{"Host":"`+host+`"}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(configPath, []byte(`{"currentContext":"bound"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("DOCKER_CONFIG", cfg)
+	t.Setenv("DOCKER_HOST", "")
+	t.Setenv("DOCKER_CONTEXT", "")
+	t.Setenv("DOCKER_API_VERSION", "1.47")
+	t.Setenv("DOCKER_TLS_VERIFY", "")
+	t.Setenv("DOCKER_CERT_PATH", "")
+	c, err := docker.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+
+	// Both changing the saved selection and editing the selected context must
+	// leave the shell on the endpoint already used for container inspection.
+	if err := os.WriteFile(configPath, []byte(`{"currentContext":"another-daemon"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(metadata, []byte(`{"Endpoints":{"docker":{"Host":"tcp://127.0.0.1:1"}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("DOCKER_HOST", "tcp://127.0.0.1:2")
+	t.Setenv("DOCKER_CONTEXT", "another-daemon")
+	t.Setenv("DOCKER_CONFIG", t.TempDir())
+	t.Setenv("DOCKER_API_VERSION", "1.48")
+	t.Setenv("DOCKER_TLS_VERIFY", "1")
+	t.Setenv("DOCKER_CERT_PATH", "/changed/certificates")
+	p, err := prepareShell(t.Context(), c, "web", "/bin/sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	p.SetStdout(&output)
+	if err := p.Run(); err != nil {
+		t.Fatal(err)
+	}
+	if want := strings.Join([]string{host, "", cfg, "1.47", "", "", ""}, "\n"); output.String() != want {
+		t.Fatalf("shell connection environment = %q, want %q", output.String(), want)
 	}
 }
 
