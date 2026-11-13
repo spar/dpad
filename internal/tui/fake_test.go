@@ -29,6 +29,7 @@ type fakeClient struct {
 	networkInfo    network.Inspect
 	networkErr     error
 	cliEnv         []string
+	closed         int
 
 	mu      sync.Mutex
 	actions []string // "verb id"
@@ -36,6 +37,7 @@ type fakeClient struct {
 
 func (f *fakeClient) ConnectionLabel() string    { return "test-daemon" }
 func (f *fakeClient) CLIEnvironment() []string   { return f.cliEnv }
+func (f *fakeClient) Close() error               { f.closed++; return nil }
 func (f *fakeClient) Ping(context.Context) error { return f.pingErr }
 
 func (f *fakeClient) Containers(context.Context, bool) ([]container.Summary, error) {
