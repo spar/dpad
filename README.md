@@ -129,7 +129,21 @@ cancels all readers and pending retries. One timer serves retry scheduling for
 the session; snapshots and status updates coalesce, and log batches retain the
 existing redraw limit. Colors are stable by container name across recreation.
 Select an individual container row for details, logs, or confirmed lifecycle
-actions; project rows do not perform bulk start/stop/restart actions.
+actions. On a project header in Projects, `S`, `x`, and `R` open a scrollable
+start, stop, or restart preview. Press `y` to confirm, or `esc` to return.
+Start targets created, exited, and paused containers (unpausing the latter);
+stop targets running, paused, and restarting containers; restart targets running
+containers only. Other states are skipped. Targets are read again before work
+begins; changed names, IDs, services, or states require a new confirmation.
+
+Project actions use existing containers through the Docker Engine API. They do
+not create or recreate services, apply Compose files, or order dependencies.
+Up to four requests run at once, each with a 45-second timeout. The progress
+view shows per-container results; navigate to a failed row for its error.
+`esc` during work cancels remaining requests and keeps partial results visible.
+An interrupted in-flight request is marked `unknown` because Docker may already
+have applied it. Closing the completed view returns to the same project filter
+and selection; container lists refresh when work finishes.
 
 In Images, the usage column counts containers by image ID, including stopped
 containers. `unused` means none reference the image; a failed usage refresh shows
@@ -172,7 +186,9 @@ uses bounded queues, and batches updates at most ten times per second.
 Over SSH, event updates batch at most four times per second and log updates at
 most ten times per second; log paging moves immediately without animation.
 SSH detection uses `SSH_CONNECTION`, `SSH_CLIENT`, or `SSH_TTY`. Table layouts
-are reused while navigating unchanged data. Automatic container-list refreshes
+are reused while navigating and across refreshes whose visible cells and columns
+are unchanged. Lists scroll when the selection leaves the visible page, keeping
+the viewport stable when moving within it. Automatic container-list refreshes
 coalesce Docker event bursts into at most one request per second; manual refresh
 and subscription recovery remain immediate.
 Interrupted subscriptions retry with one-to-five-second backoff, retaining the

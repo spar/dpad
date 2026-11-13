@@ -65,7 +65,7 @@ func (t Table) Prepare() *PreparedTable {
 				s = "" // a styled empty cell would stop trailing padding being trimmed
 			}
 			if m := t.Columns[i].Max; m > 0 && w > m {
-				s = ansi.Truncate(s, m, "…")
+				s = truncate(s, m)
 				w = width(s)
 			}
 			cells[r][i], cellW[r][i] = s, w
@@ -83,6 +83,13 @@ func (t *PreparedTable) Window(selected, height int) string {
 	if selected >= avail {
 		start = selected - avail + 1
 	}
+	return t.WindowFrom(selected, height, start)
+}
+
+// WindowFrom renders a viewport whose first data row is start.
+func (t *PreparedTable) WindowFrom(selected, height, start int) string {
+	avail := max(height-1, 1)
+	start = max(0, min(start, len(t.cells)))
 	end := min(start+avail, len(t.cells))
 	return strings.Join(t.lines(selected, start, end), "\n")
 }
@@ -136,6 +143,21 @@ func (t *PreparedTable) lines(selected, start, end int) []string {
 		out = append(out, Selected.Render(l))
 	}
 	return out
+}
+
+func truncate(s string, limit int) string {
+	for i := range len(s) {
+		if s[i] < ' ' || s[i] > '~' {
+			return ansi.Truncate(s, limit, "…")
+		}
+	}
+	if len(s) <= limit {
+		return s
+	}
+	if limit < 1 {
+		return ""
+	}
+	return s[:limit-1] + "…"
 }
 
 // width is ansi.StringWidth with a fast path for the usual cell: ASCII text
