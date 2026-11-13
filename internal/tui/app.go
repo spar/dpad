@@ -50,6 +50,7 @@ type App struct {
 	imageDetails   *ImageDetailsView
 	volumeDetails  *VolumeDetailsView
 	networkDetails *NetworkDetailsView
+	projectAction  *projectActionView
 	shell          *shellPrompt
 	help           bool
 	flash          string
@@ -110,6 +111,9 @@ func (a *App) resize(width, height int) {
 	}
 	if a.networkDetails != nil {
 		a.networkDetails.SetSize(a.width, a.bodyHeight())
+	}
+	if a.projectAction != nil {
+		a.projectAction.SetSize(a.width, a.bodyHeight())
 	}
 	if a.shell != nil {
 		a.shell.input.SetWidth(max(width-38, 1))
@@ -197,6 +201,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if a.networkDetails != nil {
 		cmds = append(cmds, a.networkDetails.Update(msg))
 	}
+	if a.projectAction != nil {
+		cmds = append(cmds, a.projectAction.Update(msg))
+	}
 	return a, tea.Batch(cmds...)
 }
 
@@ -208,6 +215,19 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	a.flash = ""
 
 	switch {
+	case a.projectAction != nil:
+		v := a.projectAction
+		if key == "esc" || key == "q" || key == "n" {
+			if v.busy() {
+				v.operationCancel()
+				v.stage = "cancelling"
+			} else {
+				v.Close()
+				a.projectAction = nil
+			}
+			return nil
+		}
+		return v.HandleKey(key)
 	case a.shell != nil:
 		return a.updateShell(msg)
 	case a.confirm != nil:
@@ -370,6 +390,9 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			return a.openShell(id, name)
 		}
 	case "S":
+		if cmd, ok := a.openProjectAction("start"); ok {
+			return cmd
+		}
 		a.ask("start", a.client.Start)
 	case "x":
 		if images, ok := a.tabs[a.active].(*ImagesView); ok {
@@ -378,8 +401,14 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			}
 			return nil
 		}
+		if cmd, ok := a.openProjectAction("stop"); ok {
+			return cmd
+		}
 		a.ask("stop", a.client.Stop)
 	case "R":
+		if cmd, ok := a.openProjectAction("restart"); ok {
+			return cmd
+		}
 		a.ask("restart", a.client.Restart)
 	default:
 		if len(key) == 1 && key[0] >= '1' && int(key[0]-'1') < len(a.tabs) {
@@ -397,6 +426,22 @@ func (a *App) openSelectedContainer() tea.Cmd {
 		return cmd
 	}
 	return nil
+}
+
+func (a *App) openProjectAction(verb string) (tea.Cmd, bool) {
+	v, ok := a.tabs[a.active].(*ProjectsView)
+	if !ok {
+		return nil, false
+	}
+	if !v.loaded || v.err != nil {
+		return nil, true
+	}
+	if p := v.selectedProject(); p != nil {
+		var cmd tea.Cmd
+		a.projectAction, cmd = newProjectAction(a.ctx, a.client, p.name, verb, a.width, a.bodyHeight())
+		return cmd, true
+	}
+	return nil, false
 }
 
 func (a *App) switchTab(i int) tea.Cmd {
@@ -420,6 +465,8 @@ func (a *App) View() tea.View {
 func (a *App) render() string {
 	var body, status string
 	switch {
+	case a.projectAction != nil:
+		body, status = a.projectAction.View(), a.projectAction.Status()
 	case a.help:
 		body = a.helpView()
 	case a.logs != nil:
@@ -485,6 +532,8 @@ func (a *App) tabBar() string {
 
 func (a *App) footer() string {
 	switch {
+	case a.projectAction != nil:
+		return a.projectAction.Footer()
 	case a.shell != nil:
 		if a.shell.launching {
 			return render.Dim.Render("checking container… · esc cancel")
@@ -550,7 +599,7 @@ func (a *App) footer() string {
 			keys = append(keys, "d/enter", "network details")
 		}
 	} else if projects, ok := a.tabs[a.active].(*ProjectsView); ok && projects.selectedProject() != nil {
-		keys = append(keys, "space", "expand/collapse", "enter", "project logs")
+		keys = append(keys, "space", "expand/collapse", "enter", "project logs", "S/x/R", "project start/stop/restart")
 	}
 	return hints(append(keys, "?", "help", "q", "quit")...)
 }
