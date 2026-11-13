@@ -15,15 +15,14 @@ import (
 	"time"
 )
 
-// remoteSocket is where the daemon listens on the SSH host.
-const remoteSocket = "/var/run/docker.sock"
+const defaultRemoteSocket = "/var/run/docker.sock"
 
 // sshCommand builds the ssh process; tests replace it with a fake.
 var sshCommand = func(args ...string) *exec.Cmd { return exec.Command("ssh", args...) }
 
-type sshTarget struct{ user, host, port string }
+type sshTarget struct{ user, host, port, socket string }
 
-// parseSSHHost accepts ssh://[user@]host[:port], as the docker CLI does.
+// parseSSHHost accepts ssh://[user@]host[:port][/socket/path].
 func parseSSHHost(raw string) (sshTarget, error) {
 	u, err := url.Parse(raw)
 	if err != nil {
@@ -32,7 +31,7 @@ func parseSSHHost(raw string) (sshTarget, error) {
 	if u.Scheme != "ssh" {
 		return sshTarget{}, fmt.Errorf("expected an ssh:// host, got %q", raw)
 	}
-	var t sshTarget
+	t := sshTarget{socket: defaultRemoteSocket}
 	if u.User != nil {
 		if _, ok := u.User.Password(); ok {
 			return sshTarget{}, errors.New("ssh host: plain-text passwords are not supported")
@@ -43,10 +42,18 @@ func parseSSHHost(raw string) (sshTarget, error) {
 	switch {
 	case t.host == "":
 		return sshTarget{}, fmt.Errorf("ssh host %q has no hostname", raw)
-	case u.Path != "":
-		return sshTarget{}, fmt.Errorf("ssh host %q: extra path after the host", raw)
 	case u.RawQuery != "" || u.Fragment != "":
 		return sshTarget{}, fmt.Errorf("ssh host %q: query and fragment are not supported", raw)
+	}
+	if u.Path != "" {
+		if !strings.HasPrefix(u.Path, "/") || strings.HasSuffix(u.Path, "/") {
+			return sshTarget{}, errors.New("ssh socket path must name an absolute socket file")
+		}
+		// OpenSSH expands ${...} locally before parsing forwarding paths.
+		if strings.Contains(u.Path, "${") || strings.ContainsAny(u.Path, "\x00\r\n") {
+			return sshTarget{}, errors.New("ssh socket path cannot contain environment expansions or NUL/newline characters")
+		}
+		t.socket = u.Path
 	}
 	return t, nil
 }
@@ -122,7 +129,9 @@ func (t *sshTunnel) args(batch bool) []string {
 	if t.target.port != "" {
 		args = append(args, "-p", t.target.port)
 	}
-	return append(args, "-L", t.socket+":"+remoteSocket, "--", t.target.host)
+	// OpenSSH uses colons as field separators and backslashes as escapes.
+	escape := strings.NewReplacer("\\", "\\\\", ":", "\\:")
+	return append(args, "-L", escape.Replace(t.socket)+":"+escape.Replace(t.target.socket), "--", t.target.host)
 }
 
 // start runs ssh and waits until it listens on the local socket or exits.

@@ -19,11 +19,23 @@ func TestParseSSHHost(t *testing.T) {
 		want sshTarget
 		err  string
 	}{
-		{in: "ssh://server", want: sshTarget{host: "server"}},
-		{in: "ssh://me@server:2222", want: sshTarget{user: "me", host: "server", port: "2222"}},
-		{in: "ssh://me@[::1]:22", want: sshTarget{user: "me", host: "::1", port: "22"}},
+		{in: "ssh://server", want: sshTarget{host: "server", socket: defaultRemoteSocket}},
+		{in: "ssh://me@server:2222", want: sshTarget{user: "me", host: "server", port: "2222", socket: defaultRemoteSocket}},
+		{in: "ssh://me@[::1]:22", want: sshTarget{user: "me", host: "::1", port: "22", socket: defaultRemoteSocket}},
+		{in: "ssh://server/var/run/docker.sock", want: sshTarget{host: "server", socket: defaultRemoteSocket}},
+		{in: "ssh://me@[::1]:2222/run/user/1000/docker.sock", want: sshTarget{user: "me", host: "::1", port: "2222", socket: "/run/user/1000/docker.sock"}},
+		{in: "ssh://server/run/custom%20socket%3Aone%5Ctwo.sock", want: sshTarget{host: "server", socket: "/run/custom socket:one\\two.sock"}},
 		{in: "ssh://me:secret@server", err: "passwords"},
-		{in: "ssh://server/var/run/docker.sock", err: "extra path"},
+		{in: "ssh://server/", err: "absolute socket file"},
+		{in: "ssh://server/run/user/1000/", err: "absolute socket file"},
+		{in: "ssh://server/run/%00docker.sock", err: "NUL/newline"},
+		{in: "ssh://server/run/%0Adocker.sock", err: "NUL/newline"},
+		{in: "ssh://server/run/%0Ddocker.sock", err: "NUL/newline"},
+		{in: "ssh://server/run/${UID}/docker.sock", err: "environment expansions"},
+		{in: "ssh://server/run/%24%7BUID%7D/docker.sock", err: "environment expansions"},
+		{in: "ssh://server/run/docker.sock?x=1", err: "query"},
+		{in: "ssh://server/run/docker.sock#fragment", err: "fragment"},
+		{in: "ssh://server/run/%zz", err: "invalid URL escape"},
 		{in: "ssh://server?x=1", err: "query"},
 		{in: "ssh://", err: "no hostname"},
 		{in: "tcp://server", err: "expected an ssh://"},
@@ -43,7 +55,7 @@ func TestParseSSHHost(t *testing.T) {
 }
 
 func TestSSHArgs(t *testing.T) {
-	tun := &sshTunnel{target: sshTarget{user: "me", host: "-oProxyCommand=x", port: "2222"}, socket: "/tmp/d/docker.sock"}
+	tun := &sshTunnel{target: sshTarget{user: "me", host: "-oProxyCommand=x", port: "2222", socket: defaultRemoteSocket}, socket: "/tmp/d/docker.sock"}
 	args := tun.args(false)
 	if slices.Contains(args, "BatchMode=yes") {
 		t.Fatal("first start must allow prompts")
@@ -54,6 +66,13 @@ func TestSSHArgs(t *testing.T) {
 	}
 	if !slices.Contains(tun.args(true), "BatchMode=yes") {
 		t.Fatal("restart can prompt while the TUI owns the terminal")
+	}
+	tun.target.socket = "/run/custom socket:one\\two.sock"
+	for _, batch := range []bool{false, true} {
+		args := tun.args(batch)
+		if got := args[slices.Index(args, "-L")+1]; got != `/tmp/d/docker.sock:/run/custom socket\:one\\two.sock` {
+			t.Fatalf("forwarding path = %q", got)
+		}
 	}
 }
 
@@ -113,14 +132,35 @@ func starts(t *testing.T, log string) []string {
 }
 
 func TestSSHTunnelServesAndRestarts(t *testing.T) {
+	for _, socket := range []string{"", "/run/user/1000/docker.sock"} {
+		for _, fromContext := range []bool{false, true} {
+			t.Run(fmt.Sprintf("socket=%s/context=%t", socket, fromContext), func(t *testing.T) {
+				testSSHTunnelServesAndRestarts(t, socket, fromContext)
+			})
+		}
+	}
+}
+
+func testSSHTunnelServesAndRestarts(t *testing.T, socket string, fromContext bool) {
+	t.Helper()
 	log := useFakeSSH(t, "serve")
-	t.Setenv("DOCKER_HOST", "ssh://me@server:2222")
+	endpoint := "ssh://me@server:2222" + socket
+	label := "ssh://server:2222" + socket
+	t.Setenv("DOCKER_HOST", endpoint)
+	if fromContext {
+		cfg := t.TempDir()
+		t.Setenv("DOCKER_CONFIG", cfg)
+		t.Setenv("DOCKER_HOST", "")
+		t.Setenv("DOCKER_CONTEXT", "home")
+		writeContext(t, cfg, "home", endpoint)
+		label = "home @ " + label
+	}
 	c, err := New()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer c.Close()
-	if c.ConnectionLabel() != "ssh://server:2222" {
+	if c.ConnectionLabel() != label {
 		t.Errorf("label = %q", c.ConnectionLabel())
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
@@ -141,6 +181,14 @@ func TestSSHTunnelServesAndRestarts(t *testing.T) {
 	s := starts(t, log)
 	if len(s) != 2 || strings.Contains(s[0], "BatchMode") || !strings.Contains(s[1], "BatchMode=yes") {
 		t.Fatalf("ssh starts = %q", s)
+	}
+	if socket == "" {
+		socket = defaultRemoteSocket
+	}
+	for _, start := range s {
+		if !strings.Contains(start, "-L "+c.tunnel.socket+":"+socket+" -- server") {
+			t.Fatalf("ssh did not forward to %q: %s", socket, start)
+		}
 	}
 
 	dir := c.tunnel.dir
