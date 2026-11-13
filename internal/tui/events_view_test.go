@@ -208,10 +208,16 @@ func TestEventsNarrowLayout(t *testing.T) {
 func TestContainerRefreshCoalescesDuringEventStorm(t *testing.T) {
 	v := NewContainersView(t.Context(), &fakeClient{})
 	first := v.load()
-	for range 100 {
+	if v.Update(eventsBatchMsg{updates: []docker.EventUpdate{testEvent(1)}}) == nil {
+		t.Fatal("event refresh not scheduled")
+	}
+	for range 99 {
 		if v.Update(eventsBatchMsg{updates: []docker.EventUpdate{testEvent(1)}}) != nil {
 			t.Fatal("overlapping load scheduled")
 		}
+	}
+	if v.Update(containersEventRefreshMsg{generation: v.eventGeneration}) != nil {
+		t.Fatal("scheduled event refresh overlapped the running request")
 	}
 	followup := v.Update(first())
 	if followup == nil {

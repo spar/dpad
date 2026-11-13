@@ -44,8 +44,10 @@ type list[T any] struct {
 	page        int // rows moved by pgup/pgdn
 
 	// Cache of visible and its row keys; nil when items, filter or sort change.
-	rowCache []row
-	keyCache []string
+	rowCache                 []row
+	keyCache                 []string
+	rowVersion, tableVersion uint64
+	table                    *render.PreparedTable
 }
 
 // setItems replaces the list's items after a load.
@@ -79,6 +81,7 @@ func (l *list[T]) visible() ([]row, []string) {
 	for i, r := range rows {
 		keys[i] = r.key
 	}
+	l.rowVersion++
 	l.rowCache, l.keyCache = rows, keys
 	return rows, keys
 }
@@ -122,18 +125,23 @@ func (l *list[T]) view(height int) string {
 	}
 	rows, keys := l.visible()
 	if len(rows) == 0 {
+		l.table = nil
 		return render.Dim.Render(l.empty)
 	}
-	cells := make([][]string, len(rows))
-	for i, r := range rows {
-		cells[i] = r.cells
+	if l.table == nil || l.tableVersion != l.rowVersion {
+		cells := make([][]string, len(rows))
+		for i, r := range rows {
+			cells[i] = r.cells
+		}
+		l.table = (render.Table{Columns: l.sortedColumns(), Rows: cells, Width: l.width}).Prepare()
+		l.tableVersion = l.rowVersion
 	}
+	l.table.Width = l.width
 	sel := l.cur.index(keys)
 	if l.noHighlight {
 		sel = -1
 	}
-	t := render.Table{Columns: l.sortedColumns(), Rows: cells, Width: l.width}
-	return t.Window(sel, height)
+	return l.table.Window(sel, height)
 }
 
 // sortedColumns returns the columns with an arrow on the sorted one's header:

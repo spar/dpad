@@ -1,6 +1,7 @@
 package render
 
 import (
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -31,27 +32,22 @@ type Table struct {
 	Width   int // truncate every line to this width; 0 = unlimited
 }
 
-// String renders the full table with no row highlighted.
-func (t Table) String() string {
-	return strings.Join(t.lines(-1, 0, len(t.Rows)), "\n")
+// PreparedTable keeps measured cells across selection and viewport changes.
+// Prepare again when row contents or columns change; Width can change freely.
+type PreparedTable struct {
+	Width        int
+	columns      []Column
+	widths       []int
+	headers      []string
+	headerWidths []int
+	cells        [][]string
+	cellWidths   [][]int
 }
 
-// Window renders the header and as many rows as fit in height lines,
-// scrolled so the selected row is visible and highlighted. A negative
-// selected highlights nothing. Only the rows shown are formatted.
-func (t Table) Window(selected, height int) string {
-	avail := max(height-1, 1)
-	start := 0
-	if selected >= avail {
-		start = selected - avail + 1
-	}
-	end := min(start+avail, len(t.Rows))
-	return strings.Join(t.lines(selected, start, end), "\n")
-}
+func (t Table) String() string                     { return t.Prepare().String() }
+func (t Table) Window(selected, height int) string { return t.Prepare().Window(selected, height) }
 
-// lines returns the header line followed by rows[start:end]. Column widths
-// account for every row, so columns don't shift while scrolling.
-func (t Table) lines(selected, start, end int) []string {
+func (t Table) Prepare() *PreparedTable {
 	n := len(t.Columns)
 	widths := make([]int, n)
 	headers, headerW := make([]string, n), make([]int, n)
@@ -77,18 +73,33 @@ func (t Table) lines(selected, start, end int) []string {
 		}
 	}
 
+	return &PreparedTable{Width: t.Width, columns: slices.Clone(t.Columns), widths: widths, headers: headers, headerWidths: headerW, cells: cells, cellWidths: cellW}
+}
+
+func (t *PreparedTable) String() string { return strings.Join(t.lines(-1, 0, len(t.cells)), "\n") }
+func (t *PreparedTable) Window(selected, height int) string {
+	avail := max(height-1, 1)
+	start := 0
+	if selected >= avail {
+		start = selected - avail + 1
+	}
+	end := min(start+avail, len(t.cells))
+	return strings.Join(t.lines(selected, start, end), "\n")
+}
+func (t *PreparedTable) lines(selected, start, end int) []string {
+	n := len(t.columns)
 	// Lines only need truncating if the widest possible one doesn't fit.
 	total := len(colGap) * (n - 1)
-	for _, w := range widths {
+	for _, w := range t.widths {
 		total += w
 	}
 	truncate := t.Width > 0 && total > t.Width
 
 	line := func(cells []string, cellW []int) string {
 		var b strings.Builder
-		for i, w := range widths {
+		for i, w := range t.widths {
 			pad := strings.Repeat(" ", w-cellW[i])
-			if t.Columns[i].Align == Right {
+			if t.columns[i].Align == Right {
 				b.WriteString(pad + cells[i])
 			} else if i == n-1 {
 				b.WriteString(cells[i])
@@ -107,18 +118,18 @@ func (t Table) lines(selected, start, end int) []string {
 	}
 
 	out := make([]string, 0, end-start+1)
-	out = append(out, line(headers, headerW))
+	out = append(out, line(t.headers, t.headerWidths))
 	for r := start; r < end; r++ {
 		if r != selected {
-			out = append(out, line(cells[r], cellW[r]))
+			out = append(out, line(t.cells[r], t.cellWidths[r]))
 			continue
 		}
 		// Inner ANSI resets would break the highlight, so render plain text.
 		plain := make([]string, n)
-		for i, c := range cells[r] {
+		for i, c := range t.cells[r] {
 			plain[i] = ansi.Strip(c)
 		}
-		l := line(plain, cellW[r])
+		l := line(plain, t.cellWidths[r])
 		if t.Width > 0 {
 			l += strings.Repeat(" ", max(0, t.Width-width(l)))
 		}
@@ -135,7 +146,14 @@ func width(s string) int {
 	for i := 0; i < len(s); i++ {
 		switch c := s[i]; {
 		case c >= utf8.RuneSelf:
-			return ansi.StringWidth(s)
+			r, size := utf8.DecodeRuneInString(s[i:])
+			switch {
+			case r >= 0x2580 && r <= 0x259f, r == '→', r == '▾', r == '▸', r == '—', r == '·', r == '▲', r == '▼', r == '↑', r == '↓', r == '♥', r == '✗', r == '…':
+				w++
+				i += size - 1
+			default:
+				return ansi.StringWidth(s)
+			}
 		case c == ansi.ESC:
 			// Skip a CSI sequence (ESC [ params final); fall back for others.
 			if i+1 >= len(s) || s[i+1] != '[' {

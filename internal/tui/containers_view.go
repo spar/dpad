@@ -18,7 +18,8 @@ type (
 		items []container.Summary
 		err   error
 	}
-	containersTickMsg struct{}
+	containersTickMsg         struct{}
+	containersEventRefreshMsg struct{ generation uint64 }
 	// refreshMsg asks list tabs to reload now (e.g. after start/stop).
 	refreshMsg struct{}
 )
@@ -29,6 +30,8 @@ type ContainersView struct {
 	ctx              context.Context
 	client           dockerClient
 	loading, pending bool
+	eventPending     bool
+	eventGeneration  uint64
 }
 
 func NewContainersView(ctx context.Context, c dockerClient) *ContainersView {
@@ -53,6 +56,9 @@ func NewContainersView(ctx context.Context, c dockerClient) *ContainersView {
 func (v *ContainersView) Title() string { return "Containers" }
 
 func (v *ContainersView) load() tea.Cmd {
+	v.eventPending = false
+	v.eventGeneration++
+
 	if v.loading {
 		v.pending = true
 		return nil
@@ -82,9 +88,23 @@ func (v *ContainersView) Update(msg tea.Msg) tea.Cmd {
 		}
 	case eventsBatchMsg:
 		for _, u := range msg.updates {
-			if u.Subscribed || u.Event.ID != "" {
+			if u.Subscribed {
 				return v.load()
 			}
+		}
+		if !v.eventPending {
+			for _, u := range msg.updates {
+				if u.Event.ID != "" {
+					v.eventPending = true
+					v.eventGeneration++
+					gen := v.eventGeneration
+					return tea.Tick(time.Second, func(time.Time) tea.Msg { return containersEventRefreshMsg{generation: gen} })
+				}
+			}
+		}
+	case containersEventRefreshMsg:
+		if v.eventPending && msg.generation == v.eventGeneration && v.ctx.Err() == nil {
+			return v.load()
 		}
 	case containersTickMsg:
 		return tea.Batch(v.load(), tick(containersTickMsg{}))

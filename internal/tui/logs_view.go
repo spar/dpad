@@ -71,6 +71,7 @@ type LogsView struct {
 	colors        render.NameColors
 	project       *projectLogSession
 	projectState  projectLogStatus
+	remote        bool
 
 	// Paging glides to target over a few frames; gen invalidates stale frames.
 	target    int
@@ -133,6 +134,7 @@ func newLogPane(ctx context.Context, name string, width, height int) (*LogsView,
 		vp:     viewport.New(viewport.WithWidth(width), viewport.WithHeight(height)),
 		search: textinput.New(),
 		colors: render.NameColors{},
+		remote: remoteTerminal(),
 	}
 	v.search.Prompt = "/"
 	v.search.Placeholder = "regex (e.g. ERROR|WARN, (?i)timeout)"
@@ -167,7 +169,11 @@ func (v *LogsView) wait() tea.Cmd {
 			l = line
 		}
 		batch := []docker.LogLine{l}
-		flush := time.After(logFlushInterval)
+		interval := logFlushInterval
+		if v.remote {
+			interval = 100 * time.Millisecond
+		}
+		flush := time.After(interval)
 		for len(batch) < maxLogBatch {
 			select {
 			case l, ok := <-ch:
@@ -381,6 +387,13 @@ const scrollFrame = time.Second / 60
 // scrollBy moves the scroll target by delta lines and starts gliding toward it.
 // Presses during a glide extend the target, so a held key scrolls continuously.
 func (v *LogsView) scrollBy(delta int) tea.Cmd {
+	if v.remote {
+		v.animating = false
+		v.gen++
+		v.vp.SetYOffset(v.vp.YOffset() + delta)
+		return nil
+	}
+
 	from := v.vp.YOffset()
 	if v.animating {
 		from = v.target

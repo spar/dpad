@@ -182,3 +182,28 @@ func TestWidthMatchesAnsi(t *testing.T) {
 		}
 	}
 }
+
+func TestPreparedTableMatchesFreshAcrossViewports(t *testing.T) {
+	t1 := Table{Columns: []Column{{Header: "NAME", Max: 12}, {Header: "CPU", Align: Right}}, Rows: [][]string{{Bold.Render("alpha"), Bar(40, 10)}, {"long-name-off-screen", Bar(90, 10)}, {"東京", "1"}, {"♥️ combine\u0301", "2"}}, Width: 40}
+	prepared := t1.Prepare()
+	for _, w := range []int{20, 40, 80} {
+		t1.Width = w
+		prepared.Width = w
+		for _, selected := range []int{-1, 0, 2, 3} {
+			for _, height := range []int{2, 4, 10} {
+				if got, want := prepared.Window(selected, height), t1.Window(selected, height); got != want {
+					t.Fatalf("width=%d selection=%d height=%d\n%s\n%s", w, selected, height, got, want)
+				}
+			}
+		}
+	}
+	for _, s := range []string{"▾ project ▲ · — →", Bar(100, 10), "♥️", "▸\u0301", "→\u200d🙂", "✗ unhealthy"} {
+		if got, want := width(s), ansi.StringWidth(s); got != want {
+			t.Fatalf("width(%q)=%d want %d", s, got, want)
+		}
+	}
+	t1.Columns[0].Header = "changed"
+	if strings.Contains(ansi.Strip(prepared.String()), "changed") {
+		t.Fatal("prepared table retained mutable column headers")
+	}
+}
