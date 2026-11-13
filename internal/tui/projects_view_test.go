@@ -101,6 +101,10 @@ func TestAppProjectLogsAndContainerActions(t *testing.T) {
 	if a.confirm != nil || a.details != nil {
 		t.Fatal("project header offered single-container actions")
 	}
+	if a.projectAction == nil {
+		t.Fatal("project header did not offer project controls")
+	}
+	press(a, "esc")
 	if !strings.Contains(ansi.Strip(a.footer()), "project logs") {
 		t.Fatal("project log action is not discoverable")
 	}
