@@ -29,21 +29,28 @@ type (
 // StatsView shows live, sortable resource usage for running containers.
 type StatsView struct {
 	list[docker.Stats]
-	ctx          context.Context
-	client       dockerClient
-	ch           <-chan docker.StatsUpdate
-	data         map[string]docker.Stats
-	watching     bool // WatchStats requested
-	history      map[string]*statsHistory
-	historyCache statsHistoryCache
-	rates        map[string]docker.Rates
-	totals       bool
-	health       map[string]statsHealth
-	requested    bool
-	watchGen     uint64
-	watchErr     error
-	retryDelay   time.Duration
-	endpoint     string
+	ctx           context.Context
+	client        dockerClient
+	ch            <-chan docker.StatsUpdate
+	data          map[string]docker.Stats
+	watching      bool // WatchStats requested
+	history       map[string]*statsHistory
+	historyCache  statsHistoryCache
+	rates         map[string]docker.Rates
+	totals        bool
+	health        map[string]statsHealth
+	requested     bool
+	watchGen      uint64
+	watchErr      error
+	retryDelay    time.Duration
+	endpoint      string
+	grouped       bool
+	membership    map[string]statsMembership
+	membershipErr error
+	projects      map[string]*statsProject
+	projectRates  map[string]docker.Rates
+	expanded      map[string]bool
+	groupMembers  int
 }
 
 func NewStatsView(ctx context.Context, c dockerClient, key sortx.Key, reverse bool) *StatsView {
@@ -57,25 +64,9 @@ func NewStatsView(ctx context.Context, c dockerClient, key sortx.Key, reverse bo
 		sortCol: map[sortx.Key]int{sortx.Name: 0, sortx.CPU: 1, sortx.Mem: 3, sortx.Net: 6, sortx.IO: 7, sortx.PIDs: 8},
 		key:     key,
 		reverse: reverse,
-		match:   func(s docker.Stats, f string) bool { return matches(f, s.Name, s.ID) },
-		sort: func(items []docker.Stats, key sortx.Key, reverse bool) {
-			if v.totals {
-				sortx.Stats(items, key, reverse)
-			} else {
-				sortx.StatsByRates(items, key, reverse, v.rates)
-			}
-		},
-		rows: func(s docker.Stats) []row {
-			var cells []string
-			if v.health[s.ID].err != nil {
-				cells = render.UnavailableStatsRow(s)
-			} else if v.totals {
-				cells = render.StatsRow(s)
-			} else {
-				cells = render.StatsRateRow(s, v.rates[s.ID])
-			}
-			return []row{{key: s.ID, cells: cells, id: s.ID, name: s.Name}}
-		},
+		match:   v.statsMatches,
+		sort:    func(items []docker.Stats, _ sortx.Key, _ bool) { v.sortSamples(items, v.grouped) },
+		rows:    v.statsRows,
 		loading: "connecting…",
 		empty:   "no running containers",
 	}
@@ -90,6 +81,10 @@ func (v *StatsView) SetTotals(totals bool) {
 		v.columns[6].Header = "NET RX / TX"
 		v.columns[7].Header = "DISK READ / WRITE"
 	}
+	if v.grouped {
+		v.columns[0].Header = "PROJECT / CONTAINER"
+		v.columns[0].Max = 35
+	}
 	v.rowCache = nil
 }
 
@@ -101,6 +96,9 @@ func (v *StatsView) Init() tea.Cmd { return nil }
 // stream per running container, which isn't worth it if the tab never is.
 func (v *StatsView) Focus() tea.Cmd {
 	v.requested = true
+	if v.grouped {
+		v.rebuildItems()
+	}
 	if v.watching {
 		return nil
 	}
@@ -155,6 +153,9 @@ func waitStats(ch <-chan docker.StatsUpdate) tea.Cmd {
 
 func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
+	case containersMsg:
+		v.updateMembership(msg)
+		return nil
 	case statsRetryMsg:
 		if msg.generation == v.watchGen {
 			return v.retryNow()
@@ -171,6 +172,9 @@ func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 			v.markUnavailable(id, h, v.watchErr)
 		}
 		v.rowCache = nil
+		if v.grouped {
+			v.rebuildItems()
+		}
 		return v.retryWatch()
 	case statsTickMsg:
 		if msg.ch != v.ch || v.ctx.Err() != nil {
@@ -195,7 +199,8 @@ func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 		clear(v.rates)
 		clear(v.health)
 		v.historyCache = statsHistoryCache{}
-		v.setItems(nil, nil)
+		v.loaded = true
+		v.rebuildItems()
 		return waitStats(v.ch)
 	case statsBatchMsg:
 		now := time.Now()
@@ -247,11 +252,8 @@ func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 			}
 		}
 		v.expireSamples(now)
-		items := v.items[:0]
-		for _, s := range v.data {
-			items = append(items, s)
-		}
-		v.setItems(items, nil)
+		v.loaded = true
+		v.rebuildItems()
 		return waitStats(v.ch)
 	case statsErrMsg:
 		if msg.generation != v.watchGen || v.ctx.Err() != nil {
@@ -262,6 +264,9 @@ func (v *StatsView) Update(msg tea.Msg) tea.Cmd {
 			v.markUnavailable(id, h, msg.err)
 		}
 		v.rowCache = nil
+		if v.grouped {
+			v.rebuildItems()
+		}
 		return v.retryWatch()
 	}
 	return nil
@@ -315,6 +320,14 @@ func shortcutHelp(sep string) (keys, sorts string) {
 }
 
 func (v *StatsView) HandleKey(key string) tea.Cmd {
+	if key == "v" && !v.noHighlight {
+		v.SetGrouped(!v.grouped)
+		return nil
+	}
+	if key == "space" && v.grouped {
+		v.toggleStatsProject(true)
+		return nil
+	}
 	if key == "ctrl+r" {
 		return v.retryNow()
 	}
@@ -350,14 +363,24 @@ func (v *StatsView) Status() string {
 		mode = "totals"
 	}
 	usage := fmt.Sprintf("CPU %.1f%% · MEM %s", cpu, render.BinSize(mem))
-	if available == 0 && (len(v.data) > 0 || v.watchErr != nil) {
+	if available == 0 && (len(v.data) > 0 || v.watchErr != nil || (v.grouped && v.groupMembers > 0)) {
 		usage = "CPU — · MEM —"
 	}
-	status := fmt.Sprintf("%d/%d available · %s · I/O: %s · %s", available, len(v.data), usage, mode, sortLabel(v.key, v.reverse))
+	total := len(v.data)
+	if v.grouped {
+		total = v.groupMembers
+	}
+	status := fmt.Sprintf("%d/%d available · %s · I/O: %s · %s", available, total, usage, mode, sortLabel(v.key, v.reverse))
 	if v.watchErr != nil {
 		status += " · reconnecting: " + connectionError(v.watchErr)
 	} else if problem != nil {
 		status += " · recovering streams: " + connectionError(problem)
+	}
+	if v.grouped {
+		status = fmt.Sprintf("%d projects · ", len(v.projects)) + status
+	}
+	if v.membershipErr != nil && v.grouped {
+		status += " · Compose metadata stale: " + connectionError(v.membershipErr)
 	}
 	if v.noHighlight && v.endpoint != "" {
 		status = v.endpoint + " · " + status
@@ -367,7 +390,11 @@ func (v *StatsView) Status() string {
 
 func (v *StatsView) Help() [][2]string {
 	keys, sorts := shortcutHelp(" / ")
-	return append([][2]string{{keys, "sort by " + sorts}, {"t", "toggle I/O rates / cumulative totals (sorting follows mode)"}}, v.list.Help()...)
+	help := append([][2]string{{keys, "sort by " + sorts}, {"t", "toggle I/O rates / cumulative totals (sorting follows mode)"}}, v.list.Help()...)
+	if !v.noHighlight {
+		help = append(help, [2]string{"v", "toggle Compose projects / flat containers"}, [2]string{"space / enter (project)", "expand/collapse project; space on a member returns to its project"})
+	}
+	return help
 }
 
 // statsProgram runs StatsView on its own for `dn stats`.
