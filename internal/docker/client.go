@@ -3,14 +3,9 @@ package docker
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"net/url"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -185,56 +180,4 @@ func (c *Client) Stop(ctx context.Context, id string) error {
 func (c *Client) Restart(ctx context.Context, id string) error {
 	_, err := c.api.ContainerRestart(ctx, id, client.ContainerRestartOptions{})
 	return err
-}
-
-// contextEndpoint resolves DOCKER_CONTEXT or currentContext in config.json.
-// Only the default context may fall back to the SDK's default endpoint.
-func contextEndpoint() (string, string, error) {
-	cfgDir, err := dockerConfigDir()
-	if err != nil {
-		return "", "", err
-	}
-
-	name := os.Getenv("DOCKER_CONTEXT")
-	if name == "" {
-		var cfg struct {
-			CurrentContext string `json:"currentContext"`
-		}
-		b, err := os.ReadFile(filepath.Join(cfgDir, "config.json"))
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return "", "", fmt.Errorf("read docker config: %w", err)
-		}
-		if err == nil {
-			if err := json.Unmarshal(b, &cfg); err != nil {
-				return "", "", fmt.Errorf("read docker config: %w", err)
-			}
-		}
-		name = cfg.CurrentContext
-	}
-	return readContextEndpoint(cfgDir, name)
-}
-
-func readContextEndpoint(cfgDir, name string) (string, string, error) {
-	if name == "" || name == "default" {
-		return "default", "", nil
-	}
-
-	sum := sha256.Sum256([]byte(name))
-	b, err := os.ReadFile(filepath.Join(cfgDir, "contexts", "meta", hex.EncodeToString(sum[:]), "meta.json"))
-	if err != nil {
-		return "", "", fmt.Errorf("read docker context %q: %w", name, err)
-	}
-	var meta struct {
-		Endpoints map[string]struct {
-			Host string `json:"Host"`
-		} `json:"Endpoints"`
-	}
-	if err := json.Unmarshal(b, &meta); err != nil {
-		return "", "", fmt.Errorf("read docker context %q: %w", name, err)
-	}
-	host := meta.Endpoints["docker"].Host
-	if host == "" {
-		return "", "", fmt.Errorf("docker context %q has no docker endpoint", name)
-	}
-	return name, host, nil
 }
