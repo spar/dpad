@@ -51,6 +51,7 @@ type App struct {
 	volumeDetails   *VolumeDetailsView
 	networkDetails  *NetworkDetailsView
 	projectAction   *projectActionView
+	composeUpdate   *composeUpdateView
 	shell           *shellPrompt
 	contextPicker   *contextPicker
 	nextContext     string
@@ -151,6 +152,9 @@ func (a *App) resize(width, height int) {
 	}
 	if a.projectAction != nil {
 		a.projectAction.SetSize(a.width, a.bodyHeight())
+	}
+	if a.composeUpdate != nil {
+		a.composeUpdate.SetSize(a.width, a.bodyHeight())
 	}
 	if a.shell != nil {
 		a.shell.input.SetWidth(max(width-38, 1))
@@ -260,6 +264,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if a.projectAction != nil {
 		cmds = append(cmds, a.projectAction.Update(msg))
 	}
+	if a.composeUpdate != nil {
+		cmds = append(cmds, a.composeUpdate.Update(msg))
+	}
 	return a, tea.Batch(cmds...)
 }
 
@@ -271,6 +278,19 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	a.flash = ""
 
 	switch {
+	case a.composeUpdate != nil:
+		v := a.composeUpdate
+		if !v.showOutput && (key == "esc" || key == "q" || key == "n") {
+			if v.busy() {
+				v.operationCancel()
+				v.stage = "cancelling"
+			} else {
+				v.Close()
+				a.composeUpdate = nil
+			}
+			return nil
+		}
+		return v.HandleKey(msg)
 	case a.contextPicker != nil:
 		return a.updateContextPicker(msg)
 	case a.projectAction != nil:
@@ -390,6 +410,8 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	}
 
 	switch key {
+	case "u", "U":
+		return a.openComposeUpdate(key == "U")
 	case "c":
 		if a.actionsInFlight > 0 {
 			a.flash, a.flashErr = "wait for the container action to finish before switching contexts", true
@@ -530,6 +552,8 @@ func (a *App) View() tea.View {
 func (a *App) render() string {
 	var body, status string
 	switch {
+	case a.composeUpdate != nil:
+		body, status = a.composeUpdate.View(), a.composeUpdate.Status()
 	case a.contextPicker != nil:
 		body = a.contextPicker.View()
 		status = "Choose a Docker context for this session · switching clears resource data"
@@ -600,6 +624,8 @@ func (a *App) tabBar() string {
 
 func (a *App) footer() string {
 	switch {
+	case a.composeUpdate != nil:
+		return a.composeUpdate.Footer()
 	case a.contextPicker != nil:
 		if a.contextPicker.filtering {
 			return a.contextPicker.search.View() + " " + render.Dim.Render("enter keep filter · esc cancel filter")
@@ -643,6 +669,9 @@ func (a *App) footer() string {
 	}
 
 	keys := []string{"tab", "switch", "c", "context", "/", "filter", "s/r", "sort: " + string(a.tabs[a.active].SortKey())}
+	if _, ok := a.tabs[a.active].(*ProjectsView); ok {
+		keys = append(keys, "u/U", "update project/all")
+	}
 	if stats, ok := a.tabs[a.active].(*StatsView); ok {
 		view := "projects"
 		if stats.grouped {
@@ -687,6 +716,7 @@ func hints(pairs ...string) string {
 
 func (a *App) helpView() string {
 	global := [][2]string{
+		{"u / U (Projects)", "preview pull + up -d for selected/all Compose projects"},
 		{"c", "choose Docker context for this session (from a list tab)"},
 		{fmt.Sprintf("tab / shift+tab, 1-%d", len(a.tabs)), "switch tabs"},
 		{"↑↓ / j k, pgup/pgdn, g/G", "move selection"},

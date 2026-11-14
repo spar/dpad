@@ -65,6 +65,7 @@ These cases go to `docker` unchanged:
 | `r` / `g` (Events) | reverse time order / return to newest and follow arrivals |
 | `x` (Images or image details) | confirm removal of the selected tag or image |
 | `S` / `x` / `R` | start (or unpause) / stop / restart (asks y/N) |
+| `u` / `U` (Projects) | preview image updates for the selected project / all discovered projects |
 | `ctrl+r` | refresh |
 | `c` (list tabs) | choose a Docker context for this session |
 | `?` | help |
@@ -139,14 +140,63 @@ stop targets running, paused, and restarting containers; restart targets running
 containers only. Other states are skipped. Targets are read again before work
 begins; changed names, IDs, services, or states require a new confirmation.
 
-Project actions use existing containers through the Docker Engine API. They do
-not create or recreate services, apply Compose files, or order dependencies.
+The `S`/`x`/`R` project controls use existing containers through the Docker Engine
+API. They do not create or recreate services, apply Compose files, or order dependencies.
 Up to four requests run at once, each with a 45-second timeout. The progress
 view shows per-container results; navigate to a failed row for its error.
 `esc` during work cancels remaining requests and keeps partial results visible.
 An interrupted in-flight request is marked `unknown` because Docker may already
 have applied it. Closing the completed view returns to the same project filter
 and selection; container lists refresh when work finishes.
+
+### Update Compose projects
+
+From Projects, press `u` on a project or one of its containers to update that
+project, or `U` to update all discovered projects on the current daemon. The
+all-project preview includes projects hidden by the list filter and stopped
+projects that still have containers. Projects with no containers cannot be
+discovered from daemon labels.
+
+Review the project list, then press `enter` for its execution host, working
+directory, Compose files, env files, services, and image tags. Press `esc` to
+return to the preview and `y` to confirm. Updating can recreate or start services.
+Missing or inconsistent Compose labels, unavailable files, or invalid configuration
+block that project; the preview shows why. Valid projects can still be confirmed.
+
+Each project runs Compose `pull --include-deps`, followed by
+`up -d --no-build --pull never` only if the pull succeeds. Projects run one at a
+time, with per-project results and a bounded live output view (`enter`). A failed
+project does not stop the remaining projects. The update uses the tags already
+in the Compose files; it does not upgrade pinned versions, edit files, build
+images, run `down`, prune images, or remove volumes. Services without profiles,
+services selected by `COMPOSE_PROFILES`, active non-one-off services, and their
+Compose dependencies are included. Existing profiled services can therefore be
+updated without enabling unrelated profiles.
+
+Source paths come from Compose's `project.working_dir`, `project.config_files`,
+and `project.environment_file` container labels. Accessible local files run with
+the dashboard's bound Docker endpoint. Otherwise, an `ssh://` endpoint can run
+Compose in the labeled directory on that SSH host, including rootless socket
+paths. The preview states which machine will execute the update. Press `h` in
+the preview to toggle local/SSH execution for a project when both machines have
+matching paths. Remote execution requires a POSIX shell, Compose v2 or later,
+and SSH key/agent authentication
+without interactive prompts. Local execution supports either `docker compose`
+or standalone Compose v2 (`docker-compose`). TCP-only remote daemons require the
+files to be available locally.
+
+Compose uses the labeled env-file overrides, or its normal `.env` discovery
+when no override was recorded. Original shell-only variables and unrecorded
+launch flags cannot be recovered;
+they must be available on the execution host or recorded in the project files.
+Resolved configuration is rechecked before confirmation, before pulling, and
+again before `up`; changes require a fresh preview. Configuration values are
+hashed rather than displayed or retained as logs.
+
+Press `esc` from the update overview to cancel remaining work. In-flight
+recreation may already have applied, and an SSH command may still be finishing;
+interrupted `up` is marked `unknown`. Each project has a 20-minute timeout.
+Return to the same filtered Projects view after completion to see refreshed state.
 
 In Images, the usage column counts containers by image ID, including stopped
 containers. `unused` means none reference the image; a failed usage refresh shows
