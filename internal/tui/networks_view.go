@@ -123,14 +123,10 @@ func (v *NetworksView) Update(msg tea.Msg) tea.Cmd {
 			v.err = msg.err
 			v.loaded = true
 		} else {
-			_, oldKeys := v.visible()
-			selected := v.cur.index(oldKeys)
-			v.setItems(msg.items, nil)
-			v.indexUsage()
-			_, keys := v.visible()
-			if len(keys) > 0 && !slices.Contains(keys, v.cur.key) {
-				v.cur.key = keys[min(selected, len(keys)-1)]
-			}
+			v.preserveSelection(func() {
+				v.setItems(msg.items, nil)
+				v.indexUsage()
+			})
 		}
 		if v.pending {
 			v.pending = false
