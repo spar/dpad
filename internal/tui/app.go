@@ -280,7 +280,7 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	switch {
 	case a.composeUpdate != nil:
 		v := a.composeUpdate
-		if !v.showOutput && (key == "esc" || key == "q" || key == "n") {
+		if (!v.showOutput || v.progressMode()) && (key == "esc" || key == "q" || key == "n") {
 			if v.busy() {
 				v.operationCancel()
 				v.stage = "cancelling"

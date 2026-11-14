@@ -129,6 +129,9 @@ func TestComposeUpdateSingleAndAllIgnoreListFilterOnlyForAll(t *testing.T) {
 	}
 	check = v.HandleKey(key("y"))
 	cmd := v.Update(check())
+	if !v.showOutput || !v.followActive {
+		t.Fatal("confirmation did not automatically open live Compose output")
+	}
 	press(a, "c", "R")
 	if a.contextPicker != nil || a.projectAction != nil || a.confirm != nil {
 		t.Fatal("busy update allowed another action/context switch")
@@ -137,6 +140,9 @@ func TestComposeUpdateSingleAndAllIgnoreListFilterOnlyForAll(t *testing.T) {
 	if v.stage != "done" || !strings.Contains(v.Status(), "2 succeeded") {
 		t.Fatal(v.stage, v.Status())
 	}
+	if !v.showOutput || !strings.Contains(ansi.Strip(v.View()), "Update complete") || strings.Contains(ansi.Strip(v.View()), "Directory:") {
+		t.Fatal("completed update did not keep its console visible")
+	}
 	b, err := os.ReadFile(log)
 	if err != nil || string(b) != "pull a\nup a\npull b\nup b\n" {
 		t.Fatalf("update commands = %q, %v", b, err)
@@ -144,6 +150,126 @@ func TestComposeUpdateSingleAndAllIgnoreListFilterOnlyForAll(t *testing.T) {
 	press(a, "esc")
 	if a.tabs[3].Filter() != "a" {
 		t.Fatal("completed update lost tab filter")
+	}
+}
+
+func progressFixture(t *testing.T) *composeUpdateView {
+	t.Helper()
+	v, _ := newComposeUpdate(t.Context(), &fakeClient{}, "", 90, 16)
+	t.Cleanup(v.Close)
+	v.Update(composePlanMsg{view: v, projects: []compose.Project{{Name: "alpha"}, {Name: "beta"}}})
+	v.stage, v.showOutput, v.followActive = "running", true, true
+	v.operationCancel = func() {}
+	v.SetSize(90, 16)
+	return v
+}
+
+func TestComposeProgressDisplaysNativeMultilineOutputAndPhase(t *testing.T) {
+	v := progressFixture(t)
+	output := "[1/2] Pull images\r\n$ docker compose pull\r\nweb Pulling\nabc Downloading 10 MB / 20 MB\nabc Extracting\nweb Pulled\n"
+	v.Update(composeEventsMsg{view: v, events: []compose.Event{{Project: "alpha", State: "pulling", Output: output}}})
+	var lines []string
+	for line := range strings.SplitSeq(ansi.Strip(v.View()), "\n") {
+		lines = append(lines, strings.TrimSpace(line))
+	}
+	for _, line := range []string{"web Pulling", "abc Downloading 10 MB / 20 MB", "abc Extracting", "web Pulled"} {
+		if !slices.Contains(lines, line) {
+			t.Fatalf("Compose line was flattened or hidden: %q\n%s", line, v.View())
+		}
+	}
+	if !strings.Contains(ansi.Strip(v.View()), "alpha · project 1/2 · local · 1/2 Pulling images") {
+		t.Fatal("current project and pull phase are unclear")
+	}
+	if strings.Contains(v.View(), "Directory:") || !strings.Contains(v.Footer(), "cancel remaining") {
+		t.Fatal("live console is cluttered or lacks cancellation")
+	}
+	v.Update(composeEventsMsg{view: v, events: []compose.Event{{Project: "alpha", State: "starting", Output: output + "\n[2/2] Start updated services\nContainer alpha-web Recreated\nContainer alpha-web Started\n"}}})
+	if !strings.Contains(ansi.Strip(v.View()), "2/2 Starting updated services") || !strings.Contains(v.View(), "Container alpha-web Started") {
+		t.Fatal("container recreation phase is hidden")
+	}
+}
+
+func TestComposeProgressScrollbackAndBulkProjectFollowing(t *testing.T) {
+	v := progressFixture(t)
+	var output strings.Builder
+	for i := range 100 {
+		fmt.Fprintf(&output, "Layer %03d Downloading\n", i)
+	}
+	v.Update(composeEventsMsg{view: v, events: []compose.Event{{Project: "alpha", State: "pulling", Output: output.String()}}})
+	if !v.vp.AtBottom() || v.cur.key != "alpha" {
+		t.Fatal("live output did not follow the active project")
+	}
+	previous := v.vp.YOffset()
+	v.HandleKey(tea.KeyPressMsg{Code: tea.KeyUp})
+	position := v.vp.YOffset()
+	visible := v.vp.View()
+	if position >= previous || v.followActive {
+		t.Fatal("scrolling up did not pause following")
+	}
+	v.Update(composeEventsMsg{view: v, events: []compose.Event{{Project: "alpha", State: "pulling", Output: output.String() + "Another layer Downloading\n"}, {Project: "beta", State: "pulling", Output: "beta Pulling\n"}}})
+	if v.cur.key != "alpha" || v.vp.YOffset() != position {
+		t.Fatal("new output or the next project stole the scrollback position")
+	}
+	if v.vp.View() != visible {
+		t.Fatal("paused scrollback changed while new output arrived")
+	}
+	v.HandleKey(key("G"))
+	if v.cur.key != "beta" || !v.vp.AtBottom() || !v.followActive || !strings.Contains(v.View(), "beta Pulling") {
+		t.Fatal("G did not resume following the active project")
+	}
+	v.HandleKey(key("["))
+	if v.cur.key != "alpha" || v.followActive {
+		t.Fatal("previous project's output could not be inspected")
+	}
+	v.Update(composeEventsMsg{view: v, events: []compose.Event{{Project: "beta", State: "starting", Output: "beta Starting\n"}}})
+	if v.cur.key != "alpha" {
+		t.Fatal("active project stole an explicitly selected project")
+	}
+	v.HandleKey(key("tab"))
+	if v.showOutput {
+		t.Fatal("Tab did not open the project list")
+	}
+	v.HandleKey(key("enter"))
+	if !v.showOutput || v.cur.key != "alpha" {
+		t.Fatal("project list could not reopen selected output")
+	}
+}
+
+func TestComposeProgressWrapsLongMessagesAndPreservesReadbackAcrossList(t *testing.T) {
+	v := progressFixture(t)
+	v.SetSize(35, 10)
+	message := "image Downloading sha256:" + strings.Repeat("a", 64) + " complete"
+	output := strings.Repeat("existing layer\n", 30) + message + "\n"
+	v.Update(composeEventsMsg{view: v, events: []compose.Event{{Project: "alpha", State: "pulling", Output: output}}})
+	if !strings.Contains(ansi.Strip(v.View()), "complete") {
+		t.Fatal("long Compose output was truncated horizontally")
+	}
+	v.HandleKey(key("g"))
+	before := v.vp.View()
+	v.HandleKey(key("tab"))
+	v.HandleKey(key("tab"))
+	if v.vp.View() != before {
+		t.Fatal("opening the project list lost the scrollback position")
+	}
+}
+
+func TestComposeProgressEscapeCancelsDirectlyAndCompletionReturns(t *testing.T) {
+	v := progressFixture(t)
+	a := newTestApp()
+	a.composeUpdate = v
+	cancelled := false
+	v.operationCancel = func() { cancelled = true }
+	press(a, "esc")
+	if !cancelled || v.stage != "cancelling" || a.composeUpdate != v || !v.showOutput {
+		t.Fatal("Esc did not cancel directly from live output")
+	}
+	v.Update(composeEventsMsg{view: v, events: []compose.Event{{Project: "alpha", State: "unknown", Output: "Container recreation interrupted\n"}}, done: true})
+	if !strings.Contains(ansi.Strip(v.View()), "interrupted") {
+		t.Fatal("interrupted operation output was lost")
+	}
+	press(a, "esc")
+	if a.composeUpdate != nil || v.ctx.Err() == nil {
+		t.Fatal("completed console did not return to Projects")
 	}
 }
 

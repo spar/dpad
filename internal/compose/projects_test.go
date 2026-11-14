@@ -223,6 +223,9 @@ func TestRunSkipsUpAfterFailedPullAndContinuesOtherProjects(t *testing.T) {
 	if states["a"].State != "failed" || !strings.Contains(states["a"].Output, "registry denied") || states["b"].State != "succeeded" {
 		t.Fatal(states)
 	}
+	if !strings.Contains(states["b"].Output, "[1/2] Pull images\n$ docker compose pull") || !strings.Contains(states["b"].Output, "[2/2] Start updated services\n$ docker compose up -d") || !strings.Contains(states["b"].Output, "Update complete.") {
+		t.Fatal("Compose phase headings or command output were lost", states["b"].Output)
+	}
 	if got := mutations(calls(t, log)); !slices.Equal(got, []string{"pull a", "pull b", "up b"}) {
 		t.Fatal(got)
 	}
