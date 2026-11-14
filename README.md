@@ -165,7 +165,12 @@ block that project; the preview shows why. Valid projects can still be confirmed
 
 Each project runs Compose `pull --include-deps`, followed by
 `up -d --no-build --pull never` only if the pull succeeds. Projects run one at a
-time, with per-project results and a bounded live output view (`enter`). A failed
+time. Confirmation opens a live Compose console automatically, with multiline
+download/extraction output and separate pull/start phase headings. Bulk updates
+follow the active project. Use `↑↓` or `pgup`/`pgdn` to read scrollback, `G` to
+follow the active project again, `[`/`]` to inspect another project's output,
+and `tab` for the project list. The latest 32 KiB per project is retained, and
+the console stays open after completion. A failed
 project does not stop the remaining projects. The update uses the tags already
 in the Compose files; it does not upgrade pinned versions, edit files, build
 images, run `down`, prune images, or remove volumes. Services without profiles,
@@ -193,7 +198,7 @@ Resolved configuration is rechecked before confirmation, before pulling, and
 again before `up`; changes require a fresh preview. Configuration values are
 hashed rather than displayed or retained as logs.
 
-Press `esc` from the update overview to cancel remaining work. In-flight
+Press `esc` from the live console or project list to cancel remaining work. In-flight
 recreation may already have applied, and an SSH command may still be finishing;
 interrupted `up` is marked `unknown`. Each project has a 20-minute timeout.
 Return to the same filtered Projects view after completion to see refreshed state.

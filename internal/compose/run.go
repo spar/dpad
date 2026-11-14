@@ -47,7 +47,7 @@ func Run(ctx, lifetime context.Context, env []string, projects []Project) <-chan
 }
 
 func update(ctx context.Context, env []string, p Project, out chan<- Event, emit func(Event)) {
-	log := &limitedOutput{limit: 8192}
+	log := &limitedOutput{limit: 32 << 10}
 	send := func(state, output string) { emit(Event{p.Name, state, output}) }
 	check := func() error {
 		fresh := p
@@ -61,18 +61,19 @@ func update(ctx context.Context, env []string, p Project, out chan<- Event, emit
 	}
 	for _, step := range []struct {
 		state string
+		title string
 		args  []string
 	}{
-		{"pulling", []string{"pull", "--include-deps"}},
-		{"starting", []string{"up", "-d", "--no-build", "--pull", "never"}},
+		{"pulling", "[1/2] Pull images", []string{"pull", "--include-deps"}},
+		{"starting", "[2/2] Start updated services", []string{"up", "-d", "--no-build", "--pull", "never"}},
 	} {
-		send("checking", "Checking the confirmed Compose configuration…")
+		send("checking", log.String())
 		if err := check(); err != nil {
 			state := "failed"
 			if ctx.Err() != nil {
 				state = "cancelled"
 			}
-			send(state, err.Error())
+			send(state, log.String()+"\n"+err.Error())
 			return
 		}
 		args := append(baseArgs(p), step.args...)
@@ -83,7 +84,8 @@ func update(ctx context.Context, env []string, p Project, out chan<- Event, emit
 			send("failed", err.Error())
 			return
 		}
-		send(step.state, "")
+		_, _ = fmt.Fprintf(log, "\n%s\n$ %s %s\n", step.title, strings.Join(p.CLI, " "), strings.Join(step.args, " "))
+		send(step.state, log.String())
 		writer := &eventWriter{tail: log, project: p.Name, state: step.state, out: out}
 		cmd.Stdout, cmd.Stderr = writer, writer
 		if err := cmd.Run(); err != nil {
@@ -99,10 +101,11 @@ func update(ctx context.Context, env []string, p Project, out chan<- Event, emit
 					detail += "; the remote operation may still be finishing, refresh project state"
 				}
 			}
-			send(state, detail+"\n"+log.String())
+			send(state, log.String()+"\n"+detail)
 			return
 		}
 	}
+	_, _ = fmt.Fprintln(log, "\nUpdate complete.")
 	send("succeeded", log.String())
 }
 
@@ -136,7 +139,13 @@ func (w *limitedOutput) Write(p []byte) (int, error) {
 func (w *limitedOutput) String() string {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	return strings.ToValidUTF8(string(w.data), "�")
+	text := strings.ToValidUTF8(string(w.data), "�")
+	if w.overflow {
+		if newline := strings.IndexByte(text, '\n'); newline >= 0 {
+			text = text[newline+1:]
+		}
+	}
+	return text
 }
 
 type eventWriter struct {
