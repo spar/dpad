@@ -29,28 +29,13 @@ func VolumeUsage(users []docker.VolumeUse, known bool) string {
 }
 
 func VolumeDetails(v volume.Volume, users []docker.VolumeUse, known bool) string {
-	var b strings.Builder
-	field := func(label, value string) {
-		if value == "" {
-			value = "—"
-		}
-		fmt.Fprintf(&b, "%s  %s\n", Bold.Render(label+":"), value)
-	}
-	field("Name", v.Name)
-	field("Driver", v.Driver)
-	field("Scope", v.Scope)
-	field("Created", v.CreatedAt)
-	field("Mountpoint (daemon host)", v.Mountpoint)
-	fmt.Fprintln(&b, "\n"+Header.Render("Labels"))
-	labels := make([]string, 0, len(v.Labels))
-	for k, value := range v.Labels {
-		labels = append(labels, k+"="+value)
-	}
-	slices.Sort(labels)
-	if len(labels) == 0 {
-		labels = append(labels, "none")
-	}
-	fmt.Fprintln(&b, strings.Join(labels, "\n"))
+	var b detailBuilder
+	b.field("Name", v.Name)
+	b.field("Driver", v.Driver)
+	b.field("Scope", v.Scope)
+	b.field("Created", v.CreatedAt)
+	b.field("Mountpoint (daemon host)", v.Mountpoint)
+	b.labels(v.Labels)
 	fmt.Fprintln(&b, "\n"+Header.Render("Container references")+" · "+VolumeUsage(users, known))
 	if !known {
 		fmt.Fprintln(&b, "container usage unavailable; ctrl+r to refresh")

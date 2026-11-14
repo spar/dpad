@@ -10,6 +10,9 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/mount"
 	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/api/types/volume"
+
+	"dockernext/internal/docker"
 )
 
 func TestContainerDetails(t *testing.T) {
@@ -69,5 +72,29 @@ func TestContainerDetailsIncomplete(t *testing.T) {
 	}}
 	if got := ContainerDetails(c); !strings.Contains(got, "443/tcp (not published)") {
 		t.Errorf("created container's exposed port missing: %s", got)
+	}
+}
+
+func TestEmptyResourceDetailsFormatting(t *testing.T) {
+	for _, tc := range []struct {
+		name, output, want string
+	}{
+		{"container", ContainerDetails(container.InspectResponse{}), "Name:  —\nID:  —\nCreated:  —"},
+		{"image", ImageDetails(docker.ImageInfo{}), "ID:  —\nCreated:  —\nOS:  —\nArchitecture:  —"},
+		{"volume", VolumeDetails(volume.Volume{}, nil, true), "Name:  —\nDriver:  —\nScope:  —"},
+		{"network", NetworkDetails(network.Inspect{}), "Name:  —\nID:  —\nDriver:  —\nScope:  —"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			out := ansi.Strip(tc.output)
+			if !strings.HasPrefix(out, tc.want) {
+				t.Fatalf("missing fields changed formatting:\n%s", out)
+			}
+			if tc.name != "container" && !strings.Contains(out, "\n\nLabels\nnone\n\n") {
+				t.Fatalf("empty labels changed section spacing:\n%s", out)
+			}
+			if strings.HasSuffix(out, "\n") {
+				t.Fatal("details have a trailing newline")
+			}
+		})
 	}
 }

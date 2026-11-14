@@ -26,26 +26,20 @@ func ImageUsage(items []container.Summary) string {
 
 func ImageDetails(info docker.ImageInfo) string {
 	i := info.Image
-	var b strings.Builder
-	field := func(label, value string) {
-		if value == "" {
-			value = "—"
-		}
-		fmt.Fprintf(&b, "%s  %s\n", Bold.Render(label+":"), value)
-	}
-	field("ID", i.ID)
-	field("Created", i.Created)
-	field("OS", i.Os)
-	field("Architecture", i.Architecture)
+	var b detailBuilder
+	b.field("ID", i.ID)
+	b.field("Created", i.Created)
+	b.field("OS", i.Os)
+	b.field("Architecture", i.Architecture)
 	if i.Variant != "" {
-		field("Variant", i.Variant)
+		b.field("Variant", i.Variant)
 	}
-	field("Size", Size(i.Size))
+	b.field("Size", Size(i.Size))
 	for _, group := range []struct {
 		title  string
 		values []string
 	}{{"Tags", i.RepoTags}, {"Digests", i.RepoDigests}} {
-		fmt.Fprintln(&b, "\n"+Header.Render(group.title))
+		b.section(group.title)
 		values := slices.Clone(group.values)
 		slices.Sort(values)
 		if len(values) == 0 {
@@ -53,25 +47,16 @@ func ImageDetails(info docker.ImageInfo) string {
 		}
 		fmt.Fprintln(&b, strings.Join(values, "\n"))
 	}
-	fmt.Fprintln(&b, "\n"+Header.Render("Configuration"))
+	b.section("Configuration")
 	if i.Config != nil {
-		field("Entrypoint", commandArgs(i.Config.Entrypoint))
-		field("Command", commandArgs(i.Config.Cmd))
-		field("Working directory", i.Config.WorkingDir)
-		field("User", i.Config.User)
+		b.field("Entrypoint", commandArgs(i.Config.Entrypoint))
+		b.field("Command", commandArgs(i.Config.Cmd))
+		b.field("Working directory", i.Config.WorkingDir)
+		b.field("User", i.Config.User)
+		b.labels(i.Config.Labels)
+	} else {
+		b.labels(nil)
 	}
-	fmt.Fprintln(&b, "\n"+Header.Render("Labels"))
-	var labels []string
-	if i.Config != nil {
-		for key, value := range i.Config.Labels {
-			labels = append(labels, key+"="+value)
-		}
-	}
-	slices.Sort(labels)
-	if len(labels) == 0 {
-		labels = []string{"none"}
-	}
-	fmt.Fprintln(&b, strings.Join(labels, "\n"))
 	fmt.Fprintln(&b, "\n"+Header.Render("Containers using this image")+" · "+ImageUsage(info.Containers))
 	items := slices.Clone(info.Containers)
 	slices.SortFunc(items, func(a, b container.Summary) int {
