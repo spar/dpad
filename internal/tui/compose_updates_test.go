@@ -164,8 +164,9 @@ func progressFixture(t *testing.T) *composeUpdateView {
 	return v
 }
 
-func TestComposeProgressDisplaysNativeMultilineOutputAndPhase(t *testing.T) {
+func TestComposeRawLogDisplaysNativeMultilineOutputAndPhase(t *testing.T) {
 	v := progressFixture(t)
+	v.rawOutput = true
 	output := "[1/2] Pull images\r\n$ docker compose pull\r\nweb Pulling\nabc Downloading 10 MB / 20 MB\nabc Extracting\nweb Pulled\n"
 	v.Update(composeEventsMsg{view: v, events: []compose.Event{{Project: "alpha", State: "pulling", Output: output}}})
 	var lines []string
@@ -191,6 +192,7 @@ func TestComposeProgressDisplaysNativeMultilineOutputAndPhase(t *testing.T) {
 
 func TestComposeProgressScrollbackAndBulkProjectFollowing(t *testing.T) {
 	v := progressFixture(t)
+	v.rawOutput = true
 	var output strings.Builder
 	for i := range 100 {
 		fmt.Fprintf(&output, "Layer %03d Downloading\n", i)
@@ -237,6 +239,7 @@ func TestComposeProgressScrollbackAndBulkProjectFollowing(t *testing.T) {
 
 func TestComposeProgressWrapsLongMessagesAndPreservesReadbackAcrossList(t *testing.T) {
 	v := progressFixture(t)
+	v.rawOutput = true
 	v.SetSize(35, 10)
 	message := "image Downloading sha256:" + strings.Repeat("a", 64) + " complete"
 	output := strings.Repeat("existing layer\n", 30) + message + "\n"

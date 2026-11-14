@@ -32,6 +32,7 @@ type composeEventsMsg struct {
 type composeUpdateRow struct {
 	project       compose.Project
 	state, output string
+	progress      composeProgress
 }
 
 type composeUpdateView struct {
@@ -44,6 +45,7 @@ type composeUpdateView struct {
 	projects                []compose.Project
 	events                  <-chan compose.Event
 	showOutput              bool
+	rawOutput               bool
 	followActive            bool
 	activeProject           string
 	outputProject           string
@@ -145,6 +147,7 @@ func (v *composeUpdateView) Update(msg tea.Msg) tea.Cmd {
 		if msg.view != v || v.ctx.Err() != nil {
 			return nil
 		}
+		dirty := map[int]bool{}
 		for _, event := range msg.events {
 			if event.State == "checking" || event.State == "pulling" || event.State == "starting" {
 				v.activeProject = event.Project
@@ -152,9 +155,15 @@ func (v *composeUpdateView) Update(msg tea.Msg) tea.Cmd {
 			for i := range v.items {
 				if v.items[i].project.Name == event.Project {
 					v.items[i].state, v.items[i].output = event.State, event.Output
+					dirty[i] = true
 					break
 				}
 			}
+		}
+		for i := range dirty {
+			r := &v.items[i]
+			final := r.state == "succeeded" || r.state == "failed" || r.state == "unknown" || r.state == "cancelled" || r.state == "skipped"
+			r.progress.apply(r.output, final)
 		}
 		v.rowCache = nil
 		changedProject := false
@@ -224,6 +233,10 @@ func (v *composeUpdateView) HandleKey(msg tea.KeyPressMsg) tea.Cmd {
 		}
 		if v.progressMode() {
 			switch key {
+			case "l":
+				v.rawOutput = !v.rawOutput
+				v.updateOutput(true)
+				return nil
 			case "[", "left", "]", "right":
 				_, keys := v.visible()
 				if len(keys) > 0 {
@@ -328,15 +341,19 @@ func (v *composeUpdateView) updateOutput(top bool) {
 	}
 	content := r.output
 	if v.progressMode() {
-		if content == "" {
+		if !v.rawOutput {
+			content = r.progress.render(v.width, r.state)
+		} else if content == "" {
 			content = "Waiting for Compose output…"
 		}
 	} else {
 		content = fmt.Sprintf("Project: %s\nRun on: %s\nDirectory: %s\nCompose files:\n  %s\nEnvironment files:\n  %s\nServices: %s\nImages (configured tags):\n  %s\n\nCommands: pull → up -d --no-build --pull never\nMay recreate or start services; named volumes are retained.\n\n%s\n%s", p.Name, where, p.Directory, strings.Join(p.Files, "\n  "), strings.Join(p.EnvFiles, "\n  "), strings.Join(p.Services, ", "), strings.Join(p.Images, "\n  "), r.state, r.output)
 	}
 	bottom := v.vp.AtBottom()
-	content = strings.ReplaceAll(strings.ReplaceAll(content, "\r\n", "\n"), "\r", "\n")
-	v.vp.SetContent(ansi.Strip(content))
+	if !v.progressMode() || v.rawOutput {
+		content = composeOutputText(content)
+	}
+	v.vp.SetContent(content)
 	if top && !v.progressMode() {
 		v.vp.GotoTop()
 	} else if top || changed || bottom {
@@ -469,7 +486,11 @@ func (v *composeUpdateView) Footer() string {
 			if v.busy() {
 				closeHint = "cancel remaining"
 			}
-			return hints("↑↓/pgup/pgdn", "scroll", "G", "follow active", "[/]", "project", "tab", "project list", "esc", closeHint)
+			logHint := "raw log"
+			if v.rawOutput {
+				logHint = "compact progress"
+			}
+			return ansi.Truncate(hints("esc", closeHint, "l", logHint, "↑↓/pgup/pgdn", "scroll", "G", "follow active", "[/]", "project", "tab", "project list"), v.width, "…")
 		}
 		return hints("esc", "overview", "↑↓/pgup/pgdn", "scroll output", "g/G", "top/bottom")
 	}
