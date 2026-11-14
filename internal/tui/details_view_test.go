@@ -123,3 +123,62 @@ func TestDetailsOnlyForContainersAndStatsSortUnchanged(t *testing.T) {
 	}
 	a.details.Close()
 }
+
+func TestDetailScreenNavigationAndResize(t *testing.T) {
+	for _, resource := range []string{"container", "image", "volume", "network"} {
+		t.Run(resource, func(t *testing.T) {
+			var v interface {
+				Close()
+				SetSize(int, int)
+				Update(tea.Msg) tea.Cmd
+				View() string
+				Status() string
+			}
+			var base *detailView
+			var load tea.Cmd
+			f := &fakeClient{}
+			switch resource {
+			case "container":
+				view, cmd := NewDetailsView(t.Context(), f, "id", "web", 80, 4)
+				v, base, load = view, &view.detailView, cmd
+			case "image":
+				view, cmd := NewImageDetailsView(t.Context(), f, docker.ImageRemoval{ID: "id", Reference: "web:latest"}, 80, 4)
+				v, base, load = view, &view.detailView, cmd
+			case "volume":
+				view, cmd := NewVolumeDetailsView(t.Context(), f, NewVolumesView(t.Context(), f), "data", 80, 4)
+				v, base, load = view, &view.detailView, cmd
+			case "network":
+				view, cmd := NewNetworkDetailsView(t.Context(), f, "id", "app", 80, 4)
+				v, base, load = view, &view.detailView, cmd
+			}
+			defer v.Close()
+			if !strings.Contains(v.View(), "loading") || !strings.Contains(v.Status(), "loading") {
+				t.Fatal("missing initial loading state")
+			}
+			v.Update(load())
+			if strings.Contains(v.Status(), "loading") {
+				t.Fatal("load did not finish")
+			}
+			for _, bottom := range []string{"G", "end"} {
+				v.Update(key(bottom))
+				if !base.vp.AtBottom() || base.vp.YOffset() == 0 {
+					t.Fatal("bottom navigation failed")
+				}
+				for _, top := range []string{"g", "home"} {
+					v.Update(key(top))
+					if base.vp.YOffset() != 0 {
+						t.Fatal("top navigation failed")
+					}
+				}
+			}
+			v.SetSize(40, 3)
+			if base.vp.Width() != 40 || base.vp.Height() != 3 {
+				t.Fatal("detail viewport did not resize")
+			}
+			v.Close()
+			if base.ctx.Err() == nil {
+				t.Fatal("closing details leaked its context")
+			}
+		})
+	}
+}
