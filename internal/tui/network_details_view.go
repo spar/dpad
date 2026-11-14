@@ -159,17 +159,3 @@ func (v *NetworkDetailsView) Status() string {
 	}
 	return v.status("network: "+render.Accent.Render(v.name), fmt.Sprintf(" · %s snapshot · %d endpoints", mode, len(v.info.Containers)))
 }
-
-func (a *App) openSelectedNetwork() tea.Cmd {
-	source, ok := a.tabs[a.active].(*NetworksView)
-	if !ok {
-		return nil
-	}
-	id, name, ok := source.SelectedNetwork()
-	if !ok {
-		return nil
-	}
-	var cmd tea.Cmd
-	a.networkDetails, cmd = NewNetworkDetailsView(a.ctx, a.client, id, name, a.width, a.bodyHeight())
-	return cmd
-}

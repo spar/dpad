@@ -143,7 +143,29 @@ func TestNetworkEndpointNavigationAndReturn(t *testing.T) {
 		t.Fatal("wrong endpoint opened")
 	}
 	a.Update(cmd())
+	containerDetails := a.details
+	a.resize(90, 12)
+	if containerDetails.vp.Width() != 90 || v.vp.Width() != 90 || v.endpoints.width != 90 {
+		t.Fatal("nested details did not resize together")
+	}
+	press(a, "enter")
+	if a.logs == nil || a.details != containerDetails || a.networkDetails != v {
+		t.Fatal("opening endpoint logs discarded parent panes")
+	}
+	logsClosed := false
+	cancelLogs := a.logs.cancel
+	a.logs.cancel = func() {
+		logsClosed = true
+		cancelLogs()
+	}
 	press(a, "esc")
+	if a.logs != nil || !logsClosed || a.details != containerDetails || v.ctx.Err() != nil {
+		t.Fatal("closing logs lost or cancelled its parent panes")
+	}
+	press(a, "esc")
+	if containerDetails.ctx.Err() == nil || v.ctx.Err() != nil {
+		t.Fatal("closing container details cancelled the wrong context")
+	}
 	if a.details != nil || a.networkDetails != v || !v.showEndpoints {
 		t.Fatal("container return lost network pane")
 	}

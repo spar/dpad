@@ -15,20 +15,6 @@ import (
 	"dockernext/internal/sortx"
 )
 
-type actionDoneMsg struct {
-	text  string
-	err   error
-	image *docker.ImageRemoval
-}
-
-// pending is an action waiting for y/n confirmation.
-type pending struct {
-	verb, id, name string
-	run            func(context.Context, string) error
-	question       string
-	image          *docker.ImageRemoval
-}
-
 var (
 	tabActive   = lipgloss.NewStyle().Bold(true).Reverse(true).Padding(0, 1)
 	tabInactive = lipgloss.NewStyle().Padding(0, 1).Foreground(render.Gray)
@@ -138,17 +124,8 @@ func (a *App) resize(width, height int) {
 	if a.logs != nil {
 		a.logs.SetSize(a.width, a.bodyHeight())
 	}
-	if a.details != nil {
-		a.details.SetSize(a.width, a.bodyHeight())
-	}
-	if a.imageDetails != nil {
-		a.imageDetails.SetSize(a.width, a.bodyHeight())
-	}
-	if a.volumeDetails != nil {
-		a.volumeDetails.SetSize(a.width, a.bodyHeight())
-	}
-	if a.networkDetails != nil {
-		a.networkDetails.SetSize(a.width, a.bodyHeight())
+	for _, v := range a.detailScreens() {
+		v.SetSize(a.width, a.bodyHeight())
 	}
 	if a.projectAction != nil {
 		a.projectAction.SetSize(a.width, a.bodyHeight())
@@ -249,17 +226,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if a.logs != nil {
 		cmds = append(cmds, a.logs.Update(msg))
 	}
-	if a.details != nil {
-		cmds = append(cmds, a.details.Update(msg))
-	}
-	if a.imageDetails != nil {
-		cmds = append(cmds, a.imageDetails.Update(msg))
-	}
-	if a.volumeDetails != nil {
-		cmds = append(cmds, a.volumeDetails.Update(msg))
-	}
-	if a.networkDetails != nil {
-		cmds = append(cmds, a.networkDetails.Update(msg))
+	for _, v := range a.detailScreens() {
+		cmds = append(cmds, v.Update(msg))
 	}
 	if a.projectAction != nil {
 		cmds = append(cmds, a.projectAction.Update(msg))
@@ -349,57 +317,8 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			return nil
 		}
 		return a.logs.Update(msg)
-	case a.details != nil:
-		switch key {
-		case "e":
-			return a.openShell(a.details.id, a.details.name)
-		case "esc", "q":
-			a.details.Close()
-			a.details = nil
-			return nil
-		case "enter":
-			var cmd tea.Cmd
-			a.logs, cmd = NewLogsView(a.ctx, a.client, a.details.id, a.details.name, a.width, a.bodyHeight())
-			return cmd
-		}
-		return a.details.Update(msg)
-	case a.networkDetails != nil:
-		switch key {
-		case "esc", "q":
-			a.networkDetails.Close()
-			a.networkDetails = nil
-			return nil
-		case "enter", "d":
-			if id, name, ok := a.networkDetails.SelectedEndpoint(); ok {
-				var cmd tea.Cmd
-				a.details, cmd = NewDetailsView(a.ctx, a.client, id, name, a.width, a.bodyHeight())
-				return cmd
-			}
-			return nil
-		}
-		return a.networkDetails.Update(msg)
-
-	case a.volumeDetails != nil:
-		if key == "esc" || key == "q" {
-			a.volumeDetails.Close()
-			a.volumeDetails = nil
-			return nil
-		}
-		return a.volumeDetails.Update(msg)
-
-	case a.imageDetails != nil:
-		switch key {
-		case "esc", "q":
-			a.imageDetails.Close()
-			a.imageDetails = nil
-			return nil
-		case "x":
-			if !a.imageDetails.loading && a.imageDetails.err == nil {
-				a.askImageRemoval(a.imageDetails.removal)
-			}
-			return nil
-		}
-		return a.imageDetails.Update(msg)
+	case a.activeDetails() != nil:
+		return a.handleDetailsKey(msg)
 	}
 
 	if _, ok := a.tabs[a.active].(*EventsView); ok {
@@ -437,17 +356,11 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		if stats, ok := a.tabs[a.active].(*StatsView); ok && stats.toggleStatsProject(false) {
 			return nil
 		}
-		if _, ok := a.tabs[a.active].(*NetworksView); ok {
-			return a.openSelectedNetwork()
-		}
-		if _, ok := a.tabs[a.active].(*VolumesView); ok {
-			return a.openSelectedVolume()
-		}
 		if _, ok := a.tabs[a.active].(*EventsView); ok {
 			return a.openSelectedContainer()
 		}
-		if _, ok := a.tabs[a.active].(*ImagesView); ok {
-			return a.openSelectedImage()
+		if cmd, handled := a.openSelectedResource(); handled {
+			return cmd
 		}
 		if projects, ok := a.tabs[a.active].(*ProjectsView); ok {
 			if p := projects.selectedProject(); p != nil {
@@ -462,14 +375,8 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			return cmd
 		}
 	case "d":
-		if _, ok := a.tabs[a.active].(*NetworksView); ok {
-			return a.openSelectedNetwork()
-		}
-		if _, ok := a.tabs[a.active].(*VolumesView); ok {
-			return a.openSelectedVolume()
-		}
-		if _, ok := a.tabs[a.active].(*ImagesView); ok {
-			return a.openSelectedImage()
+		if cmd, handled := a.openSelectedResource(); handled {
+			return cmd
 		}
 		return a.openSelectedContainer()
 	case "e":
@@ -506,41 +413,10 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	return nil
 }
 
-func (a *App) openSelectedContainer() tea.Cmd {
-	if id, name, ok := a.tabs[a.active].Selected(); ok {
-		var cmd tea.Cmd
-		a.details, cmd = NewDetailsView(a.ctx, a.client, id, name, a.width, a.bodyHeight())
-		return cmd
-	}
-	return nil
-}
-
-func (a *App) openProjectAction(verb string) (tea.Cmd, bool) {
-	v, ok := a.tabs[a.active].(*ProjectsView)
-	if !ok {
-		return nil, false
-	}
-	if !v.loaded || v.err != nil {
-		return nil, true
-	}
-	if p := v.selectedProject(); p != nil {
-		var cmd tea.Cmd
-		a.projectAction, cmd = newProjectAction(a.ctx, a.client, p.name, verb, a.width, a.bodyHeight())
-		return cmd, true
-	}
-	return nil, false
-}
-
 func (a *App) switchTab(i int) tea.Cmd {
 	a.active = i
 	a.filter.SetValue(a.tabs[i].Filter())
 	return a.tabs[i].Focus()
-}
-
-func (a *App) ask(verb string, run func(context.Context, string) error) {
-	if id, name, ok := a.tabs[a.active].Selected(); ok {
-		a.confirm = &pending{verb: verb, id: id, name: name, run: run}
-	}
 }
 
 func (a *App) View() tea.View {
@@ -551,6 +427,7 @@ func (a *App) View() tea.View {
 
 func (a *App) render() string {
 	var body, status string
+	details := a.detailScreens()
 	switch {
 	case a.composeUpdate != nil:
 		body, status = a.composeUpdate.View(), a.composeUpdate.Status()
@@ -563,14 +440,8 @@ func (a *App) render() string {
 		body = a.helpView()
 	case a.logs != nil:
 		body, status = a.logs.View(), a.logs.Status()
-	case a.details != nil:
-		body, status = a.details.View(), a.details.Status()
-	case a.imageDetails != nil:
-		body, status = a.imageDetails.View(), a.imageDetails.Status()
-	case a.volumeDetails != nil:
-		body, status = a.volumeDetails.View(), a.volumeDetails.Status()
-	case a.networkDetails != nil:
-		body, status = a.networkDetails.View(), a.networkDetails.Status()
+	case len(details) > 0:
+		body, status = details[0].View(), details[0].Status()
 	default:
 		t := a.tabs[a.active]
 		body, status = t.View(), t.Status()

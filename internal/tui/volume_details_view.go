@@ -77,17 +77,3 @@ func (v *VolumeDetailsView) Update(msg tea.Msg) tea.Cmd {
 func (v *VolumeDetailsView) Status() string {
 	return v.status("volume: "+render.Accent.Render(v.name), " · "+render.VolumeUsage(v.source.usage[v.name], v.source.usageKnown()))
 }
-
-func (a *App) openSelectedVolume() tea.Cmd {
-	source, ok := a.tabs[a.active].(*VolumesView)
-	if !ok {
-		return nil
-	}
-	name, ok := source.SelectedVolume()
-	if !ok {
-		return nil
-	}
-	var cmd tea.Cmd
-	a.volumeDetails, cmd = NewVolumeDetailsView(a.ctx, a.client, source, name, a.width, a.bodyHeight())
-	return cmd
-}
