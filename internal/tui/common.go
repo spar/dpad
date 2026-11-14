@@ -150,3 +150,31 @@ func programOptions(ctx context.Context) []tea.ProgramOption {
 func tick(msg tea.Msg) tea.Cmd {
 	return tea.Tick(pollInterval, func(time.Time) tea.Msg { return msg })
 }
+
+// waitActionBatch shares the bounded result delivery used by project operations.
+func waitActionBatch[T any](ctx context.Context, ch <-chan T, message func([]T, bool) tea.Msg) tea.Cmd {
+	return func() tea.Msg {
+		batch := []T{}
+		timer := time.NewTimer(100 * time.Millisecond)
+		defer timer.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			case result, ok := <-ch:
+				if !ok {
+					return message(batch, true)
+				}
+				batch = append(batch, result)
+				if len(batch) == 64 {
+					return message(batch, false)
+				}
+			case <-timer.C:
+				if len(batch) > 0 {
+					return message(batch, false)
+				}
+				timer.Reset(100 * time.Millisecond)
+			}
+		}
+	}
+}

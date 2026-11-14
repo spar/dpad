@@ -165,31 +165,9 @@ func (v *projectActionView) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (v *projectActionView) waitResults() tea.Cmd {
-	ch, ctx := v.results, v.ctx
-	return func() tea.Msg {
-		batch := []projectResult{}
-		timer := time.NewTimer(100 * time.Millisecond)
-		defer timer.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return nil
-			case r, ok := <-ch:
-				if !ok {
-					return projectResultsMsg{view: v, results: batch, done: true}
-				}
-				batch = append(batch, r)
-				if len(batch) >= 64 {
-					return projectResultsMsg{view: v, results: batch}
-				}
-			case <-timer.C:
-				if len(batch) > 0 {
-					return projectResultsMsg{view: v, results: batch}
-				}
-				timer.Reset(100 * time.Millisecond)
-			}
-		}
-	}
+	return waitActionBatch(v.ctx, v.results, func(batch []projectResult, done bool) tea.Msg {
+		return projectResultsMsg{view: v, results: batch, done: done}
+	})
 }
 
 func runProjectActions(ctx, viewCtx context.Context, c dockerClient, verb string, targets []projectTarget) <-chan projectResult {
