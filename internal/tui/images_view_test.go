@@ -38,6 +38,14 @@ func TestImageSelectionStaysOnTagAcrossRefreshAndRemoval(t *testing.T) {
 	if !strings.Contains(v.View(), "unknown") {
 		t.Fatal("failed usage query was shown as unused")
 	}
+	v.SetFilter("other")
+	v.Update(imagesMsg{items: []image.Summary{
+		{ID: "id", RepoTags: []string{"web:a"}},
+		{ID: "other", RepoTags: []string{"other:c"}},
+	}})
+	if r, ok := v.SelectedImage(); !ok || r.Reference != "other:c" {
+		t.Fatalf("refresh selected a filtered-out image: %+v", r)
+	}
 	v.Update(imagesMsg{})
 	if _, ok := v.SelectedImage(); ok {
 		t.Fatal("empty images selected a removal target")

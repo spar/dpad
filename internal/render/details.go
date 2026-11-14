@@ -13,37 +13,30 @@ import (
 
 // ContainerDetails renders inspect data without exposing environment variables.
 func ContainerDetails(c container.InspectResponse) string {
-	var b strings.Builder
-	section := func(title string) { fmt.Fprintln(&b, "\n"+Header.Render(title)) }
-	field := func(label, value string) {
-		if value == "" {
-			value = "—"
-		}
-		fmt.Fprintf(&b, "%s  %s\n", Bold.Render(label+":"), value)
-	}
-	field("Name", strings.TrimPrefix(c.Name, "/"))
-	field("ID", c.ID)
-	field("Created", c.Created)
+	var b detailBuilder
+	b.field("Name", strings.TrimPrefix(c.Name, "/"))
+	b.field("ID", c.ID)
+	b.field("Created", c.Created)
 	if c.State != nil {
 		s := c.State
-		section("State")
-		field("Status", StateStyle(string(s.Status), s.ExitCode).Render(string(s.Status)))
-		field("Exit code", strconv.Itoa(s.ExitCode))
-		field("OOM killed", strconv.FormatBool(s.OOMKilled))
-		field("Started", detailsTime(s.StartedAt))
-		field("Finished", detailsTime(s.FinishedAt))
+		b.section("State")
+		b.field("Status", StateStyle(string(s.Status), s.ExitCode).Render(string(s.Status)))
+		b.field("Exit code", strconv.Itoa(s.ExitCode))
+		b.field("OOM killed", strconv.FormatBool(s.OOMKilled))
+		b.field("Started", detailsTime(s.StartedAt))
+		b.field("Finished", detailsTime(s.FinishedAt))
 		if s.Error != "" {
-			field("Error", s.Error)
+			b.field("Error", s.Error)
 		}
 	}
-	field("Restarts", strconv.Itoa(c.RestartCount))
-	section("Configuration")
+	b.field("Restarts", strconv.Itoa(c.RestartCount))
+	b.section("Configuration")
 	if c.Config != nil {
-		field("Image", c.Config.Image)
-		field("Entrypoint", commandArgs(c.Config.Entrypoint))
-		field("Command", commandArgs(c.Config.Cmd))
-		field("Working directory", c.Config.WorkingDir)
-		field("User", c.Config.User)
+		b.field("Image", c.Config.Image)
+		b.field("Entrypoint", commandArgs(c.Config.Entrypoint))
+		b.field("Command", commandArgs(c.Config.Cmd))
+		b.field("Working directory", c.Config.WorkingDir)
+		b.field("User", c.Config.User)
 	}
 	if c.HostConfig != nil {
 		p := c.HostConfig.RestartPolicy
@@ -54,26 +47,26 @@ func ContainerDetails(c container.InspectResponse) string {
 		if p.MaximumRetryCount > 0 {
 			policy += fmt.Sprintf(" (max retries: %d)", p.MaximumRetryCount)
 		}
-		field("Restart policy", policy)
+		b.field("Restart policy", policy)
 	}
-	section("Health")
+	b.section("Health")
 	if c.State == nil || c.State.Health == nil {
-		field("Status", "no health check")
+		b.field("Status", "no health check")
 	} else {
 		h := c.State.Health
-		field("Status", HealthBadge(string(h.Status)))
-		field("Failing streak", strconv.Itoa(h.FailingStreak))
+		b.field("Status", HealthBadge(string(h.Status)))
+		b.field("Failing streak", strconv.Itoa(h.FailingStreak))
 		for _, result := range h.Log {
 			if result == nil {
 				continue
 			}
-			field(result.Start.Format(time.RFC3339), fmt.Sprintf("exit %d", result.ExitCode))
+			b.field(result.Start.Format(time.RFC3339), fmt.Sprintf("exit %d", result.ExitCode))
 			if output := strings.TrimSpace(result.Output); output != "" {
 				fmt.Fprintln(&b, "  "+strings.ReplaceAll(output, "\n", "\n  "))
 			}
 		}
 	}
-	section("Ports")
+	b.section("Ports")
 	var ports []string
 	if c.NetworkSettings != nil {
 		for port, bindings := range c.NetworkSettings.Ports {
@@ -104,7 +97,7 @@ func ContainerDetails(c container.InspectResponse) string {
 		ports = []string{"none"}
 	}
 	fmt.Fprintln(&b, strings.Join(ports, "\n"))
-	section("Networks")
+	b.section("Networks")
 	var networks []string
 	if c.NetworkSettings != nil {
 		for name, endpoint := range c.NetworkSettings.Networks {
@@ -125,7 +118,7 @@ func ContainerDetails(c container.InspectResponse) string {
 		networks = []string{"none"}
 	}
 	fmt.Fprintln(&b, strings.Join(networks, "\n"))
-	section("Mounts")
+	b.section("Mounts")
 	if len(c.Mounts) == 0 {
 		fmt.Fprintln(&b, "none")
 	}
@@ -156,4 +149,31 @@ func detailsTime(value string) string {
 		return ""
 	}
 	return value
+}
+
+// detailBuilder keeps the inspect screens' text layout consistent.
+type detailBuilder struct{ strings.Builder }
+
+func (b *detailBuilder) field(label, value string) {
+	if value == "" {
+		value = "—"
+	}
+	fmt.Fprintf(b, "%s  %s\n", Bold.Render(label+":"), value)
+}
+
+func (b *detailBuilder) section(title string) {
+	fmt.Fprintln(b, "\n"+Header.Render(title))
+}
+
+func (b *detailBuilder) labels(labels map[string]string) {
+	b.section("Labels")
+	lines := make([]string, 0, len(labels))
+	for key, value := range labels {
+		lines = append(lines, key+"="+value)
+	}
+	slices.Sort(lines)
+	if len(lines) == 0 {
+		lines = append(lines, "none")
+	}
+	fmt.Fprintln(b, strings.Join(lines, "\n"))
 }

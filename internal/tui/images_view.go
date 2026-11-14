@@ -79,13 +79,9 @@ func (v *ImagesView) Focus() tea.Cmd { return nil }
 func (v *ImagesView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case imagesMsg:
-		_, oldKeys := v.visible()
-		selected := v.cur.index(oldKeys)
-		v.setItems(msg.items, msg.err)
-		_, keys := v.visible()
-		if len(keys) > 0 && !slices.Contains(keys, v.cur.key) {
-			v.cur.key = keys[min(selected, len(keys)-1)]
-		}
+		v.preserveSelection(func() {
+			v.setItems(msg.items, msg.err)
+		})
 	case containersMsg:
 		v.containers, v.usageErr, v.usageLoaded = msg.items, msg.err, true
 		v.rowCache = nil

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 )
@@ -248,4 +249,63 @@ func TestProjectActionResultsSizeAndErrors(t *testing.T) {
 	if !strings.Contains(v.View(), "first line second line") || !strings.Contains(v.Status(), "1 failed") {
 		t.Fatal(v.View(), v.Status())
 	}
+}
+
+func TestActionBatchDelivery(t *testing.T) {
+	type result struct {
+		items []int
+		done  bool
+	}
+	message := func(items []int, done bool) tea.Msg { return result{items, done} }
+	t.Run("bounded batches retain final results", func(t *testing.T) {
+		ch := make(chan int, 65)
+		for i := range 65 {
+			ch <- i
+		}
+		close(ch)
+		first := waitActionBatch(t.Context(), ch, message)().(result)
+		last := waitActionBatch(t.Context(), ch, message)().(result)
+		if len(first.items) != 64 || first.done || len(last.items) != 1 || !last.done {
+			t.Fatalf("unexpected batches: %+v, %+v", first, last)
+		}
+		items := append(first.items, last.items...)
+		for i, value := range items {
+			if value != i {
+				t.Fatalf("result %d = %d", i, value)
+			}
+		}
+		empty := waitActionBatch(t.Context(), ch, message)().(result)
+		if len(empty.items) != 0 || !empty.done {
+			t.Fatalf("closed channel = %+v", empty)
+		}
+	})
+	t.Run("idle waits and partial batches flush", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		ch := make(chan int, 1)
+		out := make(chan tea.Msg, 1)
+		go func() { out <- waitActionBatch(ctx, ch, message)() }()
+		select {
+		case msg := <-out:
+			t.Fatalf("idle channel emitted a batch: %+v", msg)
+		case <-time.After(150 * time.Millisecond):
+		}
+		ch <- 7
+		select {
+		case msg := <-out:
+			got := msg.(result)
+			if len(got.items) != 1 || got.items[0] != 7 || got.done {
+				t.Fatalf("partial batch = %+v", got)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatal("partial batch did not flush")
+		}
+	})
+	t.Run("cancellation stops an idle wait", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		if msg := waitActionBatch(ctx, make(chan int), message)(); msg != nil {
+			t.Fatalf("cancelled wait = %+v", msg)
+		}
+	})
 }

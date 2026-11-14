@@ -184,30 +184,9 @@ func (v *composeUpdateView) Update(msg tea.Msg) tea.Cmd {
 }
 
 func (v *composeUpdateView) waitEvents() tea.Cmd {
-	return func() tea.Msg {
-		timer := time.NewTimer(100 * time.Millisecond)
-		defer timer.Stop()
-		batch := []compose.Event{}
-		for {
-			select {
-			case <-v.ctx.Done():
-				return nil
-			case event, ok := <-v.events:
-				if !ok {
-					return composeEventsMsg{view: v, events: batch, done: true}
-				}
-				batch = append(batch, event)
-				if len(batch) == 64 {
-					return composeEventsMsg{view: v, events: batch}
-				}
-			case <-timer.C:
-				if len(batch) != 0 {
-					return composeEventsMsg{view: v, events: batch}
-				}
-				timer.Reset(100 * time.Millisecond)
-			}
-		}
-	}
+	return waitActionBatch(v.ctx, v.events, func(batch []compose.Event, done bool) tea.Msg {
+		return composeEventsMsg{view: v, events: batch, done: done}
+	})
 }
 
 func (v *composeUpdateView) selectedRow() *composeUpdateRow {

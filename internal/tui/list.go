@@ -59,6 +59,18 @@ func (l *list[T]) setItems(items []T, err error) {
 	l.rowCache = nil
 }
 
+// preserveSelection keeps the selected row, or its position if it disappears.
+// Updates may also rebuild indexes used by filtering and row rendering.
+func (l *list[T]) preserveSelection(update func()) {
+	_, oldKeys := l.visible()
+	selected := l.cur.index(oldKeys)
+	update()
+	_, keys := l.visible()
+	if len(keys) > 0 && !slices.Contains(keys, l.cur.key) {
+		l.cur.key = keys[min(selected, len(keys)-1)]
+	}
+}
+
 func (l *list[T]) setSort(key sortx.Key, reverse bool) {
 	l.key, l.reverse = key, reverse
 	l.rowCache = nil

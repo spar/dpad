@@ -7,7 +7,6 @@ import (
 	"slices"
 	"time"
 
-	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"github.com/moby/moby/api/types/network"
 
@@ -27,22 +26,19 @@ type networkEndpoint struct {
 }
 
 type NetworkDetailsView struct {
-	ctx                   context.Context
-	cancel, requestCancel context.CancelFunc
-	client                dockerClient
-	id, name              string
-	info                  network.Inspect
-	vp                    viewport.Model
-	endpoints             list[networkEndpoint]
-	showEndpoints         bool
-	width, height, gen    int
-	loading, loaded       bool
-	err                   error
+	detailView
+	requestCancel context.CancelFunc
+	client        dockerClient
+	id, name      string
+	info          network.Inspect
+	endpoints     list[networkEndpoint]
+	showEndpoints bool
+	width, height int
+	loaded        bool
 }
 
 func NewNetworkDetailsView(ctx context.Context, c dockerClient, id, name string, width, height int) (*NetworkDetailsView, tea.Cmd) {
-	ctx, cancel := context.WithCancel(ctx)
-	v := &NetworkDetailsView{ctx: ctx, cancel: cancel, client: c, id: id, name: name, vp: viewport.New(viewport.WithWidth(width), viewport.WithHeight(height))}
+	v := &NetworkDetailsView{detailView: newDetailView(ctx, width, height, "loading network details…"), client: c, id: id, name: name}
 	v.endpoints = list[networkEndpoint]{
 		keys: []sortx.Key{sortx.Name}, key: sortx.Name,
 		match: func(networkEndpoint, string) bool { return true },
@@ -68,7 +64,6 @@ func NewNetworkDetailsView(ctx context.Context, c dockerClient, id, name string,
 		}, empty: "no container endpoints reported in this snapshot",
 	}
 	v.SetSize(width, height)
-	v.vp.SetContent("loading network details…")
 	return v, v.load()
 }
 func (v *NetworkDetailsView) load() tea.Cmd {
@@ -80,20 +75,16 @@ func (v *NetworkDetailsView) load() tea.Cmd {
 	}
 	ctx, cancel := context.WithTimeout(v.ctx, 5*time.Second)
 	v.requestCancel = cancel
-	v.gen++
-	v.loading = true
-	gen := v.gen
+	gen := v.startLoad()
 	return func() tea.Msg {
 		defer cancel()
 		info, err := v.client.Network(ctx, v.id)
 		return networkDetailsMsg{v: v, gen: gen, info: info, err: err}
 	}
 }
-func (v *NetworkDetailsView) Close() { v.cancel() }
 func (v *NetworkDetailsView) SetSize(width, height int) {
 	v.width, v.height = width, height
-	v.vp.SetWidth(width)
-	v.vp.SetHeight(height)
+	v.detailView.SetSize(width, height)
 	endpointHeight := height
 	if width < 100 {
 		endpointHeight = max(height-2, 1)
@@ -134,18 +125,8 @@ func (v *NetworkDetailsView) Update(msg tea.Msg) tea.Cmd {
 		if v.showEndpoints {
 			return v.endpoints.HandleKey(msg.String())
 		}
-		switch msg.String() {
-		case "g", "home":
-			v.vp.GotoTop()
-			return nil
-		case "G", "end":
-			v.vp.GotoBottom()
-			return nil
-		}
 	}
-	var cmd tea.Cmd
-	v.vp, cmd = v.vp.Update(msg)
-	return cmd
+	return v.updateViewport(msg)
 }
 func (v *NetworkDetailsView) SelectedEndpoint() (string, string, bool) {
 	if !v.showEndpoints || !v.loaded || v.loading || v.err != nil {
@@ -172,29 +153,9 @@ func (v *NetworkDetailsView) View() string {
 	return body
 }
 func (v *NetworkDetailsView) Status() string {
-	s := "network: " + render.Accent.Render(v.name)
-	if v.loading {
-		return s + " · loading…"
-	}
-	if v.err != nil {
-		return s + " · inspect failed (ctrl+r to retry)"
-	}
 	mode := "metadata"
 	if v.showEndpoints {
 		mode = "endpoints"
 	}
-	return fmt.Sprintf("%s · %s snapshot · %d endpoints", s, mode, len(v.info.Containers))
-}
-func (a *App) openSelectedNetwork() tea.Cmd {
-	source, ok := a.tabs[a.active].(*NetworksView)
-	if !ok {
-		return nil
-	}
-	id, name, ok := source.SelectedNetwork()
-	if !ok {
-		return nil
-	}
-	var cmd tea.Cmd
-	a.networkDetails, cmd = NewNetworkDetailsView(a.ctx, a.client, id, name, a.width, a.bodyHeight())
-	return cmd
+	return v.status("network: "+render.Accent.Render(v.name), fmt.Sprintf(" · %s snapshot · %d endpoints", mode, len(v.info.Containers)))
 }
