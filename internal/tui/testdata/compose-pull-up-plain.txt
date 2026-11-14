@@ -1,0 +1,43 @@
+[1/2] Pull images
+$ docker compose pull --include-deps
+ Image registry.example/app:main Pulling
+ 37fb86c2a767 Already exists 0B
+ 0069ea31add0 Already exists 0B
+ faa890a31e98 Already exists 0B
+ f7a79299dedd Already exists 0B
+ be36dd5ec943 Already exists 0B
+ 73a48c452b10 Already exists 0B
+ 684dca3b88d36 Already exists 0B
+ 1c9ad473d925 Pulling fs layer 0B
+ 6141c6522f61 Pulling fs layer 0B
+ be21ec85edee Pulling fs layer 0B
+ 6141c6522f61 Downloading 1.378kB
+ 6141c6522f61 Downloading 67.61kB
+ 6141c6522f61 Verifying Checksum 0B
+ 6141c6522f61 Download complete 0B
+ 1c9ad473d925 Downloading 1.378kB
+ 1c9ad473d925 Downloading 25.3kB
+ 1c9ad473d925 Verifying Checksum 0B
+ 1c9ad473d925 Download complete 0B
+ 1c9ad473d925 Extracting 25.3kB
+ 1c9ad473d925 Extracting 25.3kB
+ 1c9ad473d925 Pull complete 0B
+ 6141c6522f61 Extracting 32.77kB
+ 6141c6522f61 Extracting 67.61kB
+ 6141c6522f61 Extracting 67.61kB
+ 6141c6522f61 Pull complete 0B
+ be21ec85edee Downloading 1.137kB
+ be21ec85edee Download complete 0B
+ be21ec85edee Extracting 1.137kB
+ be21ec85edee Extracting 1.137kB
+ be21ec85edee Pull complete 0B
+ Image registry.example/app:main Pulled
+
+[2/2] Start updated services
+$ docker compose up -d --no-build --pull never
+ Container example-app Recreate
+ Container example-app Recreated
+ Container example-app Starting
+ Container example-app Started
+
+Update complete.

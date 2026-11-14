@@ -165,11 +165,14 @@ block that project; the preview shows why. Valid projects can still be confirmed
 
 Each project runs Compose `pull --include-deps`, followed by
 `up -d --no-build --pull never` only if the pull succeeds. Projects run one at a
-time. Confirmation opens a live Compose console automatically, with multiline
-download/extraction output and separate pull/start phase headings. Bulk updates
-follow the active project. Use `↑↓` or `pgup`/`pgdn` to read scrollback, `G` to
+time. Confirmation opens compact live Compose progress automatically. Each image,
+layer, and container has one row whose status updates in place, with completion
+checkmarks, status colors, and separate pull/start headings. Transfer amounts are
+shown when Compose reports them. Press `l` to switch between compact progress and
+the raw multiline log. Bulk updates follow the active project. Use `↑↓` or
+`pgup`/`pgdn` to read scrollback, `G` to
 follow the active project again, `[`/`]` to inspect another project's output,
-and `tab` for the project list. The latest 32 KiB per project is retained, and
+and `tab` for the project list. The raw log retains the latest 32 KiB per project, and
 the console stays open after completion. A failed
 project does not stop the remaining projects. The update uses the tags already
 in the Compose files; it does not upgrade pinned versions, edit files, build
