@@ -139,7 +139,7 @@ To work against Docker on another machine (for example a home server), run `dn`
 on your Mac with `DOCKER_HOST=ssh://me@server` instead of inside an SSH session.
 For a rootless daemon, include its remote socket path, for example
 `DOCKER_HOST=ssh://me@server/run/user/1000/docker.sock` (using the remote user's UID).
-See [Remote daemons over SSH](../README.md#remote-daemons-over-ssh).
+See [Remote daemons over SSH](usage.md#remote-daemons-over-ssh).
 
 ## 3. Install `dn` on your PATH
 
