@@ -25,6 +25,7 @@ Setup instructions for macOS, Linux and Windows are in
 | `internal/sortx/` | sort keys shared by the CLI and the TUI |
 | `internal/tui/` | the Bubble Tea app (`app.go`) and its views |
 | `testenv/` | demo compose environment (`make demo-up`) |
+| `scripts/screenshots/` | regenerates `docs/images` from the demo (`make screenshots`) |
 
 ## Commands
 
