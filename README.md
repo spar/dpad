@@ -10,6 +10,7 @@ and a full-screen terminal UI. Anything it doesn't enhance goes straight to `doc
 [![CI](https://github.com/spar/dockernext/actions/workflows/ci.yml/badge.svg)](https://github.com/spar/dockernext/actions/workflows/ci.yml)
 ![Go 1.26.7+](https://img.shields.io/badge/go-1.26.7%2B-00ADD8?logo=go&logoColor=white)
 ![macOS and Linux](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-informational)
+[![MIT license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Built with Bubble Tea](https://img.shields.io/badge/built%20with-Bubble%20Tea-ff5f87)](https://github.com/charmbracelet/bubbletea)
 
 **[Quick start](#quick-start) · [Features](#features) · [Performance](#performance) · [Commands](#commands) · [Docs](#documentation)**
@@ -259,3 +260,7 @@ code layout and conventions in more detail.
 [Lip Gloss](https://github.com/charmbracelet/lipgloss) from Charm,
 [Cobra](https://github.com/spf13/cobra), and the
 [Moby](https://github.com/moby/moby) Engine API client.
+
+## License
+
+dockernext is released under the [MIT License](LICENSE).
