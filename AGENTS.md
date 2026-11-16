@@ -71,3 +71,6 @@ docs: add Linux and Windows setup steps
 ```
 
 Keep each commit to one logical change.
+
+Do not add `Co-Authored-By`, `Claude-Session` or other attribution trailers to
+commit messages, and do not add attribution lines to pull request descriptions.
