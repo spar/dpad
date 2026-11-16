@@ -1,0 +1,23 @@
+[
+  {"wait": 3},
+  {"keys": "3"}, {"wait": 1.5}, {"keys": "v"},
+  {"sh": "sleep 5; docker restart -t 1 dn-demo-cpu-warm-1; sleep 3; docker pause dn-demo-many-pids-1; sleep 2; docker unpause dn-demo-many-pids-1; sleep 2; docker stop -t 1 dn-demo-logger-tty-1; sleep 2; docker start dn-demo-logger-tty-1"},
+  {"wait": 55},
+  {"keys": "1"}, {"wait": 1},
+  {"rec": "tour", "fps": 8},
+  {"wait": 1.5}, {"snap": "containers"},
+  {"keys": "jjjjjjj", "delay": 0.22}, {"wait": 0.8},
+  {"keys": "3"}, {"wait": 4}, {"snap": "stats"},
+  {"keys": "4"}, {"wait": 2.5}, {"snap": "projects"},
+  {"keys": "\r"}, {"wait": 4},
+  {"keys": "/"}, {"wait": 0.4}, {"keys": "(?i)error|warn", "delay": 0.12}, {"wait": 0.5},
+  {"keys": "\r"}, {"wait": 3}, {"snap": "logs"},
+  {"keys": "\u001b"}, {"wait": 1.5},
+  {"keys": "1"}, {"wait": 1},
+  {"keys": "/"}, {"wait": 0.3}, {"keys": "web", "delay": 0.15}, {"wait": 0.4}, {"keys": "\r"}, {"wait": 1},
+  {"keys": "d"}, {"wait": 3}, {"snap": "details"},
+  {"keys": "\u001b"}, {"wait": 1},
+  {"keys": "2"}, {"wait": 2.5},
+  {"keys": "5"}, {"wait": 2.5}, {"snap": "events"},
+  {"stop": true}
+]

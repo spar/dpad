@@ -147,7 +147,7 @@ known hosts apply, rootless sockets work (`ssh://me@server/run/user/1000/docker.
 and dropped connections reconnect in the background. Details are in
 [Daemon connection](docs/usage.md#daemon-connection).
 
-<sub>All screenshots are real, unedited output from the bundled demo environment (`make demo-up`).</sub>
+<sub>All screenshots are real, unedited output from the bundled demo environment (`make demo-up`), captured with `make screenshots`.</sub>
 
 ## Performance
 
@@ -252,6 +252,7 @@ code layout and conventions in more detail.
 | `internal/render/` | theme, ANSI-aware table, formatters, log-level highlighting |
 | `internal/tui/` | the Bubble Tea app and its views |
 | `testenv/` | demo Compose environment |
+| `scripts/screenshots/` | regenerates the README images from the demo environment |
 
 ## Acknowledgements
 
