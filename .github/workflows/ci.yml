@@ -8,8 +8,9 @@ on:
 permissions:
   contents: read
 
-# CI_RUNNER is an optional repository Actions variable, as in expense-tracker.
-# Set it to self-hosted (or a runner label); leave it unset for GitHub's runners.
+# CI_RUNNER is an optional repository Actions variable. Set it to self-hosted
+# (or the dockernext label) to use the runners from spar/gh-private-runners;
+# leave it unset for GitHub's runners. See docs/self-hosted-runner.md.
 jobs:
   test:
     name: test (${{ matrix.os }}, Go ${{ matrix.go }})
@@ -39,8 +40,6 @@ jobs:
           go-version: stable
           cache: ${{ vars.CI_RUNNER == '' }}
       - run: make lint
-      - name: Check runner lifecycle and cleanup
-        run: bash runner/test.sh
 
   vuln:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}

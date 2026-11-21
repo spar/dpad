@@ -230,7 +230,7 @@ The full key list and the behavior of each tab are in [docs/usage.md](docs/usage
 - **[Using dockernext](docs/usage.md):** every tab, key and action, Compose updates, stats details, contexts and SSH.
 - **[Running locally](docs/local-development.md):** prerequisites for macOS, Linux and Windows, building, installing, troubleshooting.
 - **[Demo environment](testenv/README.md):** what each demo container shows, plus a guided feature tour.
-- **[Self-hosted CI runners](docs/self-hosted-runner.md):** running CI on your own Docker hosts.
+- **[Self-hosted CI runners](docs/self-hosted-runner.md):** running CI on your own Docker hosts with the shared runners from gh-private-runners.
 
 ## Contributing
 
