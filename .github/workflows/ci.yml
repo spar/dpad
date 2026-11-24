@@ -39,6 +39,12 @@ jobs:
         with:
           go-version: stable
           cache: ${{ vars.CI_RUNNER == '' }}
+      - name: Test release version rules
+        uses: actions/github-script@v8
+        with:
+          script: |
+            require('node:child_process').execFileSync(process.execPath,
+              ['--test', 'scripts/release/version.test.cjs'], { stdio: 'inherit' })
       - run: make lint
 
   vuln:
@@ -50,3 +56,49 @@ jobs:
           go-version: stable
           cache: ${{ vars.CI_RUNNER == '' }}
       - run: make vuln
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, lint, vuln]
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    permissions:
+      contents: write
+    concurrency:
+      group: dpad-main-release
+      queue: max
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Determine next version
+        id: version
+        uses: actions/github-script@v8
+        with:
+          result-encoding: string
+          script: return require(process.cwd() + '/scripts/release/version.cjs').nextTag()
+      - uses: actions/setup-go@v6
+        if: steps.version.outputs.result != ''
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Build release assets
+        if: steps.version.outputs.result != ''
+        env:
+          TAG: ${{ steps.version.outputs.result }}
+        run: |
+          assets=$(mktemp -d)
+          echo "RELEASE_ASSETS=$assets" >> "$GITHUB_ENV"
+          scripts/release/build.sh "$TAG" "$assets/dist"
+      - name: Publish GitHub release
+        if: steps.version.outputs.result != ''
+        uses: actions/github-script@v8
+        env:
+          TAG: ${{ steps.version.outputs.result }}
+        with:
+          script: |
+            const publish = require(process.cwd() + '/scripts/release/publish.cjs')
+            await publish({ github, context, tag: process.env.TAG, dir: process.env.RELEASE_ASSETS + '/dist' })
+      - name: Remove temporary release assets
+        if: always() && env.RELEASE_ASSETS != ''
+        run: rm -rf -- "$RELEASE_ASSETS"

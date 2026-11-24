@@ -46,17 +46,33 @@ saved current context.
 
 ## Quick start
 
-You need **Go 1.26.7+** and a running Docker engine (Docker Desktop, colima,
-OrbStack, or Docker on Linux). The `docker` CLI is used for passthrough commands.
+Use dpad with a running Docker engine and the Docker CLI. Download the binary
+for your OS and architecture from [GitHub Releases](https://github.com/spar/dpad/releases/latest).
+Each release includes Linux, macOS and Windows binaries for amd64 and arm64,
+plus a `SHA256SUMS` file. Windows users can save the matching `.exe` as
+`dp.exe` in a directory on their PATH.
 
-```bash
+For example, on **Apple Silicon macOS** you can install directly with the GitHub CLI:
+
+```sh
+mkdir -p ~/.local/bin
+gh release download --repo spar/dpad --pattern dpad-darwin-arm64 --output ~/.local/bin/dpad && \
+  chmod +x ~/.local/bin/dpad && ln -sf dpad ~/.local/bin/dp
+```
+
+For **Linux x86-64**, use `dpad-linux-amd64` in the same command. For an upgrade,
+add `--clobber` to replace the installed binary. To verify a download, compare
+its SHA-256 digest with the matching entry in the release’s `SHA256SUMS`.
+
+To build from source with **Go 1.26.7+**, run:
+
+```sh
 git clone https://github.com/spar/dpad.git
 cd dpad
 make install
 ```
 
-This builds a static binary and installs `dpad` plus a short `dp` symlink
-into `~/.local/bin`. Then:
+With `~/.local/bin` on your PATH, try:
 
 ```bash
 dp                    # full-screen TUI

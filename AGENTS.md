@@ -74,3 +74,21 @@ Keep each commit to one logical change.
 
 Do not add `Co-Authored-By`, `Claude-Session` or other attribution trailers to
 commit messages, and do not add attribution lines to pull request descriptions.
+
+## Releases
+
+Successful CI on `main` publishes the initial release as `v0.1.0`. After that,
+the highest-impact Conventional Commit since the last release sets the version:
+
+| Commit | Example starting at v0.1.0 |
+|---|---|
+| `fix:`, `perf:` | v0.1.1 |
+| `feat:` | v0.2.0 |
+| Any conventional type with `!` or a `BREAKING CHANGE:` footer | v1.0.0 |
+| Other types, including `docs:`, `chore:`, `ci:`, and `test:` | No release |
+
+Use a conventional PR title when squash-merging and preserve any breaking-change
+footer in the final commit. For regular merges, the commits on the branch count.
+GitHub generates the release notes from merged PRs. The release job cross-builds
+the binaries, uploads them and their SHA-256 checksums to a draft, then publishes
+the release. A failed job can be rerun from Actions.
