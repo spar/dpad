@@ -10,9 +10,9 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/render"
-	"dockernext/internal/sortx"
+	"dpad/internal/docker"
+	"dpad/internal/render"
+	"dpad/internal/sortx"
 )
 
 var (
@@ -465,7 +465,7 @@ func (a *App) render() string {
 }
 
 func (a *App) tabBar() string {
-	parts := []string{render.Accent.Render("dockernext") + " "}
+	parts := []string{render.Accent.Render("dpad") + " "}
 	for i, t := range a.tabs {
 		label := fmt.Sprintf("%d %s", i+1, t.Title())
 		if i == a.active {

@@ -10,7 +10,7 @@ import (
 	"github.com/moby/moby/api/types/image"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
-	"dockernext/internal/docker"
+	"dpad/internal/docker"
 )
 
 func TestImageDetailsMetadataAndUsage(t *testing.T) {

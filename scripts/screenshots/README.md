@@ -1,7 +1,7 @@
 # Screenshots
 
 `capture.sh` regenerates the images in [docs/images](../../docs/images) from
-real `dn` output, so the README stays accurate when the UI changes.
+real `dp` output, so the README stays accurate when the UI changes.
 
 ```bash
 make demo-up
@@ -14,7 +14,7 @@ To write somewhere other than `docs/images`, run
 ## Requirements
 
 - Docker with the demo environment running (`make demo-up`)
-- Go, to build `dn`
+- Go, to build `dp`
 - Python 3 with [Pillow](https://pypi.org/project/pillow/)
 - Node.js and npm. The first run installs the pinned Playwright and xterm.js
   versions into `node_modules` here. If Playwright has no browser yet, run
@@ -25,8 +25,8 @@ To write somewhere other than `docs/images`, run
 
 ## How it works
 
-1. `drive.py` runs `dn` in a pseudo-terminal at a fixed size, types the keys
-   listed in a scenario (`tui.json`, `cli.json`) and saves everything `dn`
+1. `drive.py` runs `dp` in a pseudo-terminal at a fixed size, types the keys
+   listed in a scenario (`tui.json`, `cli.json`) and saves everything `dp`
    writes at each `snap` step and, while recording, eight times a second.
    The TUI scenario restarts, pauses and stops a few demo containers so the
    Events tab has something to show; they are running again afterwards.

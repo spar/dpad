@@ -7,8 +7,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/moby/moby/api/types/container"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/render"
+	"dpad/internal/docker"
+	"dpad/internal/render"
 )
 
 type detailsMsg struct {

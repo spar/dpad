@@ -4,10 +4,10 @@ Guidance for AI coding agents working in this repository.
 
 ## Project
 
-dockernext (`dn`) is a Go CLI and terminal UI that enhances the Docker CLI.
+dpad (`dp`) is a Go CLI and terminal UI that enhances the Docker CLI.
 `ps`, `images`, `stats` and `logs` are reimplemented against the Docker Engine
 API; any other command or flag is passed through to the `docker` binary. Running
-`dn` with no arguments opens a full-screen TUI built on Bubble Tea, Bubbles and
+`dp` with no arguments opens a full-screen TUI built on Bubble Tea, Bubbles and
 Lip Gloss v2.
 
 Setup instructions for macOS, Linux and Windows are in
@@ -30,7 +30,7 @@ Setup instructions for macOS, Linux and Windows are in
 ## Commands
 
 ```sh
-make build    # → bin/dockernext
+make build    # → bin/dpad
 make test
 make vet
 make lint     # golangci-lint, version pinned in the Makefile

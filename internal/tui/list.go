@@ -5,9 +5,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/render"
-	"dockernext/internal/sortx"
+	"dpad/internal/docker"
+	"dpad/internal/render"
+	"dpad/internal/sortx"
 )
 
 // row is one table row of a list tab.
@@ -36,7 +36,7 @@ type list[T any] struct {
 	items       []T
 	loaded      bool
 	err         error
-	noHighlight bool // hide the cursor (standalone `dn stats`)
+	noHighlight bool // hide the cursor (standalone `dp stats`)
 	cur         cursor
 	filter      string
 	width       int

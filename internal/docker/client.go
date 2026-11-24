@@ -1,4 +1,4 @@
-// Package docker wraps the Docker Engine SDK with the queries dockernext needs.
+// Package docker wraps the Docker Engine SDK with the queries dpad needs.
 package docker
 
 import (
@@ -22,7 +22,7 @@ type Client struct {
 	cliEnv []string
 }
 
-// engine is the part of the Engine API client dockernext uses, so tests can
+// engine is the part of the Engine API client dpad uses, so tests can
 // substitute a fake daemon.
 type engine interface {
 	Close() error

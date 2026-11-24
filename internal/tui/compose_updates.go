@@ -11,9 +11,9 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"dockernext/internal/compose"
-	"dockernext/internal/render"
-	"dockernext/internal/sortx"
+	"dpad/internal/compose"
+	"dpad/internal/render"
+	"dpad/internal/sortx"
 )
 
 type composePlanMsg struct {

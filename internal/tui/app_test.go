@@ -11,7 +11,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 
-	"dockernext/internal/sortx"
+	"dpad/internal/sortx"
 )
 
 func newTestApp() *App {

@@ -1,6 +1,6 @@
 # Demo environment
 
-`compose.yaml` starts containers that each exercise a specific `dn` feature.
+`compose.yaml` starts containers that each exercise a specific `dp` feature.
 For setup, see [docs/local-development.md](../docs/local-development.md).
 
 ```sh
@@ -8,12 +8,12 @@ make demo-up     # from the repo root
 make demo-down
 ```
 
-All containers are named `dn-demo-<service>-1`. In the TUI, type `/dn-demo` to
+All containers are named `dp-demo-<service>-1`. In the TUI, type `/dp-demo` to
 show only these.
 
 ## What each container demonstrates
 
-| Container | Shows in `dn` |
+| Container | Shows in `dp` |
 |---|---|
 | `web` | **healthy** badge, multi-port compaction `8080→80/tcp, 8443→443/tcp`, nginx `[error]` lines on stderr (404s) |
 | `traffic` | high **NET I/O**; drives `web` with page loads, a 5MB download and 404s |
@@ -33,34 +33,34 @@ show only these.
 | `crashed` | **Exited (3)** → red |
 | `completed` | **Exited (0)** → gray |
 | `paused` | **paused** state (yellow). Paused by `make demo-up`. |
-| `dn-demo-created` | **created** state (blue). Never started, made by `make demo-up`. |
-| `<none>` image | a **dangling** image, dimmed in `dn images`. Made by `make demo-up`. |
+| `dp-demo-created` | **created** state (blue). Never started, made by `make demo-up`. |
+| `<none>` image | a **dangling** image, dimmed in `dp images`. Made by `make demo-up`. |
 
 ## Feature tour
 
 **Colored `ps`:**
 ```sh
-dn ps -a                     # every state color plus health badges
-dn ps -a --sort created -r   # oldest first
-dn ps -q                     # unknown flag → passed through to docker
+dp ps -a                     # every state color plus health badges
+dp ps -a --sort created -r   # oldest first
+dp ps -q                     # unknown flag → passed through to docker
 ```
 
 **Images:**
 ```sh
-dn images                    # sizes, dangling image dimmed, total in the footer
-dn images --sort name
+dp images                    # sizes, dangling image dimmed, total in the footer
+dp images --sort name
 ```
 
 **Live stats:**
 ```sh
-dn stats                     # cpu-hog on top in red, cpu-warm yellow
+dp stats                     # cpu-hog on top in red, cpu-warm yellow
 #   press m → mem-hog (red), mem-warm (yellow) rise to the top
 #   press n → traffic / web (network)
 #   press i → disk-io (block I/O)
 #   live network/disk values are bytes/sec; press t to switch to cumulative totals
 #   press p → many-pids
 #   press r → reverse;  q → quit
-dn stats --no-stream --sort mem    # one snapshot
+dp stats --no-stream --sort mem    # one snapshot
 ```
 Run `docker compose -f testenv/compose.yaml stop cpu-hog` in another
 terminal and the row disappears. `start` it again and it comes back.
@@ -68,37 +68,37 @@ terminal and the row disappears. `start` it again and it comes back.
 **Logs:**
 ```sh
 # Merge several containers; each gets its own prefix color
-dn logs -f dn-demo-logger-text-1 dn-demo-logger-json-1 dn-demo-logger-logfmt-1
+dp logs -f dp-demo-logger-text-1 dp-demo-logger-json-1 dp-demo-logger-logfmt-1
 
-dn logs --tail 50 dn-demo-web-1                          # nginx [error] lines highlighted
-dn logs --tail 100 dn-demo-logger-text-1 --grep 'db|slow' # filter and highlight
-dn logs -t --tail 20 dn-demo-logger-tty-1                 # TTY stream, with timestamps
-dn logs dn-demo-flaky-1                                   # FATAL in red on every restart
+dp logs --tail 50 dp-demo-web-1                          # nginx [error] lines highlighted
+dp logs --tail 100 dp-demo-logger-text-1 --grep 'db|slow' # filter and highlight
+dp logs -t --tail 20 dp-demo-logger-tty-1                 # TTY stream, with timestamps
+dp logs dp-demo-flaky-1                                   # FATAL in red on every restart
 ```
 
 **TUI:**
 ```sh
-dn
+dp
 ```
-1. Press `/`, type `dn-demo`, then `enter` to keep only demo containers.
+1. Press `/`, type `dp-demo`, then `enter` to keep only demo containers.
 2. Press `s` a few times to cycle the sort between name, created, and status.
-3. Select `dn-demo-logger-json-1` and press `enter` to follow its logs. Press `esc` to go back.
+3. Select `dp-demo-logger-json-1` and press `enter` to follow its logs. Press `esc` to go back.
    Press `d` to inspect its configuration, networks, and mounts. Use `ctrl+r` to
    refresh, `enter` to open logs from details, and `esc` to return.
-4. Select `dn-demo-paused-1` and press `S` then `y`. It unpauses and turns green.
-5. Select `dn-demo-cpu-hog-1` and press `x` then `y`. After about 10s it shows
+4. Select `dp-demo-paused-1` and press `S` then `y`. It unpauses and turns green.
+5. Select `dp-demo-cpu-hog-1` and press `x` then `y`. After about 10s it shows
    **Exited (137)** in red and drops off the Stats tab. The shell loop ignores
    SIGTERM, so docker has to kill it. Press `S` to bring it back.
-6. Press `3` for the Stats tab. Compose projects start collapsed; select `dn-demo`
+6. Press `3` for the Stats tab. Compose projects start collapsed; select `dp-demo`
    and press `space` or `enter` to see its service/container rows. `v` toggles the
-   flat view, and `/dn-demo` or a service name filters the project. Press
+   flat view, and `/dp-demo` or a service name filters the project. Press
    `c`/`m`/`n`/`i`/`p` to re-sort live.
    Network/disk sorts follow the current rates/totals mode; press `t` to toggle.
    Select `cpu-hog` or `mem-hog` to see two-minute CPU/memory history, averages,
    and peaks below the table. History fills as samples arrive; enlarge a small
    terminal to at least 80 columns to see the panel.
 7. Press `2` for Images and `?` for help.
-8. Press `4` for Projects. The `dn-demo` project shows service containers,
+8. Press `4` for Projects. The `dp-demo` project shows service containers,
    running/total counts, and unhealthy containers. Press `space` on the project
    row to collapse/expand it, or `enter` for merged project logs. Try `/` with
    `(?i)error|warn`, then `enter`; use `ctrl+l` to clear and `esc` to return.
@@ -108,14 +108,14 @@ dn
    `up -d --force-recreate logger-text` with the same Compose file; the viewer
    follows replacement sources and retains its filter and buffer. Scale back to
    one when finished.
-9. Select a running container such as `dn-demo-web-1` and press `e`, then `enter`
+9. Select a running container such as `dp-demo-web-1` and press `e`, then `enter`
    to open `/bin/sh`. Run `pwd`, then `exit` to return to the dashboard. Try a
    stopped or paused container to see the preflight error; `esc` cancels the prompt.
 10. Press `2` for Images and `d` to inspect an image's tags, metadata, and containers
     using it. Press `esc`, then `x` to read the removal confirmation and `n` to
     cancel. Images used by stopped containers are protected from deletion too.
 11. Press `5` for Events to see lifecycle and health changes recorded since opening
-    the TUI. Filter with `/dn-demo`, or search `die`, `unhealthy`, or a service name.
+    the TUI. Filter with `/dp-demo`, or search `die`, `unhealthy`, or a service name.
     Restart a demo container in another terminal and watch the new events arrive.
     Navigate to keep an older event selected, `g` to follow newest arrivals again,
     or `enter` to inspect that event's container. The latest 1,000 records are kept.
@@ -123,13 +123,13 @@ dn
     container name; `enter` shows metadata and each container's mount destinations.
     Running and stopped references both count. `ctrl+r` refreshes and `esc` returns
     to the list. This tab is read-only and does not remove or prune volumes.
-13. Press `7` for Networks and filter by `dn-demo` or a container name. `enter`
+13. Press `7` for Networks and filter by `dp-demo` or a container name. `enter`
     opens network configuration; `tab` shows its endpoint IP/MAC addresses, and
     `enter` on an endpoint opens container details. Use `esc` to return through
     both panes. `ctrl+r` refreshes the network snapshot and shared container data.
 
 **Passthrough:**
 ```sh
-dn compose -f testenv/compose.yaml ps   # not enhanced → runs `docker compose ...`
-dn network ls
+dp compose -f testenv/compose.yaml ps   # not enhanced → runs `docker compose ...`
+dp network ls
 ```

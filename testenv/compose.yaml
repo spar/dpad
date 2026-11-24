@@ -1,18 +1,18 @@
-# Demo environment for trying out dockernext (dn) locally.
+# Demo environment for trying out dpad (dp) locally.
 #
 #   make demo-up     # start everything (+ paused/created/dangling extras)
-#   dn               # explore
+#   dp               # explore
 #   make demo-down   # remove everything
 #
-# Each service exists to exercise a specific dn feature; see testenv/README.md.
-name: dn-demo
+# Each service exists to exercise a specific dp feature; see testenv/README.md.
+name: dp-demo
 
 x-alpine: &alpine
   image: alpine:3.20
   volumes:
     - ./scripts:/scripts:ro
   labels:
-    dn-demo: "true"
+    dp-demo: "true"
 
 services:
   # ── Ports, health, nginx-style logs ────────────────────────────────────────
@@ -31,7 +31,7 @@ services:
       timeout: 2s
       retries: 3
     labels:
-      dn-demo: "true"
+      dp-demo: "true"
 
   traffic:
     <<: *alpine
@@ -57,14 +57,14 @@ services:
     command: ["python", "-c", "import time; b = b'x' * (52 * 1024 * 1024); time.sleep(10**9)"]
     mem_limit: 64m
     labels:
-      dn-demo: "true"
+      dp-demo: "true"
 
   mem-warm:
     image: python:3.13-alpine
     command: ["python", "-c", "import time; b = b'x' * (34 * 1024 * 1024); time.sleep(10**9)"]
     mem_limit: 64m
     labels:
-      dn-demo: "true"
+      dp-demo: "true"
 
   # ── Block I/O and PIDs columns ─────────────────────────────────────────────
   disk-io:
@@ -93,7 +93,7 @@ services:
     volumes:
       - ./scripts:/scripts:ro
     labels:
-      dn-demo: "true"
+      dp-demo: "true"
 
   # TTY containers send a raw (non-multiplexed) log stream.
   logger-tty:

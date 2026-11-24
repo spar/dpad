@@ -10,7 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/moby/moby/api/types/container"
 
-	"dockernext/internal/docker"
+	"dpad/internal/docker"
 )
 
 func TestContextPickerFiltersSelectsAndCancels(t *testing.T) {

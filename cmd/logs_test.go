@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"dockernext/internal/docker"
+	"dpad/internal/docker"
 )
 
 func at(sec int, text string) docker.LogLine {

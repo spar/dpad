@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/sortx"
+	"dpad/internal/docker"
+	"dpad/internal/sortx"
 )
 
 func benchmarkStatsView(n int) (*StatsView, statsBatchMsg) {

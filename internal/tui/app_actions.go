@@ -6,8 +6,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/render"
+	"dpad/internal/docker"
+	"dpad/internal/render"
 )
 
 type actionDoneMsg struct {

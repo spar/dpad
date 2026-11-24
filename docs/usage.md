@@ -1,6 +1,6 @@
-# Using dockernext
+# Using dpad
 
-The full reference for the `dn` terminal UI and its connection handling. For an
+The full reference for the `dp` terminal UI and its connection handling. For an
 overview, installation and screenshots, see the [README](../README.md).
 
 - [Keys](#keys)
@@ -66,7 +66,7 @@ an executable available in the container, such as `/bin/bash` or `powershell.exe
 Enter only the executable, without arguments. Docker must be installed in PATH,
 and the container must be running and not paused or restarting. This runs
 `docker exec -it CONTAINER EXECUTABLE` with the dashboard's bound daemon endpoint
-and startup environment. Switching the Docker CLI's current context while `dn`
+and startup environment. Switching the Docker CLI's current context while `dp`
 is open does not redirect shells to another daemon. Images without a shell need
 an executable they actually contain.
 
@@ -330,7 +330,7 @@ synchronized measurements. Stopped containers leave as discovery/streams update.
 Grouping reuses the dashboard's container labels and existing batched stats stream;
 it adds no Docker requests, streams, or per-project history buffers. Failed label
 refreshes retain known grouping and mark Compose metadata stale. Standalone
-`dn stats`, snapshots, and piped output keep their existing flat behavior.
+`dp stats`, snapshots, and piped output keep their existing flat behavior.
 
 ### History sparklines
 
@@ -346,7 +346,7 @@ samples and do not fill missing intervals. Restarted/reconnected streams start
 fresh history, and stopped containers' history is discarded.
 
 The panel follows selection through sorting/filtering. It hides automatically
-below 80 columns or 10 body rows. Standalone `dn stats`, snapshots, and piped
+below 80 columns or 10 body rows. Standalone `dp stats`, snapshots, and piped
 output omit history storage. History uses
 about 6 KiB per tracked container plus map overhead, adds no Docker requests,
 and retains the existing batched stats redraws; only the selected container's
@@ -355,7 +355,7 @@ chart is rendered.
 ### Network and disk rates
 
 Live Stats shows network RX/TX and disk read/write throughput in bytes/sec.
-Press `t` to toggle cumulative byte totals; `dn stats --totals` starts standalone
+Press `t` to toggle cumulative byte totals; `dp stats --totals` starts standalone
 live stats in totals mode. `n` and `i` sort by combined network/disk throughput
 in rates mode, or cumulative bytes in totals mode. Unavailable rates sort after
 measured rates even when sorting is reversed. Snapshots (`--no-stream`) and piped
@@ -377,7 +377,7 @@ also with one-to-five-second backoff. Samples that stop advancing for five secon
 show `—` and lose their old rates/history; the summary counts available streams
 and excludes unavailable values. One shared watchdog restarts streams with no
 progress for ten seconds. Recovered streams establish fresh rate/history
-baselines. This applies to both the Stats tab and standalone `dn stats`, where
+baselines. This applies to both the Stats tab and standalone `dp stats`, where
 `ctrl+r` retries a failed watcher immediately. Quitting cancels background work.
 
 ## Responsiveness
@@ -387,7 +387,7 @@ terminal within about 8 ms; unchanged frames write nothing.
 Over SSH, event updates batch at most four times per second and log updates at
 most ten times per second; log paging moves immediately without animation.
 Each keypress still makes a round trip over the SSH connection; for the
-smoothest navigation, run `dn` locally against the remote daemon (see
+smoothest navigation, run `dp` locally against the remote daemon (see
 [Remote daemons over SSH](#remote-daemons-over-ssh)).
 SSH detection uses `SSH_CONNECTION`, `SSH_CLIENT`, or `SSH_TTY`. Table layouts
 are reused while navigating and across refreshes whose visible cells and columns
@@ -402,7 +402,7 @@ Output is plain when piped, when `NO_COLOR` is set, or with `--no-color`.
 
 ## Daemon connection
 
-`dn` honors `DOCKER_HOST`, `DOCKER_CONTEXT`, and the current docker context
+`dp` honors `DOCKER_HOST`, `DOCKER_CONTEXT`, and the current docker context
 (`docker context use …`), so it talks to the same daemon as `docker`. That
 includes colima, Docker Desktop, and remote contexts.
 
@@ -413,37 +413,37 @@ of connecting to the default daemon.
 
 ### Remote daemons over SSH
 
-Run `dn` on your laptop and point it at a server's daemon:
+Run `dp` on your laptop and point it at a server's daemon:
 
 ```sh
-DOCKER_HOST=ssh://me@server dn
+DOCKER_HOST=ssh://me@server dp
 # or, with the docker CLI installed locally:
 docker context create home --docker host=ssh://me@server
 docker context use home
-dn
+dp
 ```
 
 The TUI then draws locally, so moving through lists doesn't wait on a network
 round trip per keypress; only data loads travel over SSH, in the background.
-This is smoother than running `dn` inside an SSH session.
+This is smoother than running `dp` inside an SSH session.
 
-`dn` starts one `ssh` process that forwards a private local socket to the
+`dp` starts one `ssh` process that forwards a private local socket to the
 server's `/var/run/docker.sock` by default. Your `~/.ssh/config`, agent, and
 known hosts apply, and password or host-key prompts appear before the TUI opens.
 Your user on the server needs access to the socket (typically through the
 `docker` group for a rootful daemon). If the
-connection drops, `dn` starts a new one without prompting, so key-based or
+connection drops, `dp` starts a new one without prompting, so key-based or
 agent authentication is needed for automatic recovery.
 
 For rootless Docker or another socket location, append the absolute remote
 socket path to the SSH endpoint:
 
 ```sh
-DOCKER_HOST=ssh://me@server/run/user/1000/docker.sock dn
+DOCKER_HOST=ssh://me@server/run/user/1000/docker.sock dp
 # or save it in a Docker context:
 docker context create rootless --docker host=ssh://me@server/run/user/1000/docker.sock
 docker context use rootless
-dn
+dp
 ```
 
 Replace `1000` with the remote user's UID (`ssh me@server id -u`) and make sure
@@ -465,13 +465,13 @@ A single daemon ping runs every two seconds with a two-second timeout. Failed
 probes retry with backoff from one to five seconds; recovery refreshes lists and
 open details without resetting filters or selection. In list tabs, `ctrl+r` refreshes and
 requests an immediate connection check. Changing the Docker CLI's current context
-outside `dn` leaves this dashboard bound to its existing daemon.
+outside `dp` leaves this dashboard bound to its existing daemon.
 
 ### Switching contexts
 
 Press `c` from a list tab to choose a saved Docker context. Use the usual navigation
 keys or `/` to filter by context name or endpoint, then `enter` to switch; `esc`
-cancels. The selection overrides `DOCKER_HOST` and `DOCKER_CONTEXT` for this `dn`
+cancels. The selection overrides `DOCKER_HOST` and `DOCKER_CONTEXT` for this `dp`
 session without changing the Docker CLI's saved current context. The `default`
 choice uses the platform's default Docker socket.
 

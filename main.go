@@ -1,6 +1,6 @@
-// Command dockernext (dn) is a colorful, interactive companion to the docker CLI.
+// Command dpad (dp) is a colorful, interactive companion to the docker CLI.
 package main
 
-import "dockernext/cmd"
+import "dpad/cmd"
 
 func main() { cmd.Execute() }

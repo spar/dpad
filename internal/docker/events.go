@@ -64,7 +64,7 @@ func (c *Client) followEvents(ctx context.Context, actions []events.Action, resy
 	}, nil
 }
 
-// containerChangeActions are the events that change what `dn ps -a` shows.
+// containerChangeActions are the events that change what `dp ps -a` shows.
 // Healthcheck exec_* events are frequent and deliberately left out.
 var containerChangeActions = []events.Action{
 	events.ActionCreate, events.ActionStart, events.ActionRestart, events.ActionDie,

@@ -1,4 +1,4 @@
-// Package cmd defines the dn command line.
+// Package cmd defines the dp command line.
 package cmd
 
 import (
@@ -13,11 +13,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/passthrough"
-	"dockernext/internal/render"
-	"dockernext/internal/sortx"
-	"dockernext/internal/tui"
+	"dpad/internal/docker"
+	"dpad/internal/passthrough"
+	"dpad/internal/render"
+	"dpad/internal/sortx"
+	"dpad/internal/tui"
 )
 
 // version is stamped by `make build`; see buildVersion for other builds.
@@ -44,10 +44,10 @@ var (
 	errPassthrough = errors.New("passthrough to docker")
 )
 
-// Execute runs dn. Commands and flags dn doesn't know are forwarded to docker.
+// Execute runs dp. Commands and flags dp doesn't know are forwarded to docker.
 func Execute() { os.Exit(run(os.Args[1:])) }
 
-// run executes dn with args and returns the process exit code.
+// run executes dp with args and returns the process exit code.
 func run(args []string) int {
 	root := newRoot()
 	if shouldPassthrough(root, args) {
@@ -61,20 +61,20 @@ func run(args []string) int {
 	case errors.Is(err, errPassthrough):
 		return passthrough.Run(dockerArgs(args, true))
 	case !errors.Is(err, errSilent):
-		fmt.Fprintln(os.Stderr, "dn:", err)
+		fmt.Fprintln(os.Stderr, "dp:", err)
 	}
 	return 1
 }
 
 func newRoot() *cobra.Command {
 	root := &cobra.Command{
-		Use:   "dn",
-		Short: "dockernext: a colorful, interactive companion to the docker CLI",
-		Long: `dockernext enhances common docker commands with colors and sorting,
+		Use:   "dp",
+		Short: "dpad: a colorful, interactive companion to the docker CLI",
+		Long: `dpad enhances common docker commands with colors and sorting,
 and opens an interactive TUI when run without arguments.
 
-Any command or flag dn doesn't handle itself is passed through to docker,
-so "dn network ls" or "dn ps --format ..." behave exactly like docker.`,
+Any command or flag dp doesn't handle itself is passed through to docker,
+so "dp network ls" or "dp ps --format ..." behave exactly like docker.`,
 		Version:       buildVersion(),
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -96,11 +96,11 @@ so "dn network ls" or "dn ps --format ..." behave exactly like docker.`,
 	return root
 }
 
-// shouldPassthrough reports whether args target a docker command dn doesn't enhance.
+// shouldPassthrough reports whether args target a docker command dp doesn't enhance.
 func shouldPassthrough(root *cobra.Command, args []string) bool {
-	// Leading dn flags don't decide anything: `dn --no-color network ls` is
+	// Leading dp flags don't decide anything: `dp --no-color network ls` is
 	// still a docker command.
-	for len(args) > 0 && isDNFlag(args[0]) {
+	for len(args) > 0 && isDPFlag(args[0]) {
 		args = args[1:]
 	}
 	if len(args) == 0 {
@@ -119,8 +119,8 @@ func shouldPassthrough(root *cobra.Command, args []string) bool {
 	return err != nil || cmd == root
 }
 
-// dockerArgs removes dn's own flags from args bound for docker, which would
-// reject them. With anywhere set (dn's own commands) they are dropped up to
+// dockerArgs removes dp's own flags from args bound for docker, which would
+// reject them. With anywhere set (dp's own commands) they are dropped up to
 // "--"; otherwise only before the command name, because later arguments may
 // belong to a program run inside a container.
 func dockerArgs(args []string, anywhere bool) []string {
@@ -129,15 +129,15 @@ func dockerArgs(args []string, anywhere bool) []string {
 		if a == "--" || !anywhere && !strings.HasPrefix(a, "-") {
 			return append(out, args[i:]...)
 		}
-		if !isDNFlag(a) {
+		if !isDPFlag(a) {
 			out = append(out, a)
 		}
 	}
 	return out
 }
 
-// isDNFlag reports whether arg is a flag only dn understands.
-func isDNFlag(arg string) bool {
+// isDPFlag reports whether arg is a flag only dp understands.
+func isDPFlag(arg string) bool {
 	return arg == "--no-color" || strings.HasPrefix(arg, "--no-color=")
 }
 

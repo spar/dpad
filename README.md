@@ -1,10 +1,10 @@
 <div align="center">
 
-# dockernext
+# dpad
 
 ### A colorful, interactive companion to the `docker` CLI
 
-`dn` adds live stats with sparklines, multi-container logs, Compose project controls<br>
+`dp` adds live stats with sparklines, multi-container logs, Compose project controls<br>
 and a full-screen terminal UI. Anything it doesn't enhance goes straight to `docker`.
 
 [![CI](https://github.com/spar/dockernext/actions/workflows/ci.yml/badge.svg)](https://github.com/spar/dockernext/actions/workflows/ci.yml)
@@ -15,18 +15,18 @@ and a full-screen terminal UI. Anything it doesn't enhance goes straight to `doc
 
 **[Quick start](#quick-start) · [Features](#features) · [Performance](#performance) · [Commands](#commands) · [Docs](#documentation)**
 
-<img src="docs/images/demo.gif" alt="dn terminal UI: moving between the Containers, Stats and Projects tabs, following a Compose project's logs and filtering them by regex" width="100%">
+<img src="docs/images/demo.gif" alt="dp terminal UI: moving between the Containers, Stats and Projects tabs, following a Compose project's logs and filtering them by regex" width="100%">
 
 </div>
 
-## Why dn
+## Why dp
 
 `docker ps` and `docker stats` are fine for a quick look. Once you run more than
 a handful of containers, you start piping through `grep`, opening one terminal
-per `docker logs -f`, and re-running commands to see what changed. `dn` keeps
+per `docker logs -f`, and re-running commands to see what changed. `dp` keeps
 the commands you already know and fills those gaps:
 
-| | `docker` | `dn` |
+| | `docker` | `dp` |
 |---|:---:|:---:|
 | Colored container states and a health column | | ✓ |
 | Sort `ps`, `images` and `stats` by any column | | ✓ |
@@ -40,8 +40,8 @@ the commands you already know and fills those gaps:
 
 <sub>¹ `docker compose logs` and `docker compose up` cover one project at a time, from its directory.</sub>
 
-`dn` talks to the Docker Engine API directly and uses your existing contexts and
-`DOCKER_HOST`. Switching contexts inside `dn` does not change the Docker CLI's
+`dp` talks to the Docker Engine API directly and uses your existing contexts and
+`DOCKER_HOST`. Switching contexts inside `dp` does not change the Docker CLI's
 saved current context.
 
 ## Quick start
@@ -50,19 +50,19 @@ You need **Go 1.26.7+** and a running Docker engine (Docker Desktop, colima,
 OrbStack, or Docker on Linux). The `docker` CLI is used for passthrough commands.
 
 ```bash
-git clone https://github.com/spar/dockernext.git
-cd dockernext
+git clone https://github.com/spar/dockernext.git dpad
+cd dpad
 make install
 ```
 
-This builds a static binary and installs `dockernext` plus a short `dn` symlink
+This builds a static binary and installs `dpad` plus a short `dp` symlink
 into `~/.local/bin`. Then:
 
 ```bash
-dn                    # full-screen TUI
-dn ps -a              # colored, sortable ps
-dn stats --sort mem   # live stats, biggest memory users first
-dn logs -f api worker # several containers, one stream
+dp                    # full-screen TUI
+dp ps -a              # colored, sortable ps
+dp stats --sort mem   # live stats, biggest memory users first
+dp logs -f api worker # several containers, one stream
 ```
 
 Want something to look at? `make demo-up` starts about 20 demo containers that
@@ -89,7 +89,7 @@ troubleshooting are covered in [Running locally](docs/local-development.md).
 
 <img src="docs/images/logs.png" alt="Project log viewer following 18 containers, filtered with the regex (?i)error|warn and highlighting the matches" width="100%">
 
-- Follow one container, several (`dn logs a b c`), or a whole Compose project (`enter` on a project row).
+- Follow one container, several (`dp logs a b c`), or a whole Compose project (`enter` on a project row).
 - Every container gets a stable color; stderr lines are marked with `┃`.
 - Log levels are highlighted in plain text, JSON, logfmt and nginx formats.
 - Press `/` to filter by regular expression. Matches are highlighted and new lines are filtered as they arrive.
@@ -130,7 +130,7 @@ Docker context for the current session.
 
 ### A better `docker` for everyday commands
 
-<img src="docs/images/cli.png" alt="dn ps -a sorted by status, and dn logs interleaving three containers with highlighted log levels" width="100%">
+<img src="docs/images/cli.png" alt="dp ps -a sorted by status, and dp logs interleaving three containers with highlighted log levels" width="100%">
 
 The CLI commands keep Docker's flags and add sorting and color. Output stays plain
 when piped, when `NO_COLOR` is set, or with `--no-color`, so scripts keep working.
@@ -138,10 +138,10 @@ when piped, when `NO_COLOR` is set, or with `--no-color`, so scripts keep workin
 ### Remote daemons over SSH
 
 ```bash
-DOCKER_HOST=ssh://me@server dn
+DOCKER_HOST=ssh://me@server dp
 ```
 
-`dn` opens one SSH tunnel to the remote socket and draws the UI locally, so
+`dp` opens one SSH tunnel to the remote socket and draws the UI locally, so
 moving through lists doesn't wait on the network. Your `~/.ssh/config`, agent and
 known hosts apply, rootless sockets work (`ssh://me@server/run/user/1000/docker.sock`),
 and dropped connections reconnect in the background. Details are in
@@ -151,7 +151,7 @@ and dropped connections reconnect in the background. Details are in
 
 ## Performance
 
-`dn` is built to stay responsive with hundreds of containers and to cost little
+`dp` is built to stay responsive with hundreds of containers and to cost little
 while it sits open in a terminal tab.
 
 **How it stays light**
@@ -168,8 +168,8 @@ while it sits open in a terminal tab.
 | Binary | 10.5 MiB, static and stripped (`CGO_ENABLED=0`) |
 | Memory | about 22 MB resident with the TUI open and live stats streaming |
 | CPU | about 2.5% of one core in the same state (30-second average) |
-| `dn ps -a` | 111 to 122 ms, against 135 to 140 ms for `docker ps -a` (mean of 50 runs) |
-| `dn images` | 89 ms, against 108 ms for `docker images` (mean of 50 runs) |
+| `dp ps -a` | 111 to 122 ms, against 135 to 140 ms for `docker ps -a` (mean of 50 runs) |
+| `dp images` | 89 ms, against 108 ms for `docker images` (mean of 50 runs) |
 
 **Microbenchmarks with 1,000 containers** (`go test -bench`)
 
@@ -190,22 +190,22 @@ while it sits open in a terminal tab.
 
 | Command | What it adds over docker |
 |---|---|
-| `dn` | Full-screen TUI: Containers, Images, Stats, Projects, Events, Volumes and Networks tabs, with filtering, details, logs, shells and confirmed actions |
-| `dn ps [-a] [--sort name\|created\|status] [-r]` | State colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
-| `dn images [--sort size\|created\|name] [-r]` | Human sizes and a total-size footer; dangling images are dimmed |
-| `dn stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream] [--totals]` | Live sorting, CPU/memory bars, network/disk throughput; `t` toggles rates and totals |
-| `dn logs [-f] [-n N] [-t] [--since T] [--grep RE] C1 [C2...]` | Interleaves containers with colored name prefixes, highlights log levels, marks stderr with `┃`, highlights `--grep` matches |
+| `dp` | Full-screen TUI: Containers, Images, Stats, Projects, Events, Volumes and Networks tabs, with filtering, details, logs, shells and confirmed actions |
+| `dp ps [-a] [--sort name\|created\|status] [-r]` | State colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
+| `dp images [--sort size\|created\|name] [-r]` | Human sizes and a total-size footer; dangling images are dimmed |
+| `dp stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream] [--totals]` | Live sorting, CPU/memory bars, network/disk throughput; `t` toggles rates and totals |
+| `dp logs [-f] [-n N] [-t] [--since T] [--grep RE] C1 [C2...]` | Interleaves containers with colored name prefixes, highlights log levels, marks stderr with `┃`, highlights `--grep` matches |
 
 Sorts default to the natural direction for each key: biggest first for numbers,
 A to Z for names. `-r` reverses.
 
-**Passthrough.** These go to `docker` unchanged, so you can type `dn` wherever you
+**Passthrough.** These go to `docker` unchanged, so you can type `dp` wherever you
 would type `docker`:
 
-- Commands `dn` doesn't implement: `dn network ls`, `dn exec -it web sh`
-- Flags `dn` doesn't implement: `dn ps --format '{{.Names}}'`, `dn ps -q`
-- Docker global flags: `dn --context prod ps`
-- `dn stats web db`, because docker already handles selecting containers
+- Commands `dp` doesn't implement: `dp network ls`, `dp exec -it web sh`
+- Flags `dp` doesn't implement: `dp ps --format '{{.Names}}'`, `dp ps -q`
+- Docker global flags: `dp --context prod ps`
+- `dp stats web db`, because docker already handles selecting containers
 
 ### Main TUI keys
 
@@ -227,7 +227,7 @@ The full key list and the behavior of each tab are in [docs/usage.md](docs/usage
 
 ## Documentation
 
-- **[Using dockernext](docs/usage.md):** every tab, key and action, Compose updates, stats details, contexts and SSH.
+- **[Using dpad](docs/usage.md):** every tab, key and action, Compose updates, stats details, contexts and SSH.
 - **[Running locally](docs/local-development.md):** prerequisites for macOS, Linux and Windows, building, installing, troubleshooting.
 - **[Demo environment](testenv/README.md):** what each demo container shows, plus a guided feature tour.
 - **[Self-hosted CI runners](docs/self-hosted-runner.md):** running CI on your own Docker hosts with the shared runners from gh-private-runners.
@@ -256,7 +256,7 @@ code layout and conventions in more detail.
 
 ## Acknowledgements
 
-`dn` is built on [Bubble Tea](https://github.com/charmbracelet/bubbletea),
+`dp` is built on [Bubble Tea](https://github.com/charmbracelet/bubbletea),
 [Bubbles](https://github.com/charmbracelet/bubbles) and
 [Lip Gloss](https://github.com/charmbracelet/lipgloss) from Charm,
 [Cobra](https://github.com/spf13/cobra), and the
@@ -264,4 +264,4 @@ code layout and conventions in more detail.
 
 ## License
 
-dockernext is released under the [MIT License](LICENSE).
+dpad is released under the [MIT License](LICENSE).

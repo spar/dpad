@@ -1,5 +1,5 @@
 // Package tui implements the interactive full-screen interface and the live
-// `dn stats` view.
+// `dp stats` view.
 package tui
 
 import (
@@ -17,9 +17,9 @@ import (
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/api/types/volume"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/render"
-	"dockernext/internal/sortx"
+	"dpad/internal/docker"
+	"dpad/internal/render"
+	"dpad/internal/sortx"
 )
 
 // pollInterval is how often the containers tab reloads besides on daemon
@@ -135,7 +135,7 @@ func remoteTerminal() bool {
 	return os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_CLIENT") != "" || os.Getenv("SSH_TTY") != ""
 }
 
-// programOptions are the Bubble Tea options shared by the TUI and dn stats.
+// programOptions are the Bubble Tea options shared by the TUI and dp stats.
 // Frames are only written on the renderer's tick, so the frame rate bounds how
 // long a keypress waits to be drawn; unchanged frames write nothing.
 func programOptions(ctx context.Context) []tea.ProgramOption {

@@ -6,7 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"dockernext/internal/docker"
+	"dpad/internal/docker"
 )
 
 const statsStaleAfter = 5 * time.Second
