@@ -15,7 +15,7 @@ and a full-screen terminal UI. Anything it doesn't enhance goes straight to `doc
 
 **[Quick start](#quick-start) · [Features](#features) · [Performance](#performance) · [Commands](#commands) · [Docs](#documentation)**
 
-<img src="docs/images/demo.gif" alt="dp terminal UI: moving between the Containers, Stats and Projects tabs, following a Compose project's logs and filtering them by regex" width="100%">
+<img src="docs/images/demo.svg" alt="dp terminal UI: moving between the Containers, Stats and Projects tabs, following a Compose project's logs and filtering them by regex" width="100%">
 
 </div>
 
@@ -98,7 +98,7 @@ troubleshooting are covered in [Running locally](docs/local-development.md).
 
 ### Live stats you can sort and read at a glance
 
-<img src="docs/images/stats.png" alt="Stats tab: containers sorted by CPU with usage bars, network rates, PIDs and a CPU and memory history panel for the selected container" width="100%">
+<img src="docs/images/stats.svg" alt="Stats tab: containers sorted by CPU with usage bars, network rates, PIDs and a CPU and memory history panel for the selected container" width="100%">
 
 - CPU and memory bars that turn yellow and red as usage climbs.
 - Network RX/TX and disk read/write as **rates per second**; press `t` for cumulative totals.
@@ -109,7 +109,7 @@ troubleshooting are covered in [Running locally](docs/local-development.md).
 
 ### Logs from a whole project in one stream
 
-<img src="docs/images/logs.png" alt="Project log viewer following 18 containers, filtered with the regex (?i)error|warn and highlighting the matches" width="100%">
+<img src="docs/images/logs.svg" alt="Project log viewer following 18 containers, filtered with the regex (?i)error|warn and highlighting the matches" width="100%">
 
 - Follow one container, several (`dp logs a b c`), or a whole Compose project (`enter` on a project row).
 - Every container gets a stable color; stderr lines are marked with `┃`.
@@ -122,24 +122,24 @@ troubleshooting are covered in [Running locally](docs/local-development.md).
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/containers.png" alt="Containers tab with colored states, health and ports" width="100%"><br>
+      <img src="docs/images/containers.svg" alt="Containers tab with colored states, health and ports" width="100%"><br>
       <b>Containers</b><br>
       <sub>States, health and ports in color. Start, stop and restart with a confirmation; <code>e</code> opens a shell.</sub>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/projects.png" alt="Projects tab grouping containers by Compose project and service" width="100%"><br>
+      <img src="docs/images/projects.svg" alt="Projects tab grouping containers by Compose project and service" width="100%"><br>
       <b>Compose projects</b><br>
       <sub>Grouped by project and service, with running and unhealthy counts. <code>u</code> previews and runs <code>pull</code> + <code>up -d</code>.</sub>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/details.png" alt="Container details: state, configuration and health check results" width="100%"><br>
+      <img src="docs/images/details.svg" alt="Container details: state, configuration and health check results" width="100%"><br>
       <b>Details</b><br>
       <sub>State, exit code, OOM status, restart policy, health checks, ports, networks and mounts. Environment variables are left out.</sub>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/events.png" alt="Events tab showing kill, stop, start, pause and restart events" width="100%"><br>
+      <img src="docs/images/events.svg" alt="Events tab showing kill, stop, start, pause and restart events" width="100%"><br>
       <b>Events</b><br>
       <sub>A live timeline of lifecycle and health events, filterable by container, project, service or event type.</sub>
     </td>
@@ -152,7 +152,7 @@ Docker context for the current session.
 
 ### A better `docker` for everyday commands
 
-<img src="docs/images/cli.png" alt="dp ps -a sorted by status, and dp logs interleaving three containers with highlighted log levels" width="100%">
+<img src="docs/images/cli.svg" alt="dp ps -a sorted by status, and dp logs interleaving three containers with highlighted log levels" width="100%">
 
 The CLI commands keep Docker's flags and add sorting and color. Output stays plain
 when piped, when `NO_COLOR` is set, or with `--no-color`, so scripts keep working.

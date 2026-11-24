@@ -15,26 +15,28 @@ To write somewhere other than `docs/images`, run
 
 - Docker with the demo environment running (`make demo-up`)
 - Go, to build `dp`
-- Python 3 with [Pillow](https://pypi.org/project/pillow/)
-- Node.js and npm. The first run installs the pinned Playwright and xterm.js
-  versions into `node_modules` here. If Playwright has no browser yet, run
-  `npx --prefix scripts/screenshots playwright install chromium`.
-- ffmpeg
-- The [JetBrains Mono](https://www.jetbrains.com/lp/mono/) font. Without it
-  the images fall back to the default monospace font.
+- Python 3 with [fonttools](https://pypi.org/project/fonttools/):
+  `pip install 'fonttools[woff]'`
+- Node.js and npm. The first run installs the pinned headless xterm.js into
+  `node_modules` here.
+- The [JetBrains Mono](https://www.jetbrains.com/lp/mono/) Regular and Bold
+  TTF files. `font.py` looks in the usual font folders; set `DP_FONT_DIR` if
+  they are elsewhere.
 
 ## How it works
 
 1. `drive.py` runs `dp` in a pseudo-terminal at a fixed size, types the keys
    listed in a scenario (`tui.json`, `cli.json`) and saves everything `dp`
-   writes at each `snap` step and, while recording, eight times a second.
+   writes at each `snap` step and, while recording, ten times a second.
    The TUI scenario restarts, pauses and stops a few demo containers so the
    Events tab has something to show; they are running again afterwards.
-2. `render.js` replays each saved stream in [xterm.js](https://xtermjs.org/)
-   inside headless Chromium and screenshots it in a window frame. Stills are
-   rendered at 2x for sharp text; GIF frames at 1x.
-3. `optimize.py` reduces the stills to 256-color PNGs, and ffmpeg encodes the
-   recorded frames as `demo.gif`.
+2. `svg.js` replays each saved stream in a headless
+   [xterm.js](https://xtermjs.org/) terminal and writes the screen as SVG in
+   a window frame. Text stays text and bars are drawn as shapes, so the
+   images are sharp at any size or zoom. The recorded frames become
+   `demo.svg`, a looping CSS animation that draws each distinct row once.
+3. `font.py` embeds the JetBrains Mono glyphs each image uses, so the images
+   look the same in every browser without the font installed.
 
 The TUI scenario waits about a minute on the Stats tab first so the history
 sparklines have data. To change what is captured, edit the scenario files;
