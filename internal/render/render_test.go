@@ -232,3 +232,14 @@ func TestPreparedViewportStart(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestStatsSnapshotTablePlainDropsBars(t *testing.T) {
+	items := []docker.Stats{{Name: "web", CPUPercent: 42, MemUsage: 1 << 20, MemLimit: 4 << 20, MemPercent: 25, PIDs: 3}}
+	if got := ansi.Strip(StatsSnapshotTable(items, false).String()); !strings.Contains(got, "░") {
+		t.Fatalf("terminal output lost its bars:\n%s", got)
+	}
+	got := ansi.Strip(StatsSnapshotTable(items, true).String())
+	if strings.ContainsAny(got, "█░") {
+		t.Fatalf("plain output kept bars:\n%s", got)
+	}
+}
