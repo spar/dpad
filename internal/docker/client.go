@@ -145,7 +145,20 @@ func (c *Client) Close() error {
 
 // Containers lists containers; all includes stopped ones.
 func (c *Client) Containers(ctx context.Context, all bool) ([]container.Summary, error) {
-	res, err := c.api.ContainerList(ctx, client.ContainerListOptions{All: all})
+	return c.FilteredContainers(ctx, all, nil)
+}
+
+// FilteredContainers lists containers matching docker ps style filters,
+// e.g. {"status": {"exited"}, "label": {"env=prod"}}.
+func (c *Client) FilteredContainers(ctx context.Context, all bool, filters map[string][]string) ([]container.Summary, error) {
+	opts := client.ContainerListOptions{All: all}
+	if len(filters) > 0 {
+		opts.Filters = client.Filters{}
+		for term, values := range filters {
+			opts.Filters.Add(term, values...)
+		}
+	}
+	res, err := c.api.ContainerList(ctx, opts)
 	return res.Items, err
 }
 

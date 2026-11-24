@@ -214,7 +214,7 @@ while it sits open in a terminal tab.
 | Command | What it adds over docker |
 |---|---|
 | `dp` | Full-screen TUI: Containers, Images, Stats, Projects, Events, Volumes and Networks tabs, with filtering, details, logs, shells and confirmed actions |
-| `dp ps [-a] [--sort name\|created\|status] [-r]` | State colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
+| `dp ps [-a] [-f name=value...] [--sort name\|created\|status] [-r]` | State colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
 | `dp images [--sort size\|created\|name] [-r]` | Human sizes and a total-size footer; dangling images are dimmed |
 | `dp stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream] [--totals]` | Live sorting, CPU/memory bars, network/disk throughput; `t` toggles rates and totals |
 | `dp logs [-f] [-n N] [-t] [--since T] [--grep RE] TARGET...` | Accepts containers, Compose services and projects, and unique name prefixes. Interleaves containers with colored name prefixes, highlights log levels, marks stderr with `┃`, highlights `--grep` matches |
