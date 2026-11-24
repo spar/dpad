@@ -51,6 +51,9 @@ type dockerClient interface {
 	Logs(ctx context.Context, id string, opts docker.LogOptions, out chan<- docker.LogLine) error
 	WatchStats(ctx context.Context) (<-chan docker.StatsUpdate, error)
 	WatchEvents(ctx context.Context) <-chan docker.EventUpdate
+	PruneTargets(ctx context.Context, kind docker.PruneKind, all bool) ([]docker.PruneTarget, error)
+	PruneOne(ctx context.Context, kind docker.PruneKind, t docker.PruneTarget) error
+	PruneBuildCache(ctx context.Context) ([]string, uint64, error)
 }
 
 var _ dockerClient = (*docker.Client)(nil)
@@ -76,6 +79,8 @@ type tab interface {
 	Status() string
 	SortKey() sortx.Key
 	Help() [][2]string
+	// clickRow selects the row drawn on a line of the last View.
+	clickRow(line int) bool
 }
 
 // cursor tracks the selected row by key, so it survives re-sorting.

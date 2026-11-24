@@ -22,6 +22,8 @@ type pending struct {
 	run            func(context.Context, string) error
 	question       string
 	image          *docker.ImageRemoval
+	// start, when set, replaces run: it returns the command to perform.
+	start func() tea.Cmd
 }
 
 func (a *App) openSelectedImage() tea.Cmd {

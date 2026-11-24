@@ -31,7 +31,7 @@ echo "capture: recording CLI commands"
 python3 "$here/drive.py" "$work/raw" 160 39 "$here/cli.json" -- bash "$here/cli.sh" "$dp"
 
 echo "capture: rendering"
-for name in containers stats projects logs details events; do
+for name in containers stats projects logs details events prune; do
 	node "$here/svg.js" 150 30 dp "$out/$name.svg" "$work/raw/$name.bin"
 done
 node "$here/svg.js" 160 39 '~/app' "$out/cli.svg" "$work/raw/cli.bin"
