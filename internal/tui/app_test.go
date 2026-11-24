@@ -140,3 +140,27 @@ func TestAppStopAsksFirst(t *testing.T) {
 		t.Errorf("actions = %v, want %v", f.actions, want)
 	}
 }
+
+func TestAppPauseKillRemoveAskFirst(t *testing.T) {
+	f := &fakeClient{containers: []container.Summary{{ID: "id-web", Names: []string{"/web"}, State: "running"}}}
+	a := newTestApp()
+	a.ctx, a.client = context.Background(), f
+	a.Update(containersMsg{items: f.containers})
+	for _, k := range []string{"P", "K", "D"} {
+		a.Update(key(k))
+		if a.confirm == nil {
+			t.Fatalf("%s ran without asking", k)
+		}
+		_, cmd := a.Update(key("y"))
+		if msg, ok := cmd().(actionDoneMsg); !ok || msg.err != nil {
+			t.Fatalf("%s: y should run the action, got %#v", k, msg)
+		}
+	}
+	if want := []string{"pause id-web", "kill id-web", "remove id-web"}; !slices.Equal(f.actions, want) {
+		t.Errorf("actions = %v, want %v", f.actions, want)
+	}
+	a.Update(key("D"))
+	if f := ansi.Strip(a.footer()); !strings.Contains(f, "killed first if running") {
+		t.Errorf("remove prompt doesn't warn about running containers: %q", f)
+	}
+}

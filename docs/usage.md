@@ -42,6 +42,7 @@ overview, installation and screenshots, see the [README](../README.md).
 | `r` / `g` (Events) | reverse time order / return to newest and follow arrivals |
 | `x` (Images or image details) | confirm removal of the selected tag or image |
 | `S` / `x` / `R` | start (or unpause) / stop / restart (asks y/N) |
+| `P` / `K` / `D` | pause / kill (SIGKILL) / remove, killing a running container first (asks y/N) |
 | `u` / `U` (Projects) | preview image updates for the selected project / all discovered projects |
 | `ctrl+r` | refresh |
 | `c` (list tabs) | choose a Docker context for this session |

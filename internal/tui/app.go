@@ -323,7 +323,7 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 
 	if _, ok := a.tabs[a.active].(*EventsView); ok {
 		switch key {
-		case "e", "S", "x", "R":
+		case "e", "S", "x", "R", "P", "K", "D":
 			return nil
 		}
 	}
@@ -404,6 +404,15 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			return cmd
 		}
 		a.ask("restart", a.client.Restart)
+	case "P":
+		a.ask("pause", a.client.Pause)
+	case "K":
+		a.ask("kill", a.client.Kill)
+	case "D":
+		a.ask("remove", a.client.Remove)
+		if a.confirm != nil {
+			a.confirm.question = fmt.Sprintf("Remove container %s? It is killed first if running.", a.confirm.name)
+		}
 	default:
 		if len(key) == 1 && key[0] >= '1' && int(key[0]-'1') < len(a.tabs) {
 			return a.switchTab(int(key[0] - '1'))
@@ -556,7 +565,7 @@ func (a *App) footer() string {
 		keys = append(keys, "t", mode)
 	}
 	if _, _, ok := a.tabs[a.active].Selected(); ok {
-		keys = append(keys, "d", "details", "enter", "logs", "e", "shell", "S/x/R", "start/stop/restart")
+		keys = append(keys, "d", "details", "enter", "logs", "e", "shell", "S/x/R", "start/stop/restart", "P/K/D", "pause/kill/remove")
 	} else if stats, ok := a.tabs[a.active].(*StatsView); ok && stats.selectedStatsProject() != nil {
 		keys = append(keys, "space/enter", "expand/collapse")
 	} else if images, ok := a.tabs[a.active].(*ImagesView); ok {
@@ -587,7 +596,6 @@ func hints(pairs ...string) string {
 
 func (a *App) helpView() string {
 	global := [][2]string{
-		{"u / U (Projects)", "preview pull + up -d for selected/all Compose projects"},
 		{"c", "choose Docker context for this session (from a list tab)"},
 		{fmt.Sprintf("tab / shift+tab, 1-%d", len(a.tabs)), "switch tabs"},
 		{"↑↓ / j k, pgup/pgdn, g/G", "move selection"},
@@ -596,6 +604,7 @@ func (a *App) helpView() string {
 		{"d", "inspect selected container, image, volume, or network"},
 		{"e", "open a shell in the selected container (choose executable, enter to open)"},
 		{"S / x / R", "start (or unpause) / stop / restart selected container"},
+		{"P / K / D", "pause / kill / remove selected container (remove kills it first if running)"},
 		{"ctrl+r", "refresh now"},
 		{"q, ctrl+c", "quit"},
 	}
@@ -603,7 +612,7 @@ func (a *App) helpView() string {
 	_, volumesTab := a.tabs[a.active].(*VolumesView)
 	_, networksTab := a.tabs[a.active].(*NetworksView)
 	if eventsTab || volumesTab || networksTab {
-		global = slices.DeleteFunc(global, func(h [2]string) bool { return h[0] == "e" || h[0] == "S / x / R" })
+		global = slices.DeleteFunc(global, func(h [2]string) bool { return h[0] == "e" || h[0] == "S / x / R" || h[0] == "P / K / D" })
 	}
 	rows := [][]string{}
 	for _, h := range append(global, a.tabs[a.active].Help()...) {

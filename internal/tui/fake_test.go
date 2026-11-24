@@ -71,6 +71,9 @@ func (f *fakeClient) record(verb, id string) error {
 func (f *fakeClient) Start(_ context.Context, id string) error   { return f.record("start", id) }
 func (f *fakeClient) Stop(_ context.Context, id string) error    { return f.record("stop", id) }
 func (f *fakeClient) Restart(_ context.Context, id string) error { return f.record("restart", id) }
+func (f *fakeClient) Pause(_ context.Context, id string) error   { return f.record("pause", id) }
+func (f *fakeClient) Kill(_ context.Context, id string) error    { return f.record("kill", id) }
+func (f *fakeClient) Remove(_ context.Context, id string) error  { return f.record("remove", id) }
 
 func (f *fakeClient) Logs(context.Context, string, docker.LogOptions, chan<- docker.LogLine) error {
 	return nil

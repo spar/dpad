@@ -40,6 +40,9 @@ type engine interface {
 	ContainerStop(context.Context, string, client.ContainerStopOptions) (client.ContainerStopResult, error)
 	ContainerRestart(context.Context, string, client.ContainerRestartOptions) (client.ContainerRestartResult, error)
 	ContainerUnpause(context.Context, string, client.ContainerUnpauseOptions) (client.ContainerUnpauseResult, error)
+	ContainerPause(context.Context, string, client.ContainerPauseOptions) (client.ContainerPauseResult, error)
+	ContainerKill(context.Context, string, client.ContainerKillOptions) (client.ContainerKillResult, error)
+	ContainerRemove(context.Context, string, client.ContainerRemoveOptions) (client.ContainerRemoveResult, error)
 	ContainerLogs(context.Context, string, client.ContainerLogsOptions) (client.ContainerLogsResult, error)
 	ContainerStats(context.Context, string, client.ContainerStatsOptions) (client.ContainerStatsResult, error)
 	Events(context.Context, client.EventsListOptions) client.EventsResult
@@ -179,5 +182,23 @@ func (c *Client) Stop(ctx context.Context, id string) error {
 
 func (c *Client) Restart(ctx context.Context, id string) error {
 	_, err := c.api.ContainerRestart(ctx, id, client.ContainerRestartOptions{})
+	return err
+}
+
+func (c *Client) Pause(ctx context.Context, id string) error {
+	_, err := c.api.ContainerPause(ctx, id, client.ContainerPauseOptions{})
+	return err
+}
+
+// Kill sends SIGKILL, for containers that ignore the stop signal.
+func (c *Client) Kill(ctx context.Context, id string) error {
+	_, err := c.api.ContainerKill(ctx, id, client.ContainerKillOptions{})
+	return err
+}
+
+// Remove deletes a container, killing it first if it is running. Its
+// anonymous volumes are kept, as with docker rm.
+func (c *Client) Remove(ctx context.Context, id string) error {
+	_, err := c.api.ContainerRemove(ctx, id, client.ContainerRemoveOptions{Force: true})
 	return err
 }

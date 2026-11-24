@@ -125,7 +125,7 @@ troubleshooting are covered in [Running locally](docs/local-development.md).
     <td width="50%" valign="top">
       <img src="docs/images/containers.svg" alt="Containers tab with colored states, health and ports" width="100%"><br>
       <b>Containers</b><br>
-      <sub>States, health and ports in color. Start, stop and restart with a confirmation; <code>e</code> opens a shell.</sub>
+      <sub>States, health and ports in color. Start, stop, restart, pause, kill and remove with a confirmation; <code>e</code> opens a shell.</sub>
     </td>
     <td width="50%" valign="top">
       <img src="docs/images/projects.svg" alt="Projects tab grouping containers by Compose project and service" width="100%"><br>
@@ -242,6 +242,7 @@ would type `docker`:
 | `d` | details |
 | `e` | open a shell in the container |
 | `S` / `x` / `R` | start / stop / restart, after a `y/N` confirmation |
+| `P` / `K` / `D` | pause / kill / remove (`S` resumes a paused container) |
 | `u` / `U` | update the selected / all Compose projects (Projects tab) |
 | `c` | choose a Docker context |
 | `?` | help for the current view |
