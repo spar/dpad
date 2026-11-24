@@ -193,8 +193,16 @@ func TestDiscoverAndPrepareUseOriginalSourcesAndActiveServices(t *testing.T) {
 	if !slices.Equal(stopped[0].Services, []string{"web"}) {
 		t.Fatal("inactive profile service would be started unexpectedly")
 	}
+	expectedDir, err := os.Stat(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, c := range calls(t, log) {
-		if c.Host != "tcp://bound-daemon:2375" || c.Context != "" || c.Directory != dir {
+		actualDir, err := os.Stat(c.Directory)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if c.Host != "tcp://bound-daemon:2375" || c.Context != "" || !os.SameFile(actualDir, expectedDir) {
 			t.Fatal("command escaped the bound daemon or directory", c)
 		}
 	}
