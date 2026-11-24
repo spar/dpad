@@ -42,6 +42,7 @@ overview, installation and screenshots, see the [README](../README.md).
 | `r` / `g` (Events) | reverse time order / return to newest and follow arrivals |
 | `x` (Images or image details) | confirm removal of the selected tag or image |
 | `S` / `x` / `R` | start (or unpause) / stop / restart (asks y/N) |
+| `P` / `K` / `D` | pause / kill (SIGKILL) / remove, killing a running container first (asks y/N) |
 | `u` / `U` (Projects) | preview image updates for the selected project / all discovered projects |
 | `ctrl+r` | refresh |
 | `c` (list tabs) | choose a Docker context for this session |
@@ -86,6 +87,10 @@ cancel changes, or `ctrl+l` outside the prompt to clear it. Invalid expressions
 show an error and keep the last valid results. Filtering searches the current
 buffer (up to 5,000 lines); it does not fetch older logs. `esc` or `q` outside
 the prompt returns to the previous view.
+
+Long lines are cut at the edge and `←→` pans across them; press `w` to wrap them
+instead. `t` shows each line's timestamp in local time, and `?` lists the log
+viewer's keys.
 
 ## Projects
 

@@ -72,6 +72,7 @@ type LogsView struct {
 	project       *projectLogSession
 	projectState  projectLogStatus
 	remote        bool
+	timestamps    bool
 
 	// Paging glides to target over a few frames; gen invalidates stale frames.
 	target    int
@@ -228,7 +229,7 @@ func (v *LogsView) renderLine(line docker.LogLine) bufferedLog {
 				style = v.colors.Style(line.Container)
 			}
 		}
-		entry.text = render.LogLine(line, style, v.prefixWidth, false, v.pattern)
+		entry.text = render.LogLine(line, style, v.prefixWidth, v.timestamps, v.pattern)
 	}
 	return entry
 }
@@ -348,6 +349,19 @@ func (v *LogsView) Update(msg tea.Msg) tea.Cmd {
 		case "ctrl+l":
 			v.search.SetValue("")
 			v.setQuery("")
+			return nil
+		case "w":
+			following := v.vp.AtBottom() && !v.animating
+			v.animating = false
+			v.vp.SetXOffset(0)
+			v.vp.SoftWrap = !v.vp.SoftWrap
+			if following {
+				v.vp.GotoBottom()
+			}
+			return nil
+		case "t":
+			v.timestamps = !v.timestamps
+			v.setQuery(v.query)
 			return nil
 		case "G", "end":
 			v.animating = false

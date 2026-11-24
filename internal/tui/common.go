@@ -45,6 +45,9 @@ type dockerClient interface {
 	Start(ctx context.Context, id string) error
 	Stop(ctx context.Context, id string) error
 	Restart(ctx context.Context, id string) error
+	Pause(ctx context.Context, id string) error
+	Kill(ctx context.Context, id string) error
+	Remove(ctx context.Context, id string) error
 	Logs(ctx context.Context, id string, opts docker.LogOptions, out chan<- docker.LogLine) error
 	WatchStats(ctx context.Context) (<-chan docker.StatsUpdate, error)
 	WatchEvents(ctx context.Context) <-chan docker.EventUpdate

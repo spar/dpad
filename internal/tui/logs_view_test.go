@@ -294,3 +294,38 @@ func TestLogsPageDownGlidesToTarget(t *testing.T) {
 		t.Errorf("settled in %d frames, want a visible glide", frames)
 	}
 }
+
+func TestLogsWrapAndTimestampToggles(t *testing.T) {
+	v := newTestLogsView(10)
+	long := "INFO " + strings.Repeat("x", 150) + " END"
+	v.Update(logBatchMsg{ch: v.ch, lines: []docker.LogLine{{Text: long, Time: time.Date(2026, 1, 2, 3, 4, 5, 0, time.Local)}}})
+	if strings.Contains(ansi.Strip(v.View()), "END") {
+		t.Fatal("long line wrapped before w was pressed")
+	}
+	v.Update(tea.KeyPressMsg{Code: 'w', Text: "w"})
+	if !strings.Contains(ansi.Strip(v.View()), "END") {
+		t.Fatalf("w did not wrap the long line:\n%s", ansi.Strip(v.View()))
+	}
+	v.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
+	if !strings.Contains(ansi.Strip(v.View()), "2026-01-02T03:04:05.000") {
+		t.Fatalf("t did not show timestamps:\n%s", ansi.Strip(v.View()))
+	}
+	v.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
+	if strings.Contains(ansi.Strip(v.View()), "2026-01-02") {
+		t.Fatal("second t did not hide timestamps")
+	}
+}
+
+func TestAppLogsHelp(t *testing.T) {
+	a := newTestApp()
+	a.logs = newTestLogsView(10)
+	a.logs.cancel = func() {}
+	press(a, "?")
+	if !a.help || !strings.Contains(ansi.Strip(a.render()), "wrap long lines") {
+		t.Fatalf("? in logs did not show the logs help:\n%s", ansi.Strip(a.render()))
+	}
+	press(a, "x")
+	if a.help || a.logs == nil {
+		t.Fatal("closing help left the log viewer")
+	}
+}

@@ -116,6 +116,7 @@ troubleshooting are covered in [Running locally](docs/local-development.md).
 - Every container gets a stable color; stderr lines are marked with `┃`.
 - Log levels are highlighted in plain text, JSON, logfmt and nginx formats.
 - Press `/` to filter by regular expression. Matches are highlighted and new lines are filtered as they arrive.
+- `w` wraps long lines and `t` shows timestamps.
 - Project logs follow containers as they are scaled, recreated or restarted, and resume from the last timestamp after a reconnect.
 
 ### Everything else in one place
@@ -125,7 +126,7 @@ troubleshooting are covered in [Running locally](docs/local-development.md).
     <td width="50%" valign="top">
       <img src="docs/images/containers.svg" alt="Containers tab with colored states, health and ports" width="100%"><br>
       <b>Containers</b><br>
-      <sub>States, health and ports in color. Start, stop and restart with a confirmation; <code>e</code> opens a shell.</sub>
+      <sub>States, health and ports in color. Start, stop, restart, pause, kill and remove with a confirmation; <code>e</code> opens a shell.</sub>
     </td>
     <td width="50%" valign="top">
       <img src="docs/images/projects.svg" alt="Projects tab grouping containers by Compose project and service" width="100%"><br>
@@ -214,7 +215,7 @@ while it sits open in a terminal tab.
 | Command | What it adds over docker |
 |---|---|
 | `dp` | Full-screen TUI: Containers, Images, Stats, Projects, Events, Volumes and Networks tabs, with filtering, details, logs, shells and confirmed actions |
-| `dp ps [-a] [--sort name\|created\|status] [-r]` | State colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
+| `dp ps [-a] [-f name=value...] [--sort name\|created\|status] [-r]` | State colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
 | `dp images [--sort size\|created\|name] [-r]` | Human sizes and a total-size footer; dangling images are dimmed |
 | `dp stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream] [--totals]` | Live sorting, CPU/memory bars, network/disk throughput; `t` toggles rates and totals |
 | `dp logs [-f] [-n N] [-t] [--since T] [--grep RE] TARGET...` | Accepts containers, Compose services and projects, and unique name prefixes. Interleaves containers with colored name prefixes, highlights log levels, marks stderr with `┃`, highlights `--grep` matches |
@@ -242,6 +243,7 @@ would type `docker`:
 | `d` | details |
 | `e` | open a shell in the container |
 | `S` / `x` / `R` | start / stop / restart, after a `y/N` confirmation |
+| `P` / `K` / `D` | pause / kill / remove (`S` resumes a paused container) |
 | `u` / `U` | update the selected / all Compose projects (Projects tab) |
 | `c` | choose a Docker context |
 | `?` | help for the current view |
