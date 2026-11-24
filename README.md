@@ -7,7 +7,7 @@
 `dp` adds live stats with sparklines, multi-container logs, Compose project controls<br>
 and a full-screen terminal UI. Anything it doesn't enhance goes straight to `docker`.
 
-[![CI](https://github.com/spar/dockernext/actions/workflows/ci.yml/badge.svg)](https://github.com/spar/dockernext/actions/workflows/ci.yml)
+[![CI](https://github.com/spar/dpad/actions/workflows/ci.yml/badge.svg)](https://github.com/spar/dpad/actions/workflows/ci.yml)
 ![Go 1.26.7+](https://img.shields.io/badge/go-1.26.7%2B-00ADD8?logo=go&logoColor=white)
 ![macOS and Linux](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-informational)
 [![MIT license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -50,7 +50,7 @@ You need **Go 1.26.7+** and a running Docker engine (Docker Desktop, colima,
 OrbStack, or Docker on Linux). The `docker` CLI is used for passthrough commands.
 
 ```bash
-git clone https://github.com/spar/dockernext.git dpad
+git clone https://github.com/spar/dpad.git
 cd dpad
 make install
 ```
