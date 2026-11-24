@@ -19,6 +19,7 @@ Setup instructions for macOS, Linux and Windows are in
 |---|---|
 | `main.go` | entry point |
 | `cmd/` | cobra commands and the routing that sends unknown commands to `docker` |
+| `internal/config/` | the optional `config.yaml`: mouse setting and custom commands |
 | `internal/docker/` | Engine API client, docker-context resolution, stats math, events, log streaming |
 | `internal/passthrough/` | executes the real `docker` binary |
 | `internal/render/` | theme, ANSI-aware table, formatters, log-level highlighting |

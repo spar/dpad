@@ -4,6 +4,7 @@ The full reference for the `dp` terminal UI and its connection handling. For an
 overview, installation and screenshots, see the [README](../README.md).
 
 - [Keys](#keys)
+- [Mouse](#mouse)
 - [Containers](#containers): details, shells
 - [Logs](#logs)
 - [Projects](#projects): grouped view, project logs, start/stop/restart, [image updates](#update-compose-projects)
@@ -11,7 +12,9 @@ overview, installation and screenshots, see the [README](../README.md).
 - [Events](#events)
 - [Volumes](#volumes)
 - [Networks](#networks)
+- [Prune](#prune): stopped containers, unused images, volumes, networks and build cache
 - [Stats](#stats): Compose grouping, history sparklines, I/O rates, stream recovery
+- [Custom commands](#custom-commands): the config file, key bindings, templates
 - [Narrow terminals](#narrow-terminals)
 - [Responsiveness](#responsiveness)
 - [Colors](#colors)
@@ -44,10 +47,27 @@ overview, installation and screenshots, see the [README](../README.md).
 | `S` / `x` / `R` | start (or unpause) / stop / restart (asks y/N) |
 | `P` / `K` / `D` | pause / kill (SIGKILL) / remove, killing a running container first (asks y/N) |
 | `u` / `U` (Projects) | preview image updates for the selected project / all discovered projects |
+| `X` | preview a prune of stopped containers or unused images, volumes, networks or build cache (asks y) |
 | `ctrl+r` | refresh |
 | `c` (list tabs) | choose a Docker context for this session |
 | `?` | help |
 | `q` | quit |
+
+Keys you bind in the [config file](#custom-commands) appear in `?` help for the
+tabs they apply to.
+
+## Mouse
+
+Click a tab to switch to it, or a row to select it. Double-click a row to do
+what `enter` does there: follow logs, open details, or expand a Stats project.
+The wheel moves the selection in lists and scrolls logs, details and previews.
+Clicking anywhere closes help.
+
+While `dp` has the mouse, selecting text with the terminal usually needs a
+modifier key, such as `shift` in most Linux and Windows terminals or `option` in
+iTerm2; Terminal.app can switch mouse reporting off from its View menu. To leave
+the mouse to the terminal entirely, set `mouse: false` in the
+[config file](#custom-commands).
 
 ## Containers
 
@@ -308,6 +328,43 @@ details panes. No per-network container scans or extra event subscriptions are
 added. Creating/removing networks and connecting/disconnecting containers are not
 offered in the TUI.
 
+## Prune
+
+Press `X` to preview a prune. It opens on the kind that matches the tab
+(Images, Volumes or Networks) and on stopped containers elsewhere; `tab` and
+`shift+tab` move between kinds. Nothing is removed until you press `y`.
+
+| Kind | Preview lists | `a` adds |
+|---|---|---|
+| containers | exited, created and dead containers | |
+| images | untagged images no container uses | tagged images no container uses |
+| volumes | anonymous volumes no container mounts | named volumes no container mounts |
+| networks | user-defined networks no container uses | |
+| build cache | build cache records not in use | |
+
+"No container" includes stopped containers, so an image or volume that a
+stopped container still references stays. The defaults match `docker container
+prune`, `docker image prune`, `docker volume prune`, `docker network prune` and
+`docker builder prune --all`; `a` matches `docker image prune --all` and
+`docker volume prune --all`. Sizes are shown for images (including shared layers)
+and build cache.
+
+After `y`, the list is read again. If it changed, the new preview is shown and
+needs another `y`. Otherwise `dp` removes exactly the previewed resources, one
+request each and without forcing, so anything that became used in the meantime
+fails with Docker's error instead of being removed. Containers, volumes and
+networks are removed four at a time. Images go one at a time, newest first, and
+each tag is removed in turn; untagged parent images go with them, as with
+`docker image prune`. Container removal keeps anonymous volumes. Each row shows
+`removed`, `failed` or `unknown` (the request was interrupted and may have
+applied); select a failed row to read the error. `esc` during removal cancels the
+rest.
+
+Build cache is pruned in one request, because Docker has no call to remove a
+single record. Rows the daemon kept are marked `kept`, and records created after
+the preview that were also removed are counted in the summary along with the
+space reclaimed.
+
 ## Stats
 
 ### Compose projects
@@ -385,6 +442,56 @@ and excludes unavailable values. One shared watchdog restarts streams with no
 progress for ten seconds. Recovered streams establish fresh rate/history
 baselines. This applies to both the Stats tab and standalone `dp stats`, where
 `ctrl+r` retries a failed watcher immediately. Quitting cancels background work.
+
+## Custom commands
+
+Bind your own commands to keys in `~/.config/dpad/config.yaml`
+(`$XDG_CONFIG_HOME/dpad/config.yaml` if set, `%AppData%\dpad\config.yaml` on
+Windows, or any path in `DPAD_CONFIG`). The file is read when `dp` starts.
+
+```yaml
+customCommands:
+  - name: top
+    key: T
+    command: docker top {{.ID}}
+  - name: bash
+    key: b
+    attach: true
+    command: docker exec -it {{.ID}} bash
+  - name: compose down
+    key: o
+    scope: project
+    confirm: true
+    command: docker compose -p {{.Project}} down
+
+# mouse: false   # leave the mouse to the terminal
+```
+
+| Field | Meaning |
+|---|---|
+| `name` | shown in help, confirmations and the status line |
+| `key` | a key `dp` doesn't already use, such as `b`, `o`, `T` or `ctrl+o` |
+| `scope` | `container` (default): a container row in Containers, Stats, Projects or Events. `project`: a project row in Projects |
+| `command` | run by `/bin/sh -c` (PowerShell on Windows) |
+| `attach` | `true` hands the terminal to the command, for interactive commands; `dp` comes back when it exits |
+| `confirm` | `true` asks `y/N` first |
+
+The command is a Go template. Container commands can use `{{.ID}}`,
+`{{.Name}}`, `{{.Image}}`, `{{.Project}}`, `{{.Service}}` and `{{.WorkingDir}}`
+(the Compose project directory); project commands can use `{{.Project}}` and
+`{{.WorkingDir}}`. Values are inserted already quoted as single words, so don't
+add quotes around them. A value `dp` doesn't know, such as the project of a
+container outside Compose, is an empty word.
+
+Commands run with the same daemon as the dashboard: `DOCKER_HOST` is set to its
+endpoint, as for shells. Without `attach`, a command runs in the background and
+its last line of output, or its error, appears in the status line; use `attach`
+when you want to read all of it, for example `docker logs {{.ID}} | less`.
+Context switching waits for background commands to finish.
+
+Problems in the file, such as a key `dp` already uses, a duplicate key or a
+template error, are shown in the status line at startup; the other commands
+still load.
 
 ## Narrow terminals
 
