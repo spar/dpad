@@ -9,10 +9,10 @@ here="$(cd "$(dirname "$0")" && pwd)"
 root="$(cd "$here/../.." && pwd)"
 out="${1:-$root/docs/images}"
 
-for tool in python3 node npm ffmpeg docker; do
+for tool in python3 node npm docker; do
 	command -v "$tool" >/dev/null || { echo "capture: $tool is required" >&2; exit 1; }
 done
-python3 -c 'import PIL' 2>/dev/null || { echo "capture: Pillow is required (pip install pillow)" >&2; exit 1; }
+python3 -c 'import fontTools, brotli' 2>/dev/null || { echo "capture: fonttools is required (pip install 'fonttools[woff]')" >&2; exit 1; }
 if [ -z "$(docker ps -q --filter label=dp-demo=true)" ]; then
 	echo "capture: the demo environment isn't running; start it with make demo-up" >&2
 	exit 1
@@ -24,7 +24,6 @@ dp="$root/bin/dpad"
 mkdir -p "$out"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-mkdir -p "$work/png" "$work/frames"
 
 echo "capture: recording the TUI (about 100 seconds; restarts, pauses and stops a few demo containers)"
 python3 "$here/drive.py" "$work/raw" 150 30 "$here/tui.json" -- "$dp"
@@ -32,21 +31,10 @@ echo "capture: recording CLI commands"
 python3 "$here/drive.py" "$work/raw" 160 39 "$here/cli.json" -- bash "$here/cli.sh" "$dp"
 
 echo "capture: rendering"
-stills=()
 for name in containers stats projects logs details events; do
-	stills+=("$work/raw/$name.bin:$work/png/$name.png")
+	node "$here/svg.js" 150 30 dp "$out/$name.svg" "$work/raw/$name.bin"
 done
-node "$here/render.js" 150 30 2 dp "${stills[@]}"
-node "$here/render.js" 160 39 2 '~/app' "$work/raw/cli.bin:$work/png/cli.png"
-frames=()
-for f in "$work"/raw/tour-*.bin; do
-	frames+=("$f:$work/frames/$(basename "$f" .bin).png")
-done
-node "$here/render.js" --seq --flat 150 30 1 dp "${frames[@]}"
-
-python3 "$here/optimize.py" "$out" "$work"/png/*.png
-ffmpeg -loglevel error -y -framerate 8 -i "$work/frames/tour-%04d.png" \
-	-vf "split[a][b];[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=none:diff_mode=rectangle" \
-	-loop 0 "$out/demo.gif"
+node "$here/svg.js" 160 39 '~/app' "$out/cli.svg" "$work/raw/cli.bin"
+node "$here/svg.js" --anim 10 150 30 dp "$out/demo.svg" "$work"/raw/tour-*.bin
+python3 "$here/font.py" "$out"/*.svg
 echo "capture: wrote $out"
-ls -l "$out"

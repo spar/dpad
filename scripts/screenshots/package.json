@@ -3,7 +3,6 @@
   "private": true,
   "description": "Renders the README screenshots; see README.md",
   "dependencies": {
-    "@xterm/xterm": "5.5.0",
-    "playwright": "1.63.0"
+    "@xterm/headless": "5.5.0"
   }
 }
