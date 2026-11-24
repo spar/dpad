@@ -4,15 +4,25 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"regexp"
+	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 
+	"github.com/moby/moby/api/types/container"
 	"github.com/spf13/cobra"
 
 	"dpad/internal/docker"
 	"dpad/internal/render"
+)
+
+const (
+	composeProjectLabel = "com.docker.compose.project"
+	composeServiceLabel = "com.docker.compose.service"
+	composeOneoffLabel  = "com.docker.compose.oneoff"
 )
 
 func newLogsCmd() *cobra.Command {
@@ -22,9 +32,13 @@ func newLogsCmd() *cobra.Command {
 		grep       string
 	)
 	cmd := &cobra.Command{
-		Use:   "logs CONTAINER [CONTAINER...]",
+		Use:   "logs CONTAINER|SERVICE|PROJECT [...]",
 		Short: "Colored logs from one or more containers",
 		Long: `Colored logs from one or more containers.
+
+Each argument is a container name or ID, a Compose service name (all of its
+containers), a Compose project name (every container in it), or a unique
+prefix of a container name.
 
 Log levels (ERROR, WARN, INFO, DEBUG, JSON "level" fields, logfmt level=) are
 highlighted. With several containers, each line is prefixed with the
@@ -39,7 +53,15 @@ container name in a stable color; stderr lines use a red separator.`,
 				}
 			}
 			return withClient(cmd.Context(), func(ctx context.Context, c *docker.Client) error {
-				return streamLogs(ctx, c, args, opts, timestamps, re)
+				list, err := c.Containers(ctx, true)
+				if err != nil {
+					return err
+				}
+				names, err := resolveLogTargets(args, list)
+				if err != nil {
+					return err
+				}
+				return streamLogs(ctx, c, names, opts, timestamps, re)
 			})
 		},
 	}
@@ -50,6 +72,85 @@ container name in a stable color; stderr lines use a red separator.`,
 	f.BoolVarP(&timestamps, "timestamps", "t", false, "show timestamps")
 	f.StringVar(&grep, "grep", "", "only show lines matching this regexp, highlighting matches")
 	return cmd
+}
+
+// resolveLogTargets expands each argument to container names. An exact
+// container name or ID wins, then a Compose service, then a Compose project,
+// then a unique name prefix. Anything else is left for docker to report.
+func resolveLogTargets(args []string, list []container.Summary) ([]string, error) {
+	var out []string
+	seen := map[string]bool{}
+	add := func(names ...string) {
+		for _, n := range names {
+			if !seen[n] {
+				seen[n] = true
+				out = append(out, n)
+			}
+		}
+	}
+	for _, arg := range args {
+		names, err := resolveLogTarget(arg, list)
+		if err != nil {
+			return nil, err
+		}
+		add(names...)
+	}
+	return out, nil
+}
+
+func resolveLogTarget(arg string, list []container.Summary) ([]string, error) {
+	var services, projects, prefixed []container.Summary
+	for _, c := range list {
+		name := docker.ContainerName(c.Names)
+		if name == arg || strings.HasPrefix(c.ID, arg) && len(arg) >= 3 {
+			return []string{arg}, nil
+		}
+		// `compose run` containers aren't part of the service's normal output.
+		if !strings.EqualFold(c.Labels[composeOneoffLabel], "true") {
+			if c.Labels[composeServiceLabel] == arg {
+				services = append(services, c)
+			}
+			if c.Labels[composeProjectLabel] == arg {
+				projects = append(projects, c)
+			}
+		}
+		if strings.HasPrefix(name, arg) {
+			prefixed = append(prefixed, c)
+		}
+	}
+	if len(services) > 0 {
+		inProjects := map[string]bool{}
+		for _, c := range services {
+			inProjects[c.Labels[composeProjectLabel]] = true
+		}
+		if len(inProjects) > 1 {
+			return nil, fmt.Errorf("%s: service is in several Compose projects (%s); use a container name", arg, strings.Join(slices.Sorted(maps.Keys(inProjects)), ", "))
+		}
+		return containerNames(services), nil
+	}
+	if len(projects) > 0 {
+		return containerNames(projects), nil
+	}
+	switch len(prefixed) {
+	case 0:
+		return []string{arg}, nil
+	case 1:
+		return containerNames(prefixed), nil
+	}
+	names := containerNames(prefixed)
+	if len(names) > 5 {
+		names = append(names[:5], "…")
+	}
+	return nil, fmt.Errorf("%s: matches several containers (%s)", arg, strings.Join(names, ", "))
+}
+
+func containerNames(list []container.Summary) []string {
+	names := make([]string, len(list))
+	for i, c := range list {
+		names[i] = docker.ContainerName(c.Names)
+	}
+	slices.Sort(names)
+	return names
 }
 
 func streamLogs(ctx context.Context, c *docker.Client, names []string, opts docker.LogOptions, timestamps bool, grep *regexp.Regexp) error {
