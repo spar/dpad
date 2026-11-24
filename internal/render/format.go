@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"net"
 	"regexp"
 	"sort"
 	"strconv"
@@ -42,7 +43,8 @@ func ExitCode(status string) int {
 }
 
 // Ports compacts port mappings to "8080→80/tcp", dropping the duplicate
-// entries docker reports for IPv4 and IPv6 bindings.
+// entries docker reports for IPv4 and IPv6 bindings. A binding to a specific
+// address keeps it ("127.0.0.1:8080→80/tcp"), since that limits who can connect.
 func Ports(ports []container.PortSummary) string {
 	sorted := append([]container.PortSummary(nil), ports...)
 	sort.SliceStable(sorted, func(i, j int) bool {
@@ -56,7 +58,11 @@ func Ports(ports []container.PortSummary) string {
 	for _, p := range sorted {
 		s := fmt.Sprintf("%d/%s", p.PrivatePort, p.Type)
 		if p.PublicPort != 0 {
-			s = fmt.Sprintf("%d→%s", p.PublicPort, s)
+			host := strconv.Itoa(int(p.PublicPort))
+			if p.IP.IsValid() && !p.IP.IsUnspecified() {
+				host = net.JoinHostPort(p.IP.String(), host)
+			}
+			s = host + "→" + s
 		}
 		if !seen[s] {
 			seen[s] = true

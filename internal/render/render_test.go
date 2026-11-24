@@ -20,8 +20,10 @@ func TestPorts(t *testing.T) {
 		{IP: netip.MustParseAddr("::"), PrivatePort: 80, PublicPort: 8080, Type: "tcp"},
 		{PrivatePort: 443, Type: "tcp"},
 		{PrivatePort: 53, PublicPort: 5353, Type: "udp"},
+		{IP: netip.MustParseAddr("127.0.0.1"), PrivatePort: 5432, PublicPort: 5432, Type: "tcp"},
+		{IP: netip.MustParseAddr("::1"), PrivatePort: 6379, PublicPort: 6379, Type: "tcp"},
 	}
-	if got, want := Ports(ports), "5353→53/udp, 8080→80/tcp, 443/tcp"; got != want {
+	if got, want := Ports(ports), "5353→53/udp, 8080→80/tcp, 443/tcp, 127.0.0.1:5432→5432/tcp, [::1]:6379→6379/tcp"; got != want {
 		t.Errorf("Ports = %q, want %q", got, want)
 	}
 }
@@ -228,5 +230,27 @@ func TestPreparedViewportStart(t *testing.T) {
 	}
 	if got := ansi.Strip(tbl.WindowFrom(-1, 3, 99)); got != "NAME" {
 		t.Fatal(got)
+	}
+}
+
+func TestStatsSnapshotTablePlainDropsBars(t *testing.T) {
+	items := []docker.Stats{{Name: "web", CPUPercent: 42, MemUsage: 1 << 20, MemLimit: 4 << 20, MemPercent: 25, PIDs: 3}}
+	if got := ansi.Strip(StatsSnapshotTable(items, false).String()); !strings.Contains(got, "░") {
+		t.Fatalf("terminal output lost its bars:\n%s", got)
+	}
+	got := ansi.Strip(StatsSnapshotTable(items, true).String())
+	if strings.ContainsAny(got, "█░") {
+		t.Fatalf("plain output kept bars:\n%s", got)
+	}
+}
+
+func TestSelectedRowKeepsBarColors(t *testing.T) {
+	bar := Bar(90, 10)
+	out := Table{Columns: []Column{{Header: "NAME"}, {}, {Header: "PIDS"}}, Rows: [][]string{{"web", bar, "3"}}}.Window(0, 5)
+	if !strings.Contains(out, "\x1b[27m"+bar+"\x1b[7m") {
+		t.Fatalf("selected bar was reversed: %q", out)
+	}
+	if got, want := ansi.Strip(out), "NAME                PIDS\nweb    "+ansi.Strip(bar)+"   3"; got != want {
+		t.Fatalf("selected row text = %q, want %q", got, want)
 	}
 }

@@ -133,16 +133,29 @@ func (t *PreparedTable) lines(selected, start, end int) []string {
 		}
 		// Inner ANSI resets would break the highlight, so render plain text.
 		plain := make([]string, n)
+		bars := map[string]string{}
 		for i, c := range t.cells[r] {
 			plain[i] = ansi.Strip(c)
+			if isBar(plain[i]) {
+				bars[plain[i]] = c
+			}
 		}
 		l := line(plain, t.cellWidths[r])
 		if t.Width > 0 {
 			l += strings.Repeat(" ", max(0, t.Width-width(l)))
 		}
-		out = append(out, Selected.Render(l))
+		l = Selected.Render(l)
+		// Reversed, a bar's filled blocks read as empty, so bars keep their colors.
+		for bar, styled := range bars {
+			l = strings.ReplaceAll(l, bar, "\x1b[27m"+styled+"\x1b[7m")
+		}
+		out = append(out, l)
 	}
 	return out
+}
+
+func isBar(s string) bool {
+	return s != "" && strings.Trim(s, "█░") == ""
 }
 
 func truncate(s string, limit int) string {

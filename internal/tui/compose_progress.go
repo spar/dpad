@@ -46,6 +46,10 @@ func (p *composeProgress) apply(output string, final bool) {
 		}
 		resource, ok := parseComposeResource(line)
 		if !ok {
+			// Compose prints a failed pull once per service that uses the image.
+			if len(p.messages) > 0 && p.messages[len(p.messages)-1] == line {
+				continue
+			}
 			if len(p.messages) == 8 {
 				p.messages = p.messages[1:]
 			}
@@ -96,7 +100,7 @@ func parseComposeResource(line string) (composeResource, bool) {
 		"Pulling fs layer", "Verifying Checksum", "Download complete", "Already exists", "Pull complete",
 		"Downloading", "Extracting", "Pulling", "Pulled", "Creating", "Created", "Recreate", "Recreated",
 		"Starting", "Started", "Running", "Restarting", "Restarted", "Stopping", "Stopped", "Removing", "Removed",
-		"Waiting", "Healthy", "Exited", "Error", "Failed", "Warning", "Skipped",
+		"Waiting", "Healthy", "Exited", "Error", "Failed", "Warning", "Skipped", "Interrupted",
 	} {
 		if text == status || strings.HasPrefix(text, status+" ") {
 			r.status, r.detail = status, strings.TrimSpace(strings.TrimPrefix(text, status))
@@ -123,6 +127,8 @@ func (r composeResource) done() bool {
 }
 
 func (p *composeProgress) render(width int, state string) string {
+	// Compose stops reporting resources when it aborts, so their last state is stale.
+	aborted := state == "failed" || state == "cancelled" || state == "unknown"
 	var lines []string
 	for _, group := range []struct {
 		kinds []string
@@ -147,7 +153,7 @@ func (p *composeProgress) render(width int, state string) string {
 		}
 		lines = append(lines, render.Bold.Render(group.title))
 		for _, kind := range group.kinds {
-			complete, active, failed, warnings, nameWidth := 0, 0, 0, 0, 0
+			complete, active, failed, warnings, interrupted, nameWidth := 0, 0, 0, 0, 0, 0
 			for _, r := range rows {
 				if r.kind != kind {
 					continue
@@ -159,19 +165,21 @@ func (p *composeProgress) render(width int, state string) string {
 					failed++
 				case r.status == "Warning":
 					warnings++
+				case aborted:
+					interrupted++
 				default:
 					active++
 				}
 				nameWidth = max(nameWidth, ansi.StringWidth(r.name))
 			}
-			if complete+active+failed+warnings == 0 {
+			if complete+active+failed+warnings+interrupted == 0 {
 				continue
 			}
 			summary := []string{kind + "s"}
 			for _, count := range []struct {
 				n     int
 				label string
-			}{{complete, "complete"}, {active, "in progress"}, {failed, "failed"}, {warnings, "warning"}} {
+			}{{complete, "complete"}, {active, "in progress"}, {failed, "failed"}, {warnings, "warning"}, {interrupted, "interrupted"}} {
 				if count.n > 0 {
 					summary = append(summary, fmt.Sprintf("%d %s", count.n, count.label))
 				}
@@ -192,13 +200,16 @@ func (p *composeProgress) render(width int, state string) string {
 				if r.status == "Warning" {
 					icon, style = "!", render.Warn
 				}
-				name := r.name
-				if r.kind == "Layer" {
-					name = render.Dim.Render(name)
-				}
 				status := r.status
 				if r.detail != "" {
 					status += " " + r.detail
+				}
+				if aborted && icon == "…" {
+					icon, style, status = "–", render.Dim, "Interrupted"
+				}
+				name := r.name
+				if r.kind == "Layer" {
+					name = render.Dim.Render(name)
 				}
 				padding := strings.Repeat(" ", max(nameWidth-ansi.StringWidth(r.name), 0))
 				lines = append(lines, "    "+style.Render(icon)+" "+name+padding+"  "+style.Render(status))

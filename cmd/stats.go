@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/charmbracelet/colorprofile"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
@@ -48,11 +49,7 @@ Snapshots and piped output always show totals because rates need two samples.`,
 					return err
 				}
 				sortx.Stats(items, key, reverse)
-				rows := make([][]string, len(items))
-				for i, s := range items {
-					rows[i] = render.StatsRow(s)
-				}
-				fmt.Fprintln(render.Out, render.Table{Columns: render.StatsColumns, Rows: rows})
+				fmt.Fprintln(render.Out, render.StatsSnapshotTable(items, render.Out.Profile == colorprofile.NoTTY))
 				return nil
 			})
 		},

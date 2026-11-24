@@ -91,6 +91,21 @@ func TestComposeProgressErrorsAndUnrecognizedOutputStayVisible(t *testing.T) {
 	}
 }
 
+func TestComposeProgressAbortedRunHasNoActiveRows(t *testing.T) {
+	var progress composeProgress
+	progress.apply("Image nginx:1 Error 429 Too Many Requests\nImage alpine:3 Pulling\nImage redis:7 Interrupted\nImage python:3 Pulled\nError response from daemon: 429\nError response from daemon: 429\npulling failed: exit status 1\n", true)
+	plain := ansi.Strip(progress.render(100, "failed"))
+	if strings.Contains(plain, "in progress") || strings.Contains(plain, "Pulling") || !strings.Contains(plain, "2 interrupted") {
+		t.Fatal("aborted pull still shown as running", plain)
+	}
+	if strings.Count(plain, "Error response from daemon: 429") != 1 {
+		t.Fatal("repeated message not collapsed", plain)
+	}
+	if running := ansi.Strip(progress.render(100, "running")); !strings.Contains(running, "Pulling") {
+		t.Fatal("live run lost its in-progress state", running)
+	}
+}
+
 func TestComposeProgressStateIsBounded(t *testing.T) {
 	var output strings.Builder
 	for i := range maxComposeResources * 2 {

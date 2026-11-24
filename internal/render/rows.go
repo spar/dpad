@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/moby/moby/api/types/container"
@@ -103,6 +104,23 @@ func StatsRateRow(s docker.Stats, r docker.Rates) []string {
 		block = byteRatePair(r.BlockRead, r.BlockWrite)
 	}
 	return statsRow(s, net, block)
+}
+
+// StatsSnapshotTable renders `dp stats --no-stream`. Plain output leaves out
+// the usage bars so piped columns line up with their headers.
+func StatsSnapshotTable(items []docker.Stats, plain bool) Table {
+	t := Table{Columns: StatsColumns, Rows: make([][]string, len(items))}
+	for i, s := range items {
+		t.Rows[i] = StatsRow(s)
+	}
+	if !plain {
+		return t
+	}
+	t.Columns = slices.Concat(StatsColumns[:2], StatsColumns[3:5], StatsColumns[6:])
+	for i, cells := range t.Rows {
+		t.Rows[i] = slices.Concat(cells[:2], cells[3:5], cells[6:])
+	}
+	return t
 }
 
 func UnavailableStatsRow(s docker.Stats) []string {
