@@ -58,7 +58,9 @@ func (v *StatsView) updateMembership(msg containersMsg) {
 	}
 	membership := make(map[string]statsMembership, len(msg.items))
 	for _, c := range msg.items {
-		active := c.State == container.StateRunning || c.State == container.StatePaused || c.State == container.StateRestarting
+		// A restarting container has no stats stream between attempts, so
+		// waiting for its sample would blank a crash-looping project for good.
+		active := c.State == container.StateRunning || c.State == container.StatePaused
 		membership[c.ID] = statsMembership{project: c.Labels[composeProjectLabel], service: c.Labels[composeServiceLabel], name: docker.ContainerName(c.Names), running: active}
 	}
 	v.membership = membership

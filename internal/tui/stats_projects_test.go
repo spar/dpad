@@ -231,6 +231,24 @@ func TestComposeStatsRateValiditySortingAndMembershipChanges(t *testing.T) {
 	}
 }
 
+func TestComposeStatsRestartingMemberDoesNotBlankProject(t *testing.T) {
+	v := newComposeStats(t)
+	members := composeStatsContainers()
+	members[1].State = container.StateRestarting
+	v.Update(containersMsg{items: members})
+	v.Update(statsBatchMsg{composeStatsSample("a", 20, 1024*1024)})
+	p := v.projects[statsProjectKey("shop")]
+	if len(p.members) != 1 || p.available != 1 {
+		t.Fatal("restarting member kept the project waiting for a sample", p)
+	}
+	rows, _ := v.visible()
+	for _, r := range rows {
+		if r.key == statsProjectKey("shop") && ansi.Strip(r.cells[1]) == "—" {
+			t.Fatal("project row stayed blank", r)
+		}
+	}
+}
+
 func TestAppComposeStatsProjectAndContainerActions(t *testing.T) {
 	a := newTestApp()
 	f := &fakeClient{}
