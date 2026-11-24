@@ -46,23 +46,29 @@ saved current context.
 
 ## Quick start
 
-Use dpad with a running Docker engine and the Docker CLI. Download the binary
-for your OS and architecture from [GitHub Releases](https://github.com/spar/dpad/releases/latest).
-Each release includes Linux, macOS and Windows binaries for amd64 and arm64,
-plus a `SHA256SUMS` file. Windows users can save the matching `.exe` as
-`dp.exe` in a directory on their PATH.
+Use dpad with a running Docker engine and the Docker CLI. Run one command to
+install or upgrade the latest release. The installer detects amd64 or arm64,
+verifies the binary against the release’s SHA-256 checksum, and installs both
+`dpad` and `dp` for your user.
 
-For example, on **Apple Silicon macOS** you can install directly with the GitHub CLI:
+**macOS or Linux** (including WSL2):
 
 ```sh
-mkdir -p ~/.local/bin
-gh release download --repo spar/dpad --pattern dpad-darwin-arm64 --output ~/.local/bin/dpad && \
-  chmod +x ~/.local/bin/dpad && ln -sf dpad ~/.local/bin/dp
+curl -fsSL https://raw.githubusercontent.com/spar/dpad/main/scripts/install.sh | sh
 ```
 
-For **Linux x86-64**, use `dpad-linux-amd64` in the same command. For an upgrade,
-add `--clobber` to replace the installed binary. To verify a download, compare
-its SHA-256 digest with the matching entry in the release’s `SHA256SUMS`.
+The commands install into `~/.local/bin`. If your shell cannot find `dp`,
+add `export PATH="$HOME/.local/bin:$PATH"` to your shell profile.
+
+**Windows** (PowerShell):
+
+```powershell
+& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/spar/dpad/main/scripts/install.ps1')))
+```
+
+The Windows installer adds `%LOCALAPPDATA%\Programs\dpad` to your user PATH.
+Run `dp --version` to check the installation. For manual installation, choose
+your OS and CPU from [GitHub Releases](https://github.com/spar/dpad/releases/latest).
 
 To build from source with **Go 1.26.7+**, run:
 
@@ -72,7 +78,7 @@ cd dpad
 make install
 ```
 
-With `~/.local/bin` on your PATH, try:
+Try:
 
 ```bash
 dp                    # full-screen TUI
