@@ -12,6 +12,7 @@ overview, installation and screenshots, see the [README](../README.md).
 - [Volumes](#volumes)
 - [Networks](#networks)
 - [Stats](#stats): Compose grouping, history sparklines, I/O rates, stream recovery
+- [Narrow terminals](#narrow-terminals)
 - [Responsiveness](#responsiveness)
 - [Colors](#colors)
 - [Daemon connection](#daemon-connection): contexts, remote daemons over SSH, connection status, switching contexts
@@ -379,6 +380,21 @@ and excludes unavailable values. One shared watchdog restarts streams with no
 progress for ten seconds. Recovered streams establish fresh rate/history
 baselines. This applies to both the Stats tab and standalone `dp stats`, where
 `ctrl+r` retries a failed watcher immediately. Quitting cancels background work.
+
+## Narrow terminals
+
+Tables fit the terminal width instead of running off the right edge. Long
+names, images and ports shrink with a `…`, and when that isn't enough the
+least useful columns are hidden:
+
+| Tab | Hidden first |
+|---|---|
+| Containers | container ID, then image |
+| Images | image ID, then created |
+| Stats | disk I/O, memory bar, PIDS, CPU bar, network, memory usage |
+
+Widen the terminal and they come back. Volumes and Networks switch to a compact
+column set below 100 columns, and Events below 110.
 
 ## Responsiveness
 

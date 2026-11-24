@@ -84,7 +84,7 @@ Try:
 dp                    # full-screen TUI
 dp ps -a              # colored, sortable ps
 dp stats --sort mem   # live stats, biggest memory users first
-dp logs -f api worker # several containers, one stream
+dp logs -f api worker # Compose services or containers, one stream
 ```
 
 Want something to look at? `make demo-up` starts about 20 demo containers that
@@ -111,7 +111,8 @@ troubleshooting are covered in [Running locally](docs/local-development.md).
 
 <img src="docs/images/logs.svg" alt="Project log viewer following 18 containers, filtered with the regex (?i)error|warn and highlighting the matches" width="100%">
 
-- Follow one container, several (`dp logs a b c`), or a whole Compose project (`enter` on a project row).
+- Follow one container, several (`dp logs a b c`), or a whole Compose project (`enter` on a project row, or `dp logs <project>`).
+- `dp logs` accepts container names and IDs, Compose service and project names, and unique name prefixes, so `dp logs web` works without typing `myapp-web-1`.
 - Every container gets a stable color; stderr lines are marked with `┃`.
 - Log levels are highlighted in plain text, JSON, logfmt and nginx formats.
 - Press `/` to filter by regular expression. Matches are highlighted and new lines are filtered as they arrive.
@@ -216,7 +217,7 @@ while it sits open in a terminal tab.
 | `dp ps [-a] [--sort name\|created\|status] [-r]` | State colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
 | `dp images [--sort size\|created\|name] [-r]` | Human sizes and a total-size footer; dangling images are dimmed |
 | `dp stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream] [--totals]` | Live sorting, CPU/memory bars, network/disk throughput; `t` toggles rates and totals |
-| `dp logs [-f] [-n N] [-t] [--since T] [--grep RE] C1 [C2...]` | Interleaves containers with colored name prefixes, highlights log levels, marks stderr with `┃`, highlights `--grep` matches |
+| `dp logs [-f] [-n N] [-t] [--since T] [--grep RE] TARGET...` | Accepts containers, Compose services and projects, and unique name prefixes. Interleaves containers with colored name prefixes, highlights log levels, marks stderr with `┃`, highlights `--grep` matches |
 
 Sorts default to the natural direction for each key: biggest first for numbers,
 A to Z for names. `-r` reverses.

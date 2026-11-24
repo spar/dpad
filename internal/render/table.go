@@ -22,6 +22,10 @@ type Column struct {
 	Header string
 	Align  Align
 	Max    int // truncate wider cells to this width; 0 = unlimited
+	// When a table doesn't fit its Width, columns with a Min shrink toward it,
+	// and columns with a Drop rank are hidden, lowest rank first.
+	Min  int
+	Drop int
 }
 
 // Table renders docker-style borderless columns. Cells may contain ANSI
@@ -94,26 +98,44 @@ func (t *PreparedTable) WindowFrom(selected, height, start int) string {
 	return strings.Join(t.lines(selected, start, end), "\n")
 }
 func (t *PreparedTable) lines(selected, start, end int) []string {
-	n := len(t.columns)
-	// Lines only need truncating if the widest possible one doesn't fit.
-	total := len(colGap) * (n - 1)
-	for _, w := range t.widths {
-		total += w
+	widths := t.layout()
+	last := -1
+	for i, w := range widths {
+		if w >= 0 {
+			last = i
+		}
 	}
+	total := 0
+	for i, w := range widths {
+		if w >= 0 {
+			total += w
+			if i != last {
+				total += len(colGap)
+			}
+		}
+	}
+	// Lines only need truncating if the widest possible one doesn't fit.
 	truncate := t.Width > 0 && total > t.Width
 
 	line := func(cells []string, cellW []int) string {
 		var b strings.Builder
-		for i, w := range t.widths {
-			pad := strings.Repeat(" ", w-cellW[i])
-			if t.columns[i].Align == Right {
-				b.WriteString(pad + cells[i])
-			} else if i == n-1 {
-				b.WriteString(cells[i])
-			} else {
-				b.WriteString(cells[i] + pad)
+		for i, w := range widths {
+			if w < 0 {
+				continue
 			}
-			if i < n-1 {
+			cell, cw := cells[i], cellW[i]
+			if cw > w {
+				cell, cw = ansi.Truncate(cell, w, "…"), w
+			}
+			pad := strings.Repeat(" ", w-cw)
+			if t.columns[i].Align == Right {
+				b.WriteString(pad + cell)
+			} else if i == last {
+				b.WriteString(cell)
+			} else {
+				b.WriteString(cell + pad)
+			}
+			if i != last {
 				b.WriteString(colGap)
 			}
 		}
@@ -132,7 +154,7 @@ func (t *PreparedTable) lines(selected, start, end int) []string {
 			continue
 		}
 		// Inner ANSI resets would break the highlight, so render plain text.
-		plain := make([]string, n)
+		plain := make([]string, len(t.columns))
 		bars := map[string]string{}
 		for i, c := range t.cells[r] {
 			plain[i] = ansi.Strip(c)
@@ -152,6 +174,74 @@ func (t *PreparedTable) lines(selected, start, end int) []string {
 		out = append(out, l)
 	}
 	return out
+}
+
+// layout returns each column's width for t.Width, or -1 for a hidden column.
+// Columns are hidden by Drop rank until the table fits at its Min widths, any
+// hidden column that would still fit comes back, and then the columns with
+// the most room above their Min shrink until the table fits.
+func (t *PreparedTable) layout() []int {
+	widths := slices.Clone(t.widths)
+	if t.Width <= 0 {
+		return widths
+	}
+	sum := func(atMin bool) int {
+		total, shown := 0, 0
+		for i, w := range widths {
+			if w < 0 {
+				continue
+			}
+			if m := t.minWidth(i); atMin && m > 0 {
+				w = min(w, m)
+			}
+			total += w
+			shown++
+		}
+		return total + max(shown-1, 0)*len(colGap)
+	}
+	if sum(false) <= t.Width {
+		return widths
+	}
+	order := make([]int, 0, len(t.columns))
+	for i, c := range t.columns {
+		if c.Drop > 0 {
+			order = append(order, i)
+		}
+	}
+	slices.SortStableFunc(order, func(a, b int) int { return t.columns[a].Drop - t.columns[b].Drop })
+	dropped := 0
+	for ; dropped < len(order) && sum(true) > t.Width; dropped++ {
+		widths[order[dropped]] = -1
+	}
+	for i := dropped - 1; i >= 0; i-- {
+		c := order[i]
+		widths[c] = t.widths[c]
+		if sum(true) > t.Width {
+			widths[c] = -1
+		}
+	}
+	for over := sum(false) - t.Width; over > 0; over-- {
+		widest, room := -1, 0
+		for i, w := range widths {
+			if m := t.minWidth(i); m > 0 && w-m > room {
+				widest, room = i, w-m
+			}
+		}
+		if widest < 0 {
+			break
+		}
+		widths[widest]--
+	}
+	return widths
+}
+
+// minWidth is how narrow column i may shrink, or 0 if it keeps its width.
+// Headers stay whole.
+func (t *PreparedTable) minWidth(i int) int {
+	if t.columns[i].Min == 0 {
+		return 0
+	}
+	return max(t.columns[i].Min, t.headerWidths[i])
 }
 
 func isBar(s string) bool {

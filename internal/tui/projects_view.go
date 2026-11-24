@@ -50,7 +50,7 @@ type projectContainerSnapshot struct {
 func NewProjectsView() *ProjectsView {
 	v := &ProjectsView{collapsed: make(map[string]bool)}
 	v.list = list[composeProject]{
-		columns: []render.Column{{Header: "PROJECT / SERVICE", Max: 35}, {Header: "CONTAINER", Max: 35}, {Header: "STATE"}, {Header: "HEALTH"}, {Header: "RUNNING"}},
+		columns: []render.Column{{Header: "PROJECT / SERVICE", Max: 35, Min: 16}, {Header: "CONTAINER", Max: 35, Min: 16}, {Header: "STATE"}, {Header: "HEALTH"}, {Header: "RUNNING"}},
 		keys:    []sortx.Key{sortx.Name, sortx.Status},
 		sortCol: map[sortx.Key]int{sortx.Name: 0, sortx.Status: 2},
 		key:     sortx.Name,
