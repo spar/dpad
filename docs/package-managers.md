@@ -6,7 +6,7 @@ Each release updates three packages from the release's `SHA256SUMS`:
 |---|---|---|
 | Homebrew (macOS, Linux) | [spar/homebrew-tap](https://github.com/spar/homebrew-tap), `Formula/dpad.rb` | `brew install spar/tap/dpad` |
 | Scoop (Windows) | [spar/scoop-bucket](https://github.com/spar/scoop-bucket), `bucket/dpad.json` | `scoop bucket add spar https://github.com/spar/scoop-bucket` then `scoop install spar/dpad` |
-| AUR (Arch Linux) | [dpad-bin](https://aur.archlinux.org/packages/dpad-bin) | `yay -S dpad-bin` (or any AUR helper) |
+| AUR (Arch Linux) | `dpad-bin`, not published yet (see [AUR](#aur)) | `yay -S dpad-bin` (or any AUR helper) |
 
 All three install the prebuilt release binaries as `dpad` plus a `dp` alias.
 
@@ -31,7 +31,7 @@ are safe.
 To publish an existing release again, run the workflow by hand:
 
 ```sh
-gh workflow run packages.yml --repo spar/dpad -f tag=v0.3.1
+gh workflow run packages.yml --repo spar/dpad -f tag=v0.4.0
 ```
 
 ## One-time setup
@@ -52,6 +52,9 @@ gh workflow run packages.yml --repo spar/dpad -f tag=v0.3.1
    ```
 
 ### AUR
+
+Not set up yet: AUR account registration was temporarily closed in November 2026.
+Until `AUR_SSH_KEY` exists the workflow skips this step.
 
 1. Create an account at [aur.archlinux.org](https://aur.archlinux.org/register).
 2. Make a key for CI only and add the public half under **My Account, SSH Public Key**:

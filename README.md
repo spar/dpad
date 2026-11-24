@@ -64,13 +64,7 @@ scoop bucket add spar https://github.com/spar/scoop-bucket
 scoop install spar/dpad
 ```
 
-**Arch Linux** (AUR), with `yay` or any AUR helper:
-
-```sh
-yay -S dpad-bin
-```
-
-Upgrade with `brew upgrade dpad`, `scoop update dpad` or `yay -Syu`.
+Upgrade with `brew upgrade dpad` or `scoop update dpad`.
 
 ### Install script
 
@@ -299,7 +293,7 @@ The full key list and the behavior of each tab are in [docs/usage.md](docs/usage
 - **[Running locally](docs/local-development.md):** prerequisites for macOS, Linux and Windows, building, installing, troubleshooting.
 - **[Demo environment](testenv/README.md):** what each demo container shows, plus a guided feature tour.
 - **[Self-hosted CI runners](docs/self-hosted-runner.md):** running CI on your own Docker hosts with the shared runners from gh-private-runners.
-- **[Package managers](docs/package-managers.md):** how releases update the Homebrew tap, Scoop bucket and AUR package, and their one-time setup.
+- **[Package managers](docs/package-managers.md):** how releases update the Homebrew tap and Scoop bucket (and the AUR package once it is set up), and their one-time setup.
 
 ## Contributing
 
