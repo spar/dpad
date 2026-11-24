@@ -48,10 +48,29 @@ saved current context.
 
 ## Quick start
 
-Use dpad with a running Docker engine and the Docker CLI. Run one command to
-install or upgrade the latest release. The installer detects amd64 or arm64,
-verifies the binary against the release’s SHA-256 checksum, and installs both
-`dpad` and `dp` for your user.
+Use dpad with a running Docker engine and the Docker CLI. Every install method
+below provides both `dpad` and the short `dp` command.
+
+**Homebrew** (macOS and Linux):
+
+```sh
+brew install spar/tap/dpad
+```
+
+**Scoop** (Windows):
+
+```powershell
+scoop bucket add spar https://github.com/spar/scoop-bucket
+scoop install spar/dpad
+```
+
+Upgrade with `brew upgrade dpad` or `scoop update dpad`.
+
+### Install script
+
+Without a package manager, run one command to install or upgrade the latest
+release. The installer detects amd64 or arm64, verifies the binary against the
+release’s SHA-256 checksum, and installs both `dpad` and `dp` for your user.
 
 **macOS or Linux** (including WSL2):
 
@@ -75,6 +94,8 @@ the archive for your OS and CPU from
 (`.tar.gz` for macOS and Linux, `.zip` for Windows), check it against
 `SHA256SUMS` and put the `dpad` binary on your PATH.
 
+### From source
+
 To build from source with **Go 1.26.7+**, run:
 
 ```sh
@@ -83,7 +104,7 @@ cd dpad
 make install
 ```
 
-Try:
+### First commands
 
 ```bash
 dp                    # full-screen TUI
@@ -272,6 +293,7 @@ The full key list and the behavior of each tab are in [docs/usage.md](docs/usage
 - **[Running locally](docs/local-development.md):** prerequisites for macOS, Linux and Windows, building, installing, troubleshooting.
 - **[Demo environment](testenv/README.md):** what each demo container shows, plus a guided feature tour.
 - **[Self-hosted CI runners](docs/self-hosted-runner.md):** running CI on your own Docker hosts with the shared runners from gh-private-runners.
+- **[Package managers](docs/package-managers.md):** how releases update the Homebrew tap and Scoop bucket (and the AUR package once it is set up), and their one-time setup.
 
 ## Contributing
 

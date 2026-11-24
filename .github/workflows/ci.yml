@@ -39,12 +39,12 @@ jobs:
         with:
           go-version: stable
           cache: ${{ vars.CI_RUNNER == '' }}
-      - name: Test release version rules
+      - name: Test release scripts
         uses: actions/github-script@v8
         with:
           script: |
             require('node:child_process').execFileSync(process.execPath,
-              ['--test', 'scripts/release/version.test.cjs'], { stdio: 'inherit' })
+              ['--test', 'scripts/release/version.test.cjs', 'scripts/release/packages.test.cjs'], { stdio: 'inherit' })
       - run: make lint
 
   vuln:
@@ -63,6 +63,8 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write
+    outputs:
+      tag: ${{ steps.version.outputs.result }}
     concurrency:
       group: dpad-main-release
       queue: max
@@ -102,3 +104,13 @@ jobs:
       - name: Remove temporary release assets
         if: always() && env.RELEASE_ASSETS != ''
         run: rm -rf -- "$RELEASE_ASSETS"
+
+  packages:
+    needs: release
+    if: needs.release.outputs.tag != ''
+    uses: ./.github/workflows/packages.yml
+    with:
+      tag: ${{ needs.release.outputs.tag }}
+    secrets:
+      PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+      AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}

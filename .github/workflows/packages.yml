@@ -1,0 +1,81 @@
+name: Packages
+
+# Updates the Homebrew tap, Scoop bucket and AUR package for a published
+# release. ci.yml calls this after each release; run it by hand to republish
+# a tag. Each target is skipped until its secret is set; see
+# docs/package-managers.md.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+    secrets:
+      PACKAGES_TOKEN:
+        required: false
+      AUR_SSH_KEY:
+        required: false
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, e.g. v0.3.1
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    env:
+      TAG: ${{ inputs.tag }}
+      HAS_PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN != '' }}
+      HAS_AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Download release checksums
+        run: |
+          case $TAG in v[0-9]*.[0-9]*.[0-9]*) ;; *) echo "Unexpected tag: $TAG" >&2; exit 1 ;; esac
+          curl -fsSL "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/SHA256SUMS" \
+            -o "$RUNNER_TEMP/SHA256SUMS"
+      - name: Update Homebrew formula and Scoop manifest
+        if: env.HAS_PACKAGES_TOKEN == 'true'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.PACKAGES_TOKEN }}
+          script: |
+            const { publishManifests } = require(process.cwd() + '/scripts/release/packages.cjs')
+            await publishManifests({ github, core, tag: process.env.TAG, sumsFile: process.env.RUNNER_TEMP + '/SHA256SUMS' })
+      - name: Render AUR package
+        if: env.HAS_AUR_SSH_KEY == 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { writeAur } = require(process.cwd() + '/scripts/release/packages.cjs')
+            writeAur({ tag: process.env.TAG, sumsFile: process.env.RUNNER_TEMP + '/SHA256SUMS', dir: process.env.RUNNER_TEMP + '/aur' })
+      - name: Push AUR package
+        if: env.HAS_AUR_SSH_KEY == 'true'
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          home=$(mktemp -d)
+          trap 'rm -rf -- "$home"' EXIT
+          printf '%s\n' "$AUR_SSH_KEY" > "$home/key"
+          chmod 600 "$home/key"
+          # Pin the Ed25519 host key fingerprint published on aur.archlinux.org.
+          ssh-keyscan -t ed25519 aur.archlinux.org > "$home/known_hosts"
+          ssh-keygen -lf "$home/known_hosts" | grep -q 'SHA256:RFzBCUItH9LZS0cKB5UE6ceAYhBD5C8GeOBip8Z11+4' \
+            || { echo "aur.archlinux.org host key did not match" >&2; exit 1; }
+          export GIT_SSH_COMMAND="ssh -i $home/key -o IdentitiesOnly=yes -o UserKnownHostsFile=$home/known_hosts"
+          git clone -q ssh://aur@aur.archlinux.org/dpad-bin.git "$home/aur"
+          cp "$RUNNER_TEMP/aur/PKGBUILD" "$RUNNER_TEMP/aur/.SRCINFO" "$home/aur/"
+          cd "$home/aur"
+          git add PKGBUILD .SRCINFO
+          if git diff --cached --quiet; then echo "AUR package already current"; exit 0; fi
+          git -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -q -m "dpad ${TAG#v}"
+          git push -q origin HEAD:master
