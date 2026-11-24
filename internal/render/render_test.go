@@ -20,8 +20,10 @@ func TestPorts(t *testing.T) {
 		{IP: netip.MustParseAddr("::"), PrivatePort: 80, PublicPort: 8080, Type: "tcp"},
 		{PrivatePort: 443, Type: "tcp"},
 		{PrivatePort: 53, PublicPort: 5353, Type: "udp"},
+		{IP: netip.MustParseAddr("127.0.0.1"), PrivatePort: 5432, PublicPort: 5432, Type: "tcp"},
+		{IP: netip.MustParseAddr("::1"), PrivatePort: 6379, PublicPort: 6379, Type: "tcp"},
 	}
-	if got, want := Ports(ports), "5353→53/udp, 8080→80/tcp, 443/tcp"; got != want {
+	if got, want := Ports(ports), "5353→53/udp, 8080→80/tcp, 443/tcp, 127.0.0.1:5432→5432/tcp, [::1]:6379→6379/tcp"; got != want {
 		t.Errorf("Ports = %q, want %q", got, want)
 	}
 }
