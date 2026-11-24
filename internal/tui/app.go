@@ -10,6 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"dpad/internal/config"
 	"dpad/internal/docker"
 	"dpad/internal/render"
 	"dpad/internal/sortx"
@@ -37,6 +38,7 @@ type App struct {
 	volumeDetails   *VolumeDetailsView
 	networkDetails  *NetworkDetailsView
 	projectAction   *projectActionView
+	prune           *pruneView
 	composeUpdate   *composeUpdateView
 	shell           *shellPrompt
 	contextPicker   *contextPicker
@@ -46,11 +48,16 @@ type App struct {
 	flash           string
 	flashErr        bool
 	daemon          daemonConnection
+	mouse           bool
+	click           lastClick
+	commands        []config.CustomCommand
 }
 
 // Run starts the TUI and blocks until the user quits.
 func Run(ctx context.Context, c dockerClient) error {
+	cfg, cfgErr := config.Load()
 	return runSessions(ctx, c, func(app *App) error {
+		app.configure(cfg, cfgErr)
 		_, err := tea.NewProgram(app, programOptions(app.ctx)...).Run()
 		return err
 	}, func(ctx context.Context, name string) (dockerClient, error) {
@@ -72,7 +79,7 @@ func newApp(ctx context.Context, c dockerClient) *App {
 		NewVolumesView(ctx, c),
 		NewNetworksView(ctx, c),
 	}
-	app := &App{ctx: ctx, client: c, tabs: tabs, filter: fi, daemon: daemonConnection{label: c.ConnectionLabel()}}
+	app := &App{ctx: ctx, client: c, tabs: tabs, filter: fi, daemon: daemonConnection{label: c.ConnectionLabel()}, mouse: true}
 	app.resize(120, 30)
 	return app
 }
@@ -133,6 +140,9 @@ func (a *App) resize(width, height int) {
 	if a.composeUpdate != nil {
 		a.composeUpdate.SetSize(a.width, a.bodyHeight())
 	}
+	if a.prune != nil {
+		a.prune.SetSize(a.width, a.bodyHeight())
+	}
 	if a.shell != nil {
 		a.shell.input.SetWidth(max(width-38, 1))
 	}
@@ -171,6 +181,15 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case tea.KeyPressMsg:
 		return a, a.handleKey(msg)
+	case tea.MouseClickMsg, tea.MouseWheelMsg:
+		return a, a.handleMouse(msg.(tea.MouseMsg))
+	case commandDoneMsg:
+		a.flash = fmt.Sprintf("%s on %s: exited", msg.name, msg.target)
+		a.flashErr = msg.err != nil
+		if msg.err != nil {
+			a.flash += ": " + msg.err.Error()
+		}
+		return a, func() tea.Msg { return refreshMsg{} }
 	case shellReadyMsg:
 		if a.shell == nil || a.shell != msg.prompt {
 			return a, nil
@@ -235,6 +254,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if a.composeUpdate != nil {
 		cmds = append(cmds, a.composeUpdate.Update(msg))
 	}
+	if a.prune != nil {
+		cmds = append(cmds, a.prune.Update(msg))
+	}
 	return a, tea.Batch(cmds...)
 }
 
@@ -274,6 +296,19 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			return nil
 		}
 		return v.HandleKey(key)
+	case a.prune != nil:
+		v := a.prune
+		if key == "esc" || key == "q" || key == "n" {
+			if v.busy() {
+				v.operationCancel()
+				v.stage = "cancelling"
+			} else {
+				v.Close()
+				a.prune = nil
+			}
+			return nil
+		}
+		return v.HandleKey(key)
 	case a.shell != nil:
 		return a.updateShell(msg)
 	case a.confirm != nil:
@@ -281,6 +316,9 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		a.confirm = nil
 		if key != "y" && key != "Y" {
 			return nil
+		}
+		if p.start != nil {
+			return p.start()
 		}
 		a.flash = fmt.Sprintf("%s %s…", p.verb, p.name)
 		a.actionsInFlight++
@@ -327,12 +365,19 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 
 	if _, ok := a.tabs[a.active].(*EventsView); ok {
 		switch key {
-		case "e", "S", "x", "R", "P", "K", "D":
+		case "e", "S", "x", "R", "P", "K", "D", "X":
 			return nil
 		}
 	}
+	if cmd, ok := a.runCustomCommand(key); ok {
+		return cmd
+	}
 
 	switch key {
+	case "X":
+		var cmd tea.Cmd
+		a.prune, cmd = newPruneView(a.ctx, a.client, pruneKindFor(a.tabs[a.active]), a.width, a.bodyHeight())
+		return cmd
 	case "u", "U":
 		return a.openComposeUpdate(key == "U")
 	case "c":
@@ -435,6 +480,9 @@ func (a *App) switchTab(i int) tea.Cmd {
 func (a *App) View() tea.View {
 	v := tea.NewView(a.render())
 	v.AltScreen = true
+	if a.mouse {
+		v.MouseMode = tea.MouseModeCellMotion
+	}
 	return v
 }
 
@@ -449,6 +497,8 @@ func (a *App) render() string {
 		status = "Choose a Docker context for this session · switching clears resource data"
 	case a.projectAction != nil:
 		body, status = a.projectAction.View(), a.projectAction.Status()
+	case a.prune != nil:
+		body, status = a.prune.View(), a.prune.Status()
 	case a.help:
 		body = a.helpView()
 	case a.logs != nil:
@@ -478,7 +528,15 @@ func (a *App) render() string {
 }
 
 func (a *App) tabBar() string {
+	parts, _ := a.tabBarParts()
+	return strings.Join(parts, " ")
+}
+
+// tabBarParts returns the tab bar's space-separated parts and the tab each
+// shows (-1 for the logo), narrowing labels until the bar fits.
+func (a *App) tabBarParts() ([]string, []int) {
 	parts := []string{render.Accent.Render("dpad") + " "}
+	owners := []int{-1}
 	for i, t := range a.tabs {
 		label := fmt.Sprintf("%d %s", i+1, t.Title())
 		if i == a.active {
@@ -486,24 +544,25 @@ func (a *App) tabBar() string {
 		} else {
 			parts = append(parts, tabInactive.Render(label))
 		}
+		owners = append(owners, i)
 	}
-	bar := strings.Join(parts, " ")
-	if a.width > 0 && lipgloss.Width(bar) > a.width {
-		parts = parts[1:]
-		bar = strings.Join(parts, " ")
-		if lipgloss.Width(bar) > a.width {
-			for i := range parts {
-				if i != a.active {
-					parts[i] = tabInactive.Render(fmt.Sprint(i + 1))
-				}
-			}
-			bar = strings.Join(parts, " ")
-			if lipgloss.Width(bar) > a.width {
-				bar = parts[a.active]
-			}
+	fits := func() bool { return a.width <= 0 || lipgloss.Width(strings.Join(parts, " ")) <= a.width }
+	if fits() {
+		return parts, owners
+	}
+	parts, owners = parts[1:], owners[1:]
+	if fits() {
+		return parts, owners
+	}
+	for i := range parts {
+		if i != a.active {
+			parts[i] = tabInactive.Render(fmt.Sprint(i + 1))
 		}
 	}
-	return bar
+	if fits() {
+		return parts, owners
+	}
+	return parts[a.active : a.active+1], owners[a.active : a.active+1]
 }
 
 func (a *App) footer() string {
@@ -517,6 +576,8 @@ func (a *App) footer() string {
 		return hints("↑↓/j/k", "move", "/", "filter", "enter", "switch context", "esc", "cancel")
 	case a.projectAction != nil:
 		return a.projectAction.Footer()
+	case a.prune != nil:
+		return a.prune.Footer()
 	case a.shell != nil:
 		if a.shell.launching {
 			return render.Dim.Render("checking container… · esc cancel")
@@ -576,14 +637,17 @@ func (a *App) footer() string {
 		if _, ok := images.SelectedImage(); ok {
 			keys = append(keys, "d/enter", "image details", "x", "remove tag/image")
 		}
+		keys = append(keys, "X", "prune")
 	} else if volumes, ok := a.tabs[a.active].(*VolumesView); ok {
 		if _, ok := volumes.SelectedVolume(); ok {
 			keys = append(keys, "d/enter", "volume details")
 		}
+		keys = append(keys, "X", "prune")
 	} else if networks, ok := a.tabs[a.active].(*NetworksView); ok {
 		if _, _, ok := networks.SelectedNetwork(); ok {
 			keys = append(keys, "d/enter", "network details")
 		}
+		keys = append(keys, "X", "prune")
 	} else if projects, ok := a.tabs[a.active].(*ProjectsView); ok && projects.selectedProject() != nil {
 		keys = append(keys, "space", "expand/collapse", "enter", "project logs", "S/x/R", "project start/stop/restart")
 	}
@@ -612,8 +676,12 @@ func (a *App) helpView() string {
 		{"e", "open a shell in the selected container (choose executable, enter to open)"},
 		{"S / x / R", "start (or unpause) / stop / restart selected container"},
 		{"P / K / D", "pause / kill / remove selected container (remove kills it first if running)"},
+		{"X", "prune: preview, then remove stopped containers or unused images, volumes, networks, build cache"},
 		{"ctrl+r", "refresh now"},
 		{"q, ctrl+c", "quit"},
+	}
+	if a.mouse {
+		global = append(global, [2]string{"mouse", "click a tab or row to select it, double-click a row for enter, wheel to move"})
 	}
 	_, eventsTab := a.tabs[a.active].(*EventsView)
 	_, volumesTab := a.tabs[a.active].(*VolumesView)
@@ -621,7 +689,10 @@ func (a *App) helpView() string {
 	if eventsTab || volumesTab || networksTab {
 		global = slices.DeleteFunc(global, func(h [2]string) bool { return h[0] == "e" || h[0] == "S / x / R" || h[0] == "P / K / D" })
 	}
-	return helpTable(a.tabs[a.active].Title(), append(global, a.tabs[a.active].Help()...))
+	if eventsTab {
+		global = slices.DeleteFunc(global, func(h [2]string) bool { return h[0] == "X" })
+	}
+	return helpTable(a.tabs[a.active].Title(), append(append(global, a.tabs[a.active].Help()...), a.customCommandHelp()...))
 }
 
 var logsHelp = [][2]string{

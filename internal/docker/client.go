@@ -46,6 +46,10 @@ type engine interface {
 	ContainerLogs(context.Context, string, client.ContainerLogsOptions) (client.ContainerLogsResult, error)
 	ContainerStats(context.Context, string, client.ContainerStatsOptions) (client.ContainerStatsResult, error)
 	Events(context.Context, client.EventsListOptions) client.EventsResult
+	VolumeRemove(context.Context, string, client.VolumeRemoveOptions) (client.VolumeRemoveResult, error)
+	NetworkRemove(context.Context, string, client.NetworkRemoveOptions) (client.NetworkRemoveResult, error)
+	DiskUsage(context.Context, client.DiskUsageOptions) (client.DiskUsageResult, error)
+	BuildCachePrune(context.Context, client.BuildCachePruneOptions) (client.BuildCachePruneResult, error)
 }
 
 var _ engine = (*client.Client)(nil)

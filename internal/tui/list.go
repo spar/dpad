@@ -43,6 +43,7 @@ type list[T any] struct {
 	height      int
 	page        int // rows moved by pgup/pgdn
 	top         int // first row in the viewport
+	shown       int // rows drawn by the last view
 
 	// Cache of visible and its row keys; nil when items, filter or sort change.
 	rowCache                 []row
@@ -134,15 +135,17 @@ func (l *list[T]) View() string {
 func (l *list[T]) view(height int) string {
 	switch {
 	case l.err != nil:
+		l.shown = 0
 		return render.Error.Render("error: " + l.err.Error())
 	case !l.loaded:
+		l.shown = 0
 		return render.Dim.Render(l.loading)
 	}
 	rows, keys := l.visible()
 	if len(rows) == 0 {
 		l.table = nil
 		l.tableRows, l.tableColumns = nil, nil
-		l.top = 0
+		l.top, l.shown = 0, 0
 		return render.Dim.Render(l.empty)
 	}
 	if l.table == nil || l.tableVersion != l.rowVersion {
@@ -172,7 +175,20 @@ func (l *list[T]) view(height int) string {
 	} else if sel >= l.top+avail {
 		l.top = sel - avail + 1
 	}
+	l.shown = min(avail, len(rows)-l.top)
 	return l.table.WindowFrom(sel, height, l.top)
+}
+
+// clickRow selects the row drawn on line of the last view, where line 0 is
+// the header. It reports whether a row was there.
+func (l *list[T]) clickRow(line int) bool {
+	_, keys := l.visible()
+	i := l.top + line - 1
+	if line < 1 || line > l.shown || i >= len(keys) {
+		return false
+	}
+	l.cur.key = keys[i]
+	return true
 }
 
 // sortedColumns returns the columns with an arrow on the sorted one's header:

@@ -2,6 +2,8 @@ package tui
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"sync"
 
 	"github.com/moby/moby/api/types/container"
@@ -30,6 +32,11 @@ type fakeClient struct {
 	networkErr     error
 	cliEnv         []string
 	closed         int
+
+	pruneTargets      map[docker.PruneKind][]docker.PruneTarget
+	pruneErr          error
+	pruneOneErr       map[string]error
+	buildCacheDeleted []string
 
 	mu      sync.Mutex
 	actions []string // "verb id"
@@ -103,4 +110,19 @@ func (f *fakeClient) Networks(context.Context) ([]network.Summary, error) {
 func (f *fakeClient) Network(_ context.Context, id string) (network.Inspect, error) {
 	_ = f.record("network inspect", id)
 	return f.networkInfo, f.networkErr
+}
+
+func (f *fakeClient) PruneTargets(_ context.Context, kind docker.PruneKind, all bool) ([]docker.PruneTarget, error) {
+	_ = f.record("prune targets", fmt.Sprintf("%s all=%t", kind, all))
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.pruneTargets[kind]), f.pruneErr
+}
+func (f *fakeClient) PruneOne(_ context.Context, kind docker.PruneKind, t docker.PruneTarget) error {
+	_ = f.record("prune "+string(kind), t.ID)
+	return f.pruneOneErr[t.ID]
+}
+func (f *fakeClient) PruneBuildCache(context.Context) ([]string, uint64, error) {
+	_ = f.record("prune build cache", "")
+	return f.buildCacheDeleted, 1024, f.pruneErr
 }
