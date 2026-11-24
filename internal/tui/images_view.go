@@ -31,7 +31,7 @@ type ImagesView struct {
 func NewImagesView(ctx context.Context, c dockerClient) *ImagesView {
 	v := &ImagesView{ctx: ctx, client: c}
 	v.list = list[image.Summary]{
-		columns: append(slices.Clone(render.ImageColumns), render.Column{Header: "USAGE"}),
+		columns: append(slices.Clone(render.ImageColumns), render.Column{Header: "USAGE", Min: 19}),
 		keys:    sortx.ImageKeys,
 		sortCol: map[sortx.Key]int{sortx.Name: 0, sortx.Created: 3, sortx.Size: 4},
 		key:     sortx.Size,

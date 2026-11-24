@@ -13,17 +13,19 @@ import (
 
 var (
 	ContainerColumns = []Column{
-		{Header: "CONTAINER ID"}, {Header: "NAME", Max: 30}, {Header: "IMAGE", Max: 40},
-		{Header: "STATE"}, {Header: "STATUS"}, {Header: "HEALTH"}, {Header: "PORTS", Max: 60},
+		{Header: "CONTAINER ID", Drop: 1}, {Header: "NAME", Max: 30, Min: 16}, {Header: "IMAGE", Max: 40, Min: 12, Drop: 2},
+		{Header: "STATE"}, {Header: "STATUS", Min: 12}, {Header: "HEALTH"}, {Header: "PORTS", Max: 60, Min: 11},
 	}
 	ImageColumns = []Column{
-		{Header: "REPOSITORY", Max: 50}, {Header: "TAG", Max: 30}, {Header: "IMAGE ID"},
-		{Header: "CREATED"}, {Header: "SIZE", Align: Right},
+		{Header: "REPOSITORY", Max: 50, Min: 24}, {Header: "TAG", Max: 30, Min: 12}, {Header: "IMAGE ID", Drop: 1},
+		{Header: "CREATED", Drop: 2}, {Header: "SIZE", Align: Right},
 	}
+	// Narrow terminals lose disk I/O first, since many hosts don't report it,
+	// then the decorative bars and PIDS, keeping CPU and memory longest.
 	StatsColumns = []Column{
-		{Header: "NAME", Max: 30}, {Header: "CPU %", Align: Right}, {},
-		{Header: "MEM USAGE / LIMIT", Align: Right}, {Header: "MEM %", Align: Right}, {},
-		{Header: "NET I/O", Align: Right}, {Header: "BLOCK I/O", Align: Right}, {Header: "PIDS", Align: Right},
+		{Header: "NAME", Max: 30, Min: 16}, {Header: "CPU %", Align: Right}, {Drop: 4},
+		{Header: "MEM USAGE / LIMIT", Align: Right, Drop: 6}, {Header: "MEM %", Align: Right}, {Drop: 2},
+		{Header: "NET I/O", Align: Right, Drop: 5}, {Header: "BLOCK I/O", Align: Right, Drop: 1}, {Header: "PIDS", Align: Right, Drop: 3},
 	}
 )
 

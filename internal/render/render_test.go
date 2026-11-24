@@ -254,3 +254,34 @@ func TestSelectedRowKeepsBarColors(t *testing.T) {
 		t.Fatalf("selected row text = %q, want %q", got, want)
 	}
 }
+
+func TestTableFitsWidthByDroppingAndShrinkingColumns(t *testing.T) {
+	cols := []Column{{Header: "ID", Drop: 1}, {Header: "NAME", Min: 8}, {Header: "STATE"}, {Header: "EXTRA", Drop: 2}, {Header: "PORTS", Min: 6}}
+	rows := [][]string{{"0123456789ab", "a-very-long-container-name", "running", "something", "8080→80/tcp"}}
+	full := ansi.Strip(Table{Columns: cols, Rows: rows}.String())
+	if got := ansi.Strip(Table{Columns: cols, Rows: rows, Width: 200}.String()); got != full {
+		t.Fatalf("a table that fits changed:\n%s", got)
+	}
+	for _, tc := range []struct {
+		width int
+		want  string
+	}{
+		// Shrinking to minimum widths is enough, so nothing is hidden.
+		{70, "ID             NAME                  STATE     EXTRA       PORTS\n0123456789ab   a-very-long-contai…   running   something   8080→80/tcp"},
+		// ID goes first.
+		{50, "NAME             STATE     EXTRA       PORTS\na-very-long-c…   running   something   8080→80/tcp"},
+		// Then EXTRA, and what's left can't fit even at minimum widths.
+		{36, "NAME           STATE     PORTS\na-very-long…   running   8080→80/tcp"},
+		{28, "NAME       STATE     PORTS\na-very-…   running   8080→8…"},
+	} {
+		got := ansi.Strip(Table{Columns: cols, Rows: rows, Width: tc.width}.String())
+		if got != tc.want {
+			t.Errorf("width %d:\n%s\nwant:\n%s", tc.width, got, tc.want)
+		}
+		for l := range strings.SplitSeq(got, "\n") {
+			if ansi.StringWidth(l) > tc.width {
+				t.Errorf("width %d: line %q is %d wide", tc.width, l, ansi.StringWidth(l))
+			}
+		}
+	}
+}
