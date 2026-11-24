@@ -18,8 +18,8 @@ The switch is the **repository Actions variable `CI_RUNNER`**, under
 | `dockernext` | Your runners with the `dockernext` label |
 
 ```sh
-gh variable set CI_RUNNER --body self-hosted --repo spar/dockernext
-gh variable delete CI_RUNNER --repo spar/dockernext   # back to GitHub's runners
+gh variable set CI_RUNNER --body self-hosted --repo spar/dpad
+gh variable delete CI_RUNNER --repo spar/dpad   # back to GitHub's runners
 ```
 
 Self-hosted mode tests both Go versions on Linux only; macOS tests come back
