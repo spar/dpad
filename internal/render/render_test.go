@@ -243,3 +243,14 @@ func TestStatsSnapshotTablePlainDropsBars(t *testing.T) {
 		t.Fatalf("plain output kept bars:\n%s", got)
 	}
 }
+
+func TestSelectedRowKeepsBarColors(t *testing.T) {
+	bar := Bar(90, 10)
+	out := Table{Columns: []Column{{Header: "NAME"}, {}, {Header: "PIDS"}}, Rows: [][]string{{"web", bar, "3"}}}.Window(0, 5)
+	if !strings.Contains(out, "\x1b[27m"+bar+"\x1b[7m") {
+		t.Fatalf("selected bar was reversed: %q", out)
+	}
+	if got, want := ansi.Strip(out), "NAME                PIDS\nweb    "+ansi.Strip(bar)+"   3"; got != want {
+		t.Fatalf("selected row text = %q, want %q", got, want)
+	}
+}
