@@ -67,8 +67,11 @@ add `export PATH="$HOME/.local/bin:$PATH"` to your shell profile.
 ```
 
 The Windows installer adds `%LOCALAPPDATA%\Programs\dpad` to your user PATH.
-Run `dp --version` to check the installation. For manual installation, choose
-your OS and CPU from [GitHub Releases](https://github.com/spar/dpad/releases/latest).
+Run `dp --version` to check the installation. For manual installation, download
+the archive for your OS and CPU from
+[GitHub Releases](https://github.com/spar/dpad/releases/latest)
+(`.tar.gz` for macOS and Linux, `.zip` for Windows), check it against
+`SHA256SUMS` and put the `dpad` binary on your PATH.
 
 To build from source with **Go 1.26.7+**, run:
 

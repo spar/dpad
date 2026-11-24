@@ -1,4 +1,4 @@
-// Keep the release in draft until every binary and the checksum file is present.
+// Keep the release in draft until every archive and the checksum file is present.
 const fs = require('node:fs');
 const path = require('node:path');
 
