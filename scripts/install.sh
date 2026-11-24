@@ -14,7 +14,7 @@ install_dpad() {
     *) echo "Unsupported CPU architecture: $(uname -m)" >&2; return 1 ;;
   esac
 
-  asset=dpad-$os-$arch
+  asset=dpad-$os-$arch.tar.gz
   url=https://github.com/spar/dpad/releases/latest/download
   tmp=$(mktemp -d)
   trap 'rm -rf "$tmp"' EXIT
@@ -28,9 +28,11 @@ install_dpad() {
     shasum -a 256 -c selected.sha256
   fi
 
+  tar -xzf "$asset" dpad
+
   bin=$HOME/.local/bin
   mkdir -p "$bin"
-  install -m 755 "$asset" "$bin/dpad"
+  install -m 755 dpad "$bin/dpad"
   ln -sf dpad "$bin/dp"
   "$bin/dpad" --version
   case :$PATH: in
