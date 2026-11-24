@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 
-	"dockernext/internal/docker"
+	"dpad/internal/docker"
 )
 
 func TestPreparedListInvalidation(t *testing.T) {

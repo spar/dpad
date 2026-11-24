@@ -100,7 +100,7 @@ func startSSHTunnelContext(ctx context.Context, host string) (*sshTunnel, error)
 	}
 	// The socket grants root-equivalent access to the server, so it lives in a
 	// directory only this user can enter.
-	dir, err := os.MkdirTemp("", "dn-ssh-")
+	dir, err := os.MkdirTemp("", "dp-ssh-")
 	if err != nil {
 		return nil, err
 	}

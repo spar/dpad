@@ -1,5 +1,5 @@
 {
-  "name": "dockernext-screenshots",
+  "name": "dpad-screenshots",
   "private": true,
   "description": "Renders the README screenshots; see README.md",
   "dependencies": {

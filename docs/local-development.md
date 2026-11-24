@@ -1,11 +1,11 @@
-# Running dockernext locally
+# Running dpad locally
 
-This guide takes you from a fresh clone to running `dn` against a demo set of
+This guide takes you from a fresh clone to running `dp` against a demo set of
 containers.
 
 - [1. Prerequisites](#1-prerequisites)
 - [2. Build and run from source](#2-build-and-run-from-source)
-- [3. Install `dn` on your PATH](#3-install-dn-on-your-path)
+- [3. Install `dp` on your PATH](#3-install-dp-on-your-path)
 - [4. Start the demo environment](#4-start-the-demo-environment)
 - [5. Development loop](#5-development-loop)
 - [6. Troubleshooting](#6-troubleshooting)
@@ -16,7 +16,7 @@ containers.
 |---|---|---|---|
 | Go | 1.26.7+ | `go version` | building |
 | Docker Engine | any recent | `docker info` | everything. Docker Desktop, colima, OrbStack and Linux all work |
-| `docker` CLI | any | `docker version` | passthrough of commands `dn` doesn't enhance |
+| `docker` CLI | any | `docker version` | passthrough of commands `dp` doesn't enhance |
 | Docker Compose v2 | any | `docker compose version` or `docker-compose version` | the demo environment only |
 | `make` | any | `make --version` | convenience targets (optional) |
 
@@ -114,15 +114,15 @@ After installing, ensure `DOCKER_HOST` points to your Docker daemon (Docker Desk
 ## 2. Build and run from source
 
 ```sh
-cd dockernext
-make build                 # → bin/dockernext
-./bin/dockernext ps -a     # try it
-./bin/dockernext           # full-screen TUI (q to quit)
+cd dpad
+make build                 # → bin/dpad
+./bin/dpad ps -a     # try it
+./bin/dpad           # full-screen TUI (q to quit)
 ```
 
 Without `make`:
 ```sh
-go build -o bin/dockernext .
+go build -o bin/dpad .
 ```
 
 To run straight from source without building, use `make run`:
@@ -131,20 +131,20 @@ make run ARGS="stats --sort mem"
 go run . logs -f my-container      # same thing without make
 ```
 
-`dn` uses whatever daemon `docker` uses (`DOCKER_HOST`, `DOCKER_CONTEXT`, or the
-current `docker context`). As a quick sanity check, `./bin/dockernext ps -a` should
+`dp` uses whatever daemon `docker` uses (`DOCKER_HOST`, `DOCKER_CONTEXT`, or the
+current `docker context`). As a quick sanity check, `./bin/dpad ps -a` should
 list the same containers as `docker ps -a`.
 
-To work against Docker on another machine (for example a home server), run `dn`
+To work against Docker on another machine (for example a home server), run `dp`
 on your Mac with `DOCKER_HOST=ssh://me@server` instead of inside an SSH session.
 For a rootless daemon, include its remote socket path, for example
 `DOCKER_HOST=ssh://me@server/run/user/1000/docker.sock` (using the remote user's UID).
 See [Remote daemons over SSH](usage.md#remote-daemons-over-ssh).
 
-## 3. Install `dn` on your PATH
+## 3. Install `dp` on your PATH
 
 ```sh
-make install                 # → ~/.local/bin/dockernext and ~/.local/bin/dn
+make install                 # → ~/.local/bin/dpad and ~/.local/bin/dp
 ```
 
 If `~/.local/bin` isn't on your PATH yet, add it to your shell's rc file:
@@ -152,38 +152,38 @@ If `~/.local/bin` isn't on your PATH yet, add it to your shell's rc file:
 **bash:**
 ```sh
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
-dn --version
+dp --version
 ```
 
 **zsh:**
 ```sh
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
-dn --version
+dp --version
 ```
 
 **fish:**
 ```sh
 fish_add_path ~/.local/bin
-dn --version
+dp --version
 ```
 
 **Other ways to install:**
 - System-wide (no PATH changes needed): `sudo make install PREFIX=/usr/local`
-- With `go install .`: this puts `dockernext` in `$(go env GOPATH)/bin`. Add `alias dn=dockernext` to your shell rc file.
-- **Shell completion:** for example, `dn completion zsh > "${fpath[1]}/_dn"`. See `dn completion --help`.
+- With `go install .`: this puts `dpad` in `$(go env GOPATH)/bin`. Add `alias dp=dpad` to your shell rc file.
+- **Shell completion:** for example, `dp completion zsh > "${fpath[1]}/_dp"`. See `dp completion --help`.
 
 To remove it, run `make uninstall` (use the same `PREFIX` you installed with).
 
 ## 4. Start the demo environment
 
 `testenv/compose.yaml` starts about 20 containers, each designed to exercise one
-dn feature. Among them are a CPU hog, a container near its memory limit, an
+dp feature. Among them are a CPU hog, a container near its memory limit, an
 unhealthy one, a crash-looping one, a paused one, several log formats, and
 network and disk I/O generators.
 
 ```sh
 make demo-up        # pulls alpine, nginx, python (~165MB total) and starts everything
-dn                  # explore. The demo containers are all named dn-demo-*
+dp                  # explore. The demo containers are all named dp-demo-*
 make demo-down      # removes containers, the volume, and the dangling demo image
 ```
 
@@ -213,7 +213,7 @@ make test      # unit tests: stats math, sorting, formatting, log-level detectio
 make vet
 make lint      # golangci-lint, pinned in the Makefile; nothing to install
 make vuln      # govulncheck
-make build && ./bin/dockernext stats
+make build && ./bin/dpad stats
 ```
 
 **Where things live:**
@@ -228,7 +228,7 @@ make build && ./bin/dockernext stats
 | `testenv/` | demo compose file and the scripts its containers run |
 
 **Tips:**
-- **Colors and piping:** colors are disabled automatically when output is piped, so `dn ps | less` shows plain text. Run `dn ps` directly in a terminal to see colors.
+- **Colors and piping:** colors are disabled automatically when output is piped, so `dp ps | less` shows plain text. Run `dp ps` directly in a terminal to see colors.
 - **Re-running the TUI:** after a change, `go run .` is the fastest way to try it.
 - **Version string:** `make build` stamps it from `git describe`. Other builds (`go build`, `go install`) report the module version Go records, and `dev` if there is none.
 
@@ -236,13 +236,13 @@ make build && ./bin/dockernext stats
 
 | Symptom | Fix |
 |---|---|
-| `Cannot connect to the Docker daemon` | Start your engine (`colima start`, or open Docker Desktop). Check `docker context ls`: `dn` follows the context marked `*`. |
-| `dn ps` shows different containers than `docker ps` | `DOCKER_HOST` set in one shell but not the other? `dn` honors `DOCKER_HOST` > `DOCKER_CONTEXT` > the current context. |
+| `Cannot connect to the Docker daemon` | Start your engine (`colima start`, or open Docker Desktop). Check `docker context ls`: `dp` follows the context marked `*`. |
+| `dp ps` shows different containers than `docker ps` | `DOCKER_HOST` set in one shell but not the other? `dp` honors `DOCKER_HOST` > `DOCKER_CONTEXT` > the current context. |
 | No colors | Output is piped or redirected, `NO_COLOR` is set, or you passed `--no-color`. |
 | A row shows `0.00%` CPU for a moment | The first sample of a newly started container has no previous sample to diff against. It fills in after about 1s. |
-| `dn: docker CLI not found in PATH` | Passthrough needs the `docker` binary. Enhanced commands (`ps`, `images`, `stats`, `logs`, the TUI) work without it. |
+| `dp: docker CLI not found in PATH` | Passthrough needs the `docker` binary. Enhanced commands (`ps`, `images`, `stats`, `logs`, the TUI) work without it. |
 | `docker: unknown command: docker compose` | Compose isn't installed as a plugin. See [Prerequisites](#1-prerequisites), or run `make demo-up COMPOSE=docker-compose`. |
 | Demo containers fail with `/scripts/...: not found` | The engine can't see the repo directory. colima and Docker Desktop share your home directory by default, so clone under `~` or add the path to the engine's file-sharing settings. |
 | TUI looks garbled | Use a terminal with UTF-8 and 256 colors (iTerm2, the macOS Terminal, kitty, WezTerm, Windows Terminal). Over tmux, set `TERM=tmux-256color`. |
-| `ssh tunnel to …: Permission denied` | `dn` runs `ssh` with your `~/.ssh/config`. Check `ssh me@server docker ps` works first; your server user must be in the `docker` group. |
+| `ssh tunnel to …: Permission denied` | `dp` runs `ssh` with your `~/.ssh/config`. Check `ssh me@server docker ps` works first; your server user must be in the `docker` group. |
 | `go: go.mod requires go >= 1.26.7` | Upgrade Go (`brew upgrade go`). |

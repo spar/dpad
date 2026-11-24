@@ -10,8 +10,8 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/sortx"
+	"dpad/internal/docker"
+	"dpad/internal/sortx"
 )
 
 func composeStatsContainers() []container.Summary {

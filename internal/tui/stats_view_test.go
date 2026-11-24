@@ -8,8 +8,8 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/sortx"
+	"dpad/internal/docker"
+	"dpad/internal/sortx"
 )
 
 func TestStatsSelectedMatchesHighlight(t *testing.T) {

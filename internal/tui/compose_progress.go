@@ -7,7 +7,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"dockernext/internal/render"
+	"dpad/internal/render"
 )
 
 const maxComposeResources = 256

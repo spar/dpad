@@ -13,36 +13,36 @@ for tool in python3 node npm ffmpeg docker; do
 	command -v "$tool" >/dev/null || { echo "capture: $tool is required" >&2; exit 1; }
 done
 python3 -c 'import PIL' 2>/dev/null || { echo "capture: Pillow is required (pip install pillow)" >&2; exit 1; }
-if [ -z "$(docker ps -q --filter label=dn-demo=true)" ]; then
+if [ -z "$(docker ps -q --filter label=dp-demo=true)" ]; then
 	echo "capture: the demo environment isn't running; start it with make demo-up" >&2
 	exit 1
 fi
 [ -d "$here/node_modules" ] || npm --prefix "$here" ci --no-audit --no-fund
 
 make -C "$root" --no-print-directory build
-dn="$root/bin/dockernext"
+dp="$root/bin/dpad"
 mkdir -p "$out"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/png" "$work/frames"
 
 echo "capture: recording the TUI (about 100 seconds; restarts, pauses and stops a few demo containers)"
-python3 "$here/drive.py" "$work/raw" 150 30 "$here/tui.json" -- "$dn"
+python3 "$here/drive.py" "$work/raw" 150 30 "$here/tui.json" -- "$dp"
 echo "capture: recording CLI commands"
-python3 "$here/drive.py" "$work/raw" 160 39 "$here/cli.json" -- bash "$here/cli.sh" "$dn"
+python3 "$here/drive.py" "$work/raw" 160 39 "$here/cli.json" -- bash "$here/cli.sh" "$dp"
 
 echo "capture: rendering"
 stills=()
 for name in containers stats projects logs details events; do
 	stills+=("$work/raw/$name.bin:$work/png/$name.png")
 done
-node "$here/render.js" 150 30 2 dn "${stills[@]}"
+node "$here/render.js" 150 30 2 dp "${stills[@]}"
 node "$here/render.js" 160 39 2 '~/app' "$work/raw/cli.bin:$work/png/cli.png"
 frames=()
 for f in "$work"/raw/tour-*.bin; do
 	frames+=("$f:$work/frames/$(basename "$f" .bin).png")
 done
-node "$here/render.js" --seq --flat 150 30 1 dn "${frames[@]}"
+node "$here/render.js" --seq --flat 150 30 1 dp "${frames[@]}"
 
 python3 "$here/optimize.py" "$out" "$work"/png/*.png
 ffmpeg -loglevel error -y -framerate 8 -i "$work/frames/tour-%04d.png" \

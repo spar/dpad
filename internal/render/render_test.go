@@ -11,7 +11,7 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
 
-	"dockernext/internal/docker"
+	"dpad/internal/docker"
 )
 
 func TestPorts(t *testing.T) {

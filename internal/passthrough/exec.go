@@ -1,4 +1,4 @@
-// Package passthrough hands commands dockernext doesn't enhance to the docker CLI.
+// Package passthrough hands commands dpad doesn't enhance to the docker CLI.
 package passthrough
 
 import (
@@ -13,7 +13,7 @@ import (
 func Run(args []string) int {
 	path, err := exec.LookPath("docker")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "dn: docker CLI not found in PATH")
+		fmt.Fprintln(os.Stderr, "dp: docker CLI not found in PATH")
 		return 127
 	}
 	cmd := exec.Command(path, args...)
@@ -27,7 +27,7 @@ func Run(args []string) int {
 		if exit, ok := errors.AsType[*exec.ExitError](err); ok {
 			return exit.ExitCode()
 		}
-		fmt.Fprintln(os.Stderr, "dn:", err)
+		fmt.Fprintln(os.Stderr, "dp:", err)
 		return 1
 	}
 	return 0

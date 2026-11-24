@@ -1,7 +1,7 @@
 [
   {"wait": 3},
   {"keys": "3"}, {"wait": 1.5}, {"keys": "v"},
-  {"sh": "sleep 5; docker restart -t 1 dn-demo-cpu-warm-1; sleep 3; docker pause dn-demo-many-pids-1; sleep 2; docker unpause dn-demo-many-pids-1; sleep 2; docker stop -t 1 dn-demo-logger-tty-1; sleep 2; docker start dn-demo-logger-tty-1"},
+  {"sh": "sleep 5; docker restart -t 1 dp-demo-cpu-warm-1; sleep 3; docker pause dp-demo-many-pids-1; sleep 2; docker unpause dp-demo-many-pids-1; sleep 2; docker stop -t 1 dp-demo-logger-tty-1; sleep 2; docker start dp-demo-logger-tty-1"},
   {"wait": 55},
   {"keys": "1"}, {"wait": 1},
   {"rec": "tour", "fps": 8},

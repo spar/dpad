@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/network"
 
-	"dockernext/internal/docker"
+	"dpad/internal/docker"
 )
 
 func TestNetworkMetadataAndMissingAddresses(t *testing.T) {

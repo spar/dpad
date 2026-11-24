@@ -6,7 +6,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 
-	"dockernext/internal/docker"
+	"dpad/internal/docker"
 )
 
 // StableNameStyle keeps dynamic source colors stable without retaining names.

@@ -84,7 +84,7 @@ func useFakeSSH(t *testing.T, mode string) (log string) {
 	orig := sshCommand
 	sshCommand = func(args ...string) *exec.Cmd {
 		cmd := exec.Command(os.Args[0], append([]string{"-test.run=^TestHelperSSH$", "--"}, args...)...)
-		cmd.Env = append(os.Environ(), "DN_FAKE_SSH="+mode, "DN_FAKE_SSH_LOG="+log)
+		cmd.Env = append(os.Environ(), "DP_FAKE_SSH="+mode, "DP_FAKE_SSH_LOG="+log)
 		return cmd
 	}
 	t.Cleanup(func() { sshCommand = orig })
@@ -94,12 +94,12 @@ func useFakeSSH(t *testing.T, mode string) (log string) {
 // TestHelperSSH is the fake ssh: it records its arguments, then listens on
 // the -L socket and answers like a daemon.
 func TestHelperSSH(t *testing.T) {
-	mode := os.Getenv("DN_FAKE_SSH")
+	mode := os.Getenv("DP_FAKE_SSH")
 	if mode == "" {
 		return
 	}
 	args := os.Args[slices.Index(os.Args, "--")+1:]
-	f, _ := os.OpenFile(os.Getenv("DN_FAKE_SSH_LOG"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	f, _ := os.OpenFile(os.Getenv("DP_FAKE_SSH_LOG"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	fmt.Fprintln(f, strings.Join(args, " "))
 	f.Close()
 	if mode == "fail" {

@@ -13,8 +13,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/render"
+	"dpad/internal/docker"
+	"dpad/internal/render"
 )
 
 type multiLogClient struct {

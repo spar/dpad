@@ -11,8 +11,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/render"
+	"dpad/internal/docker"
+	"dpad/internal/render"
 )
 
 func newLogsCmd() *cobra.Command {
@@ -64,7 +64,7 @@ func streamLogs(ctx context.Context, c *docker.Client, names []string, opts dock
 			defer close(ch)
 			if err := c.Logs(ctx, name, opts, ch); err != nil && ctx.Err() == nil {
 				failed.Store(true)
-				fmt.Fprintf(os.Stderr, "dn: %s: %v\n", name, err)
+				fmt.Fprintf(os.Stderr, "dp: %s: %v\n", name, err)
 			}
 		}()
 	}

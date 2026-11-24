@@ -9,7 +9,7 @@ import (
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/api/types/volume"
 
-	"dockernext/internal/docker"
+	"dpad/internal/docker"
 )
 
 // fakeClient records container actions; list calls return fixed data.

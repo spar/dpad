@@ -13,9 +13,9 @@ import (
 	"github.com/moby/moby/api/types/mount"
 	"github.com/moby/moby/api/types/volume"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/render"
-	"dockernext/internal/sortx"
+	"dpad/internal/docker"
+	"dpad/internal/render"
+	"dpad/internal/sortx"
 )
 
 type volumesMsg struct {

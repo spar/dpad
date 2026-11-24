@@ -6,9 +6,9 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/render"
-	"dockernext/internal/sortx"
+	"dpad/internal/docker"
+	"dpad/internal/render"
+	"dpad/internal/sortx"
 )
 
 type statsMembership struct {

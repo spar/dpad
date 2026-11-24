@@ -9,9 +9,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/render"
-	"dockernext/internal/sortx"
+	"dpad/internal/docker"
+	"dpad/internal/render"
+	"dpad/internal/sortx"
 )
 
 type (
@@ -397,7 +397,7 @@ func (v *StatsView) Help() [][2]string {
 	return help
 }
 
-// statsProgram runs StatsView on its own for `dn stats`.
+// statsProgram runs StatsView on its own for `dp stats`.
 type statsProgram struct{ v *StatsView }
 
 // RunStats shows live stats inline until the user quits.

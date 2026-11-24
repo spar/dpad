@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"dockernext/internal/compose"
+	"dpad/internal/compose"
 )
 
 func screenshotComposeOutput(t *testing.T) string {

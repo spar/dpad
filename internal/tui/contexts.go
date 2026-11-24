@@ -7,9 +7,9 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/render"
-	"dockernext/internal/sortx"
+	"dpad/internal/docker"
+	"dpad/internal/render"
+	"dpad/internal/sortx"
 )
 
 type contextPicker struct {

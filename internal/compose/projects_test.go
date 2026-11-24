@@ -36,10 +36,10 @@ func composeFixture(t *testing.T) (dir, model, log string) {
 		}
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-	t.Setenv("DN_COMPOSE_HELPER", "1")
+	t.Setenv("DP_COMPOSE_HELPER", "1")
 	t.Setenv("GORACE", os.Getenv("GORACE")+" atexit_sleep_ms=0")
-	t.Setenv("DN_COMPOSE_MODEL", model)
-	t.Setenv("DN_COMPOSE_CALLS", log)
+	t.Setenv("DP_COMPOSE_MODEL", model)
+	t.Setenv("DP_COMPOSE_CALLS", log)
 	t.Setenv("DOCKER_HOST", "tcp://bound-daemon:2375")
 	t.Setenv("DOCKER_CONTEXT", "")
 	t.Setenv("COMPOSE_PROFILES", "")
@@ -52,15 +52,15 @@ type recordedCall struct {
 }
 
 func TestComposeHelper(t *testing.T) {
-	if os.Getenv("DN_COMPOSE_HELPER") == "" {
+	if os.Getenv("DP_COMPOSE_HELPER") == "" {
 		return
 	}
 	args := os.Args[slices.Index(os.Args, "--")+1:]
 	backend := args[0]
 	if args[0] == "ssh" {
 		script := args[len(args)-1]
-		if real := os.Getenv("DN_COMPOSE_REAL_DIR"); real != "" {
-			script = strings.Replace(script, "cd '/srv/dn-project'", "cd "+quote(real), 1)
+		if real := os.Getenv("DP_COMPOSE_REAL_DIR"); real != "" {
+			script = strings.Replace(script, "cd '/srv/dp-project'", "cd "+quote(real), 1)
 		}
 		cmd := exec.Command("/bin/sh", "-c", script)
 		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
@@ -71,21 +71,21 @@ func TestComposeHelper(t *testing.T) {
 	}
 	args = args[1:]
 	dir, _ := os.Getwd()
-	f, err := os.OpenFile(os.Getenv("DN_COMPOSE_CALLS"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	f, err := os.OpenFile(os.Getenv("DP_COMPOSE_CALLS"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		os.Exit(2)
 	}
 	_ = json.NewEncoder(f).Encode(recordedCall{args, os.Getenv("DOCKER_HOST"), os.Getenv("DOCKER_CONTEXT"), dir})
 	f.Close()
 	if slices.Contains(args, "version") {
-		if backend == "docker" && os.Getenv("DN_COMPOSE_STANDALONE") == "1" {
+		if backend == "docker" && os.Getenv("DP_COMPOSE_STANDALONE") == "1" {
 			os.Exit(1)
 		}
 		fmt.Print("2.40.3")
 		os.Exit(0)
 	}
 	if slices.Contains(args, "config") {
-		b, _ := os.ReadFile(os.Getenv("DN_COMPOSE_MODEL"))
+		b, _ := os.ReadFile(os.Getenv("DP_COMPOSE_MODEL"))
 		if !slices.Contains(args, "--profile") {
 			var model map[string]json.RawMessage
 			_ = json.Unmarshal(b, &model)
@@ -109,15 +109,15 @@ func TestComposeHelper(t *testing.T) {
 	if slices.Contains(args, "pull") {
 		step = "pull"
 	}
-	if os.Getenv("DN_COMPOSE_BLOCK_STEP") == step {
-		_ = os.WriteFile(os.Getenv("DN_COMPOSE_ENTERED"), []byte(step), 0o600)
+	if os.Getenv("DP_COMPOSE_BLOCK_STEP") == step {
+		_ = os.WriteFile(os.Getenv("DP_COMPOSE_ENTERED"), []byte(step), 0o600)
 		time.Sleep(time.Hour)
 	}
-	if step == "pull" && os.Getenv("DN_COMPOSE_EDIT_ON_PULL") == "1" {
-		_ = os.WriteFile(os.Getenv("DN_COMPOSE_MODEL"), []byte(strings.ReplaceAll(testModel, "web:latest", "web:changed")), 0o600)
+	if step == "pull" && os.Getenv("DP_COMPOSE_EDIT_ON_PULL") == "1" {
+		_ = os.WriteFile(os.Getenv("DP_COMPOSE_MODEL"), []byte(strings.ReplaceAll(testModel, "web:latest", "web:changed")), 0o600)
 	}
 	fmt.Println(step + " " + project)
-	if step == "pull" && project == os.Getenv("DN_COMPOSE_FAIL_PROJECT") {
+	if step == "pull" && project == os.Getenv("DP_COMPOSE_FAIL_PROJECT") {
 		fmt.Fprintln(os.Stderr, "registry denied")
 		os.Exit(1)
 	}
@@ -126,7 +126,7 @@ func TestComposeHelper(t *testing.T) {
 
 func TestPrepareSupportsStandaloneComposeV2AndBlocksMissingSources(t *testing.T) {
 	dir, _, _ := composeFixture(t)
-	t.Setenv("DN_COMPOSE_STANDALONE", "1")
+	t.Setenv("DP_COMPOSE_STANDALONE", "1")
 	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("demo", dir)}, ""))
 	if projects[0].Issue != "" || !slices.Equal(projects[0].CLI, []string{"docker-compose"}) {
 		t.Fatal(projects)
@@ -214,7 +214,7 @@ func TestDiscoverAndPrepareUseOriginalSourcesAndActiveServices(t *testing.T) {
 
 func TestRunSkipsUpAfterFailedPullAndContinuesOtherProjects(t *testing.T) {
 	dir, _, log := composeFixture(t)
-	t.Setenv("DN_COMPOSE_FAIL_PROJECT", "a")
+	t.Setenv("DP_COMPOSE_FAIL_PROJECT", "a")
 	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("a", dir), labeledProject("b", dir)}, ""))
 	states := map[string]Event{}
 	for event := range Run(t.Context(), t.Context(), os.Environ(), projects) {
@@ -253,7 +253,7 @@ func TestChangedConfigurationPreventsContainerRecreation(t *testing.T) {
 		t.Run(when, func(t *testing.T) {
 			dir, model, log := composeFixture(t)
 			if when == "after pull" {
-				t.Setenv("DN_COMPOSE_EDIT_ON_PULL", "1")
+				t.Setenv("DP_COMPOSE_EDIT_ON_PULL", "1")
 			}
 			projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("demo", dir)}, ""))
 			if when == "before pull" {
@@ -279,8 +279,8 @@ func TestChangedConfigurationPreventsContainerRecreation(t *testing.T) {
 func TestSSHExecutionBindsRootlessSocketAndQuotesArguments(t *testing.T) {
 	dir, _, log := composeFixture(t)
 	t.Setenv("DOCKER_HOST", "ssh://me@server:2222/run/user/1000/docker.sock")
-	t.Setenv("DN_COMPOSE_REAL_DIR", dir)
-	p := labeledProject("remote", "/srv/dn-project")
+	t.Setenv("DP_COMPOSE_REAL_DIR", dir)
+	p := labeledProject("remote", "/srv/dp-project")
 	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{p}, ""))
 	if len(projects) != 1 || !projects[0].Remote || projects[0].Issue != "" {
 		t.Fatal(projects)
@@ -324,8 +324,8 @@ func TestCancellationStopsRemainingProjectsAndReportsUnknownUp(t *testing.T) {
 		t.Run(step, func(t *testing.T) {
 			dir, _, log := composeFixture(t)
 			entered := filepath.Join(dir, "entered")
-			t.Setenv("DN_COMPOSE_BLOCK_STEP", step)
-			t.Setenv("DN_COMPOSE_ENTERED", entered)
+			t.Setenv("DP_COMPOSE_BLOCK_STEP", step)
+			t.Setenv("DP_COMPOSE_ENTERED", entered)
 			projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("a", dir), labeledProject("b", dir)}, ""))
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()

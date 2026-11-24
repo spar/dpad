@@ -8,9 +8,9 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/moby/moby/api/types/container"
 
-	"dockernext/internal/docker"
-	"dockernext/internal/render"
-	"dockernext/internal/sortx"
+	"dpad/internal/docker"
+	"dpad/internal/render"
+	"dpad/internal/sortx"
 )
 
 const (

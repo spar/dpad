@@ -11,7 +11,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"dockernext/internal/compose"
+	"dpad/internal/compose"
 )
 
 func composeUIFixture(t *testing.T) (*App, string, string) {
@@ -25,15 +25,15 @@ func composeUIFixture(t *testing.T) (*App, string, string) {
 	if err := os.WriteFile(composeFile, []byte("services: {}"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	script := "#!/bin/sh\nexec \"$DN_TUI_COMPOSE_BINARY\" -test.run=^TestTUIComposeHelper$ -- \"$@\"\n"
+	script := "#!/bin/sh\nexec \"$DP_TUI_COMPOSE_BINARY\" -test.run=^TestTUIComposeHelper$ -- \"$@\"\n"
 	if err := os.WriteFile(filepath.Join(bin, "docker"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-	t.Setenv("DN_TUI_COMPOSE_BINARY", os.Args[0])
+	t.Setenv("DP_TUI_COMPOSE_BINARY", os.Args[0])
 	t.Setenv("GORACE", os.Getenv("GORACE")+" atexit_sleep_ms=0")
-	t.Setenv("DN_TUI_COMPOSE_MODEL", model)
-	t.Setenv("DN_TUI_COMPOSE_LOG", log)
+	t.Setenv("DP_TUI_COMPOSE_MODEL", model)
+	t.Setenv("DP_TUI_COMPOSE_LOG", log)
 	t.Setenv("DOCKER_HOST", "unix:///bound.sock")
 	t.Setenv("DOCKER_CONTEXT", "")
 	t.Setenv("COMPOSE_PROFILES", "")
@@ -51,7 +51,7 @@ func composeUIFixture(t *testing.T) (*App, string, string) {
 }
 
 func TestTUIComposeHelper(t *testing.T) {
-	if os.Getenv("DN_TUI_COMPOSE_BINARY") == "" {
+	if os.Getenv("DP_TUI_COMPOSE_BINARY") == "" {
 		return
 	}
 	args := os.Args[slices.Index(os.Args, "--")+1:]
@@ -60,7 +60,7 @@ func TestTUIComposeHelper(t *testing.T) {
 		os.Exit(0)
 	}
 	if slices.Contains(args, "config") {
-		b, _ := os.ReadFile(os.Getenv("DN_TUI_COMPOSE_MODEL"))
+		b, _ := os.ReadFile(os.Getenv("DP_TUI_COMPOSE_MODEL"))
 		os.Stdout.Write(b)
 		os.Exit(0)
 	}
@@ -69,7 +69,7 @@ func TestTUIComposeHelper(t *testing.T) {
 		step = "pull"
 	}
 	project := args[slices.Index(args, "--project-name")+1]
-	f, _ := os.OpenFile(os.Getenv("DN_TUI_COMPOSE_LOG"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	f, _ := os.OpenFile(os.Getenv("DP_TUI_COMPOSE_LOG"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	fmt.Fprintln(f, step+" "+project)
 	f.Close()
 	fmt.Fprintln(os.Stdout, "updated "+project)

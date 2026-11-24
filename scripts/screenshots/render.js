@@ -51,7 +51,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8">
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ deviceScaleFactor: Number(scale), viewport: { width: 2400, height: 1600 } });
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dn-render-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dp-render-'));
   fs.writeFileSync(path.join(dir, 'page.html'), html);
   await page.goto('file://' + path.join(dir, 'page.html'));
   // An installed font changes the text width from the fallback's.

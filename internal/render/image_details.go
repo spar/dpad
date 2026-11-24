@@ -8,7 +8,7 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 
-	"dockernext/internal/docker"
+	"dpad/internal/docker"
 )
 
 func ImageUsage(items []container.Summary) string {

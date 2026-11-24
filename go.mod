@@ -1,4 +1,4 @@
-module dockernext
+module dpad
 
 go 1.26.7
 

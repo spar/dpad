@@ -21,7 +21,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 
-	"dockernext/internal/docker"
+	"dpad/internal/docker"
 )
 
 func shellDockerFixture(t *testing.T) string {
@@ -263,12 +263,12 @@ func TestShellShortcutTargetsDetailsAndContainerRowsOnly(t *testing.T) {
 
 func shellHelperCommand(ctx context.Context, mode string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestShellProcessHelper$")
-	cmd.Env = append(os.Environ(), "DN_SHELL_TEST_HELPER="+mode)
+	cmd.Env = append(os.Environ(), "DP_SHELL_TEST_HELPER="+mode)
 	return cmd
 }
 
 func TestShellProcessHelper(t *testing.T) {
-	switch os.Getenv("DN_SHELL_TEST_HELPER") {
+	switch os.Getenv("DP_SHELL_TEST_HELPER") {
 	case "success":
 		fmt.Fprintln(os.Stdout, "shell session finished")
 		os.Exit(0)
