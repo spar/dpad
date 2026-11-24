@@ -88,6 +88,10 @@ show an error and keep the last valid results. Filtering searches the current
 buffer (up to 5,000 lines); it does not fetch older logs. `esc` or `q` outside
 the prompt returns to the previous view.
 
+Long lines are cut at the edge and `←→` pans across them; press `w` to wrap them
+instead. `t` shows each line's timestamp in local time, and `?` lists the log
+viewer's keys.
+
 ## Projects
 
 The Projects tab groups containers by their Compose project and service labels,

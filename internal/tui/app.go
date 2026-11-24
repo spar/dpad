@@ -311,9 +311,13 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		if a.logs.searching {
 			return a.logs.Update(msg)
 		}
-		if key == "esc" || key == "q" {
+		switch key {
+		case "esc", "q":
 			a.logs.Close()
 			a.logs = nil
+			return nil
+		case "?":
+			a.help = true
 			return nil
 		}
 		return a.logs.Update(msg)
@@ -529,7 +533,7 @@ func (a *App) footer() string {
 		if a.logs.searching {
 			return a.logs.search.View() + " " + render.Dim.Render(logSearchHints)
 		}
-		return hints("esc", "back", "/", "regex filter", "ctrl+l", "clear filter", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/follow")
+		return hints("esc", "back", "/", "regex filter", "w", "wrap", "t", "timestamps", "←→", "pan", "g/G", "top/follow", "?", "help")
 	case a.details != nil:
 		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "enter", "logs", "e", "shell")
 	case a.networkDetails != nil:
@@ -595,6 +599,9 @@ func hints(pairs ...string) string {
 }
 
 func (a *App) helpView() string {
+	if a.logs != nil {
+		return helpTable("Logs", logsHelp)
+	}
 	global := [][2]string{
 		{"c", "choose Docker context for this session (from a list tab)"},
 		{fmt.Sprintf("tab / shift+tab, 1-%d", len(a.tabs)), "switch tabs"},
@@ -614,10 +621,25 @@ func (a *App) helpView() string {
 	if eventsTab || volumesTab || networksTab {
 		global = slices.DeleteFunc(global, func(h [2]string) bool { return h[0] == "e" || h[0] == "S / x / R" || h[0] == "P / K / D" })
 	}
-	rows := [][]string{}
-	for _, h := range append(global, a.tabs[a.active].Help()...) {
-		rows = append(rows, []string{keyStyle.Render(h[0]), h[1]})
+	return helpTable(a.tabs[a.active].Title(), append(global, a.tabs[a.active].Help()...))
+}
+
+var logsHelp = [][2]string{
+	{"/", "filter buffered lines by regular expression (enter keeps, esc cancels)"},
+	{"ctrl+l", "clear the filter"},
+	{"w", "wrap long lines (off: ←→ pans)"},
+	{"t", "show timestamps"},
+	{"↑↓ / j k", "scroll a line"},
+	{"pgup/pgdn, b/space, u/d", "scroll a page or half a page"},
+	{"g / G", "top / bottom, following new lines"},
+	{"esc, q", "back"},
+}
+
+func helpTable(title string, help [][2]string) string {
+	rows := make([][]string, len(help))
+	for i, h := range help {
+		rows[i] = []string{keyStyle.Render(h[0]), h[1]}
 	}
-	t := render.Table{Columns: []render.Column{{Header: "KEY"}, {Header: a.tabs[a.active].Title() + " — ACTION"}}, Rows: rows}
+	t := render.Table{Columns: []render.Column{{Header: "KEY"}, {Header: title + " — ACTION"}}, Rows: rows}
 	return t.String() + "\n\n" + render.Dim.Render("press any key to close")
 }

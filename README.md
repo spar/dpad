@@ -116,6 +116,7 @@ troubleshooting are covered in [Running locally](docs/local-development.md).
 - Every container gets a stable color; stderr lines are marked with `┃`.
 - Log levels are highlighted in plain text, JSON, logfmt and nginx formats.
 - Press `/` to filter by regular expression. Matches are highlighted and new lines are filtered as they arrive.
+- `w` wraps long lines and `t` shows timestamps.
 - Project logs follow containers as they are scaled, recreated or restarted, and resume from the last timestamp after a reconnect.
 
 ### Everything else in one place
