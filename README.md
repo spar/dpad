@@ -36,6 +36,8 @@ the commands you already know and fills those gaps:
 | Regex filter over buffered logs, with match highlighting | | ✓ |
 | Compose projects: grouped stats, project logs, start/stop/restart, image updates | per project dir¹ | ✓ |
 | Events timeline, volume and network usage, container shells | separate commands | ✓ in one UI |
+| Prune with a list of exactly what will be removed | | ✓ |
+| Your own commands on a key, mouse support | | ✓ |
 | Every other command and flag | ✓ | ✓ passed through |
 
 <sub>¹ `docker compose logs` and `docker compose up` cover one project at a time, from its directory.</sub>
@@ -147,6 +149,17 @@ troubleshooting are covered in [Running locally](docs/local-development.md).
       <img src="docs/images/events.svg" alt="Events tab showing kill, stop, start, pause and restart events" width="100%"><br>
       <b>Events</b><br>
       <sub>A live timeline of lifecycle and health events, filterable by container, project, service or event type.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/prune.svg" alt="Prune preview listing the stopped demo containers that would be removed" width="100%"><br>
+      <b>Prune</b><br>
+      <sub><code>X</code> lists the stopped containers, unused images, volumes, networks or build cache a prune would remove, then removes exactly those after <code>y</code>.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <b>Custom commands and mouse</b><br>
+      <sub>Bind your own commands to keys in <code>~/.config/dpad/config.yaml</code>, run against the selected container or Compose project. Click tabs and rows, double-click to open, scroll with the wheel. See <a href="docs/usage.md#custom-commands">Custom commands</a>.</sub>
     </td>
   </tr>
 </table>

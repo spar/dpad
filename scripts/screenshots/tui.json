@@ -19,5 +19,7 @@
   {"keys": "\u001b"}, {"wait": 1},
   {"keys": "2"}, {"wait": 2.5},
   {"keys": "5"}, {"wait": 2.5}, {"snap": "events"},
-  {"stop": true}
+  {"stop": true},
+  {"keys": "1"}, {"wait": 1.5}, {"keys": "X"}, {"wait": 2.5}, {"snap": "prune"},
+  {"keys": "\u001b"}, {"wait": 0.5}
 ]
