@@ -11,6 +11,7 @@ and a full-screen terminal UI. Anything it doesn't enhance goes straight to `doc
 
 [![Latest release](https://img.shields.io/github/v/release/spar/dpad)](https://github.com/spar/dpad/releases/latest)
 [![CI](https://github.com/spar/dpad/actions/workflows/ci.yml/badge.svg)](https://github.com/spar/dpad/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/spar/dpad/badge)](https://scorecard.dev/viewer/?uri=github.com/spar/dpad)
 ![macOS, Linux and Windows](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-informational)
 [![MIT license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Built with Bubble Tea](https://img.shields.io/badge/built%20with-Bubble%20Tea-ff5f87)](https://github.com/charmbracelet/bubbletea)
