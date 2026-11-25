@@ -50,7 +50,7 @@ overview, installation and screenshots, see the [README](../README.md).
 | `X` | preview a prune of stopped containers or unused images, volumes, networks or build cache (asks y) |
 | `ctrl+r` | refresh |
 | `c` (list tabs) | choose a Docker context for this session |
-| `C` | choose a color theme; the screen previews each one (`enter` keeps it for the session, `esc` cancels) |
+| `C` | choose a color theme; the screen previews each one (`enter` keeps it and saves it to `config.yaml`, `esc` cancels) |
 | `?` | help |
 | `q` | quit |
 

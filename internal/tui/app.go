@@ -639,7 +639,7 @@ func (a *App) footer() string {
 		}
 		return hints("↑↓/j/k", "move", "/", "filter", "enter", "switch context", "esc", "cancel")
 	case a.themePicker != nil:
-		return hints("↑↓/j/k", "preview", "enter", "use for this session", "esc", "cancel")
+		return hints("↑↓/j/k", "preview", "enter", "use and save", "esc", "cancel")
 	case a.projectAction != nil:
 		return a.projectAction.Footer()
 	case a.prune != nil:

@@ -16,12 +16,14 @@ can write your own in a few lines of YAML.
 ## Choosing a theme
 
 Press `C` in the TUI to open the theme picker. Moving through the list
-previews each theme on the whole screen; `enter` keeps it for the session and
-`esc` goes back to the theme you had.
+previews each theme on the whole screen; `enter` keeps it and saves it as
+`theme:` in your `config.yaml`, and `esc` goes back to the theme you had.
 
 <img src="images/themes/picker.svg" alt="The theme picker listing the built-in themes with color swatches, previewing amber on the Containers tab" width="100%">
 
-To keep a theme, name it in `~/.config/dpad/config.yaml` (the same file as
+The picker only changes the `theme:` line, creating `config.yaml` if needed,
+and leaves the rest of the file as you wrote it. You can also set the theme
+there yourself, in `~/.config/dpad/config.yaml` (the same file as
 [custom commands](usage.md#custom-commands)):
 
 ```yaml

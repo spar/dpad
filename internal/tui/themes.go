@@ -1,18 +1,21 @@
 package tui
 
 import (
+	"os"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"dpad/internal/config"
 	"dpad/internal/render"
 	"dpad/internal/sortx"
 	"dpad/internal/theme"
 )
 
 // themePicker previews each theme on the whole screen as the cursor moves.
-// esc puts back the theme that was active when it opened.
+// enter saves the choice to config.yaml; esc puts back the theme that was
+// active when it opened.
 type themePicker struct {
 	list[themeItem]
 	original *theme.Theme
@@ -81,8 +84,16 @@ func (a *App) updateThemePicker(key string) tea.Cmd {
 			return nil
 		}
 		a.themePicker = nil
-		if it.theme.Name != p.original.Name || it.theme.Path != p.original.Path {
-			a.flash = "theme " + it.name + " for this session · add theme: " + it.name + " to config.yaml to keep it"
+		if it.theme.Name == p.original.Name && it.theme.Path == p.original.Path {
+			return nil
+		}
+		if err := config.SaveTheme(it.name); err != nil {
+			a.flash, a.flashErr = "theme "+it.name+" for this session; not saved: "+oneLine(err.Error()), true
+			return nil
+		}
+		a.flash = "theme " + it.name + " saved to config.yaml"
+		if env := os.Getenv("DPAD_THEME"); env != "" && env != it.name {
+			a.flash += " · DPAD_THEME=" + env + " still wins at startup"
 		}
 	default:
 		p.HandleKey(key)

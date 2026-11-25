@@ -227,7 +227,7 @@ and dropped connections reconnect in the background. Details are in
 
 dpad ships ten color themes, from the default that follows your terminal's
 palette to matrix, amber CRT, black and white, high contrast and a light theme.
-Press `C` to preview them live, or set `theme: matrix` in `config.yaml`. A
+Press `C` to preview them live and save your pick, or set `theme: matrix` in `config.yaml`. A
 theme is one YAML file, so you can write your own or contribute one. See the
 [gallery and theme guide](docs/themes.md).
 

@@ -44,8 +44,11 @@ func TestThemePickerPreviewsKeepsAndCancels(t *testing.T) {
 	}
 	a.themePicker.cur.key = "matrix"
 	press(a, "k", "j", "enter")
-	if a.themePicker != nil || render.Theme().Name != "matrix" || !strings.Contains(a.flash, "theme: matrix") {
+	if a.themePicker != nil || render.Theme().Name != "matrix" || !strings.Contains(a.flash, "saved") {
 		t.Fatalf("enter did not keep matrix: theme %s, flash %q", render.Theme().Name, a.flash)
+	}
+	if saved, err := os.ReadFile(filepath.Join(dir, "config.yaml")); err != nil || string(saved) != "theme: matrix\n" {
+		t.Fatalf("choice not saved: %q, %v", saved, err)
 	}
 	if v := a.View(); v.BackgroundColor == nil {
 		t.Fatal("matrix did not set the terminal background")
