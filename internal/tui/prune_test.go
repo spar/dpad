@@ -72,7 +72,9 @@ func TestPruneAsksAgainWhenTargetsChange(t *testing.T) {
 		t.Fatalf("changed targets should return to preview, stage %s", v.stage)
 	}
 	finishPrune(t, v, v.Update(v.HandleKey("y")()))
-	if got := f.actions[len(f.actions)-2:]; !slices.Equal(got, []string{"prune containers a", "prune containers b"}) {
+	// Containers are removed by several workers, so either may finish first.
+	got := slices.Sorted(slices.Values(f.actions[len(f.actions)-2:]))
+	if !slices.Equal(got, []string{"prune containers a", "prune containers b"}) {
 		t.Fatal(f.actions)
 	}
 }
