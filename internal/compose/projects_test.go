@@ -85,6 +85,13 @@ func TestComposeHelper(t *testing.T) {
 		os.Exit(0)
 	}
 	if slices.Contains(args, "config") {
+		if name := os.Getenv("DP_COMPOSE_OPTIONAL"); name != "" && os.Getenv(name) == "" {
+			fmt.Fprintf(os.Stderr, "time=\"now\" level=warning msg=\"The \\\"%s\\\" variable is not set. Defaulting to a blank string.\"\n", name)
+		}
+		if name := os.Getenv("DP_COMPOSE_REQUIRE"); name != "" && os.Getenv(name) == "" {
+			fmt.Fprintf(os.Stderr, "error while interpolating name: required variable %s is missing a value: use the wrapper\n", name)
+			os.Exit(1)
+		}
 		b, _ := os.ReadFile(os.Getenv("DP_COMPOSE_MODEL"))
 		if !slices.Contains(args, "--profile") {
 			var model map[string]json.RawMessage
@@ -127,12 +134,12 @@ func TestComposeHelper(t *testing.T) {
 func TestPrepareSupportsStandaloneComposeV2AndBlocksMissingSources(t *testing.T) {
 	dir, _, _ := composeFixture(t)
 	t.Setenv("DP_COMPOSE_STANDALONE", "1")
-	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("demo", dir)}, ""))
+	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("demo", dir)}, ""), nil)
 	if projects[0].Issue != "" || !slices.Equal(projects[0].CLI, []string{"docker-compose"}) {
 		t.Fatal(projects)
 	}
 	missing := labeledProject("missing", filepath.Join(dir, "does-not-exist"))
-	projects = Prepare(t.Context(), os.Environ(), Discover([]container.Summary{missing}, ""))
+	projects = Prepare(t.Context(), os.Environ(), Discover([]container.Summary{missing}, ""), nil)
 	if projects[0].Issue == "" {
 		t.Fatal("missing local files accepted without an SSH endpoint")
 	}
@@ -181,7 +188,7 @@ func TestDiscoverAndPrepareUseOriginalSourcesAndActiveServices(t *testing.T) {
 	web := labeledProject("demo", dir)
 	worker := labeledProject("demo", dir)
 	worker.Labels["com.docker.compose.service"] = "worker"
-	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{web, worker, {}}, ""))
+	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{web, worker, {}}, ""), nil)
 	if len(projects) != 1 || projects[0].Issue != "" || projects[0].Remote || !slices.Equal(projects[0].Services, []string{"web", "worker"}) {
 		t.Fatalf("prepared projects = %+v", projects)
 	}
@@ -189,7 +196,7 @@ func TestDiscoverAndPrepareUseOriginalSourcesAndActiveServices(t *testing.T) {
 		t.Fatal("preview lost source files or performed writes")
 	}
 	worker.State = container.StateExited
-	stopped := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{web, worker}, ""))
+	stopped := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{web, worker}, ""), nil)
 	if !slices.Equal(stopped[0].Services, []string{"web"}) {
 		t.Fatal("inactive profile service would be started unexpectedly")
 	}
@@ -223,7 +230,7 @@ func TestDiscoverAndPrepareUseOriginalSourcesAndActiveServices(t *testing.T) {
 func TestRunSkipsUpAfterFailedPullAndContinuesOtherProjects(t *testing.T) {
 	dir, _, log := composeFixture(t)
 	t.Setenv("DP_COMPOSE_FAIL_PROJECT", "a")
-	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("a", dir), labeledProject("b", dir)}, ""))
+	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("a", dir), labeledProject("b", dir)}, ""), nil)
 	states := map[string]Event{}
 	for event := range Run(t.Context(), t.Context(), os.Environ(), projects) {
 		states[event.Project] = event
@@ -250,7 +257,7 @@ func TestPrepareIncludesDependenciesWithoutUnrelatedProfileServices(t *testing.T
 	if err := os.WriteFile(model, []byte(config), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("demo", dir)}, ""))
+	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("demo", dir)}, ""), nil)
 	if projects[0].Issue != "" || !slices.Equal(projects[0].Services, []string{"migrate", "web"}) || !slices.Equal(projects[0].Images, []string{"migrate:latest", "web:latest"}) {
 		t.Fatal(projects)
 	}
@@ -263,7 +270,7 @@ func TestChangedConfigurationPreventsContainerRecreation(t *testing.T) {
 			if when == "after pull" {
 				t.Setenv("DP_COMPOSE_EDIT_ON_PULL", "1")
 			}
-			projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("demo", dir)}, ""))
+			projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("demo", dir)}, ""), nil)
 			if when == "before pull" {
 				if err := os.WriteFile(model, []byte(strings.ReplaceAll(testModel, "web:latest", "web:changed")), 0o600); err != nil {
 					t.Fatal(err)
@@ -289,7 +296,7 @@ func TestSSHExecutionBindsRootlessSocketAndQuotesArguments(t *testing.T) {
 	t.Setenv("DOCKER_HOST", "ssh://me@server:2222/run/user/1000/docker.sock")
 	t.Setenv("DP_COMPOSE_REAL_DIR", dir)
 	p := labeledProject("remote", "/srv/dp-project")
-	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{p}, ""))
+	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{p}, ""), nil)
 	if len(projects) != 1 || !projects[0].Remote || projects[0].Issue != "" {
 		t.Fatal(projects)
 	}
@@ -311,17 +318,17 @@ func TestExecutionHostCanBeChosenWhenLocalAndSSHPathsOverlap(t *testing.T) {
 	dir, _, _ := composeFixture(t)
 	t.Setenv("DOCKER_HOST", "ssh://me@server/run/user/1000/docker.sock")
 	projects := Discover([]container.Summary{labeledProject("demo", dir)}, "")
-	automatic := Prepare(t.Context(), os.Environ(), projects)
+	automatic := Prepare(t.Context(), os.Environ(), projects, nil)
 	if automatic[0].Issue != "" || automatic[0].Remote {
 		t.Fatal("available local files should be the default", automatic)
 	}
 	projects[0].Location = "ssh"
-	remote := Prepare(t.Context(), os.Environ(), projects)
+	remote := Prepare(t.Context(), os.Environ(), projects, nil)
 	if remote[0].Issue != "" || !remote[0].Remote {
 		t.Fatal("explicit SSH selection was ignored", remote)
 	}
 	remote[0].Location = "local"
-	local := Prepare(t.Context(), os.Environ(), remote)
+	local := Prepare(t.Context(), os.Environ(), remote, nil)
 	if local[0].Issue != "" || local[0].Remote {
 		t.Fatal("explicit local selection was ignored", local)
 	}
@@ -334,7 +341,7 @@ func TestCancellationStopsRemainingProjectsAndReportsUnknownUp(t *testing.T) {
 			entered := filepath.Join(dir, "entered")
 			t.Setenv("DP_COMPOSE_BLOCK_STEP", step)
 			t.Setenv("DP_COMPOSE_ENTERED", entered)
-			projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("a", dir), labeledProject("b", dir)}, ""))
+			projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("a", dir), labeledProject("b", dir)}, ""), nil)
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			events := Run(ctx, t.Context(), os.Environ(), projects)
@@ -415,7 +422,7 @@ func TestPrepareWithInstalledComposeConfigurationParser(t *testing.T) {
 	t.Setenv("DOCKER_HOST", "unix:///nonexistent-compose-config-test.sock")
 	t.Setenv("DOCKER_CONTEXT", "")
 	t.Setenv("COMPOSE_PROFILES", "")
-	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("config-test", dir)}, ""))
+	projects := Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("config-test", dir)}, ""), nil)
 	if projects[0].Issue != "" || !slices.Equal(projects[0].Services, []string{"web"}) || !slices.Equal(projects[0].Images, []string{"nginx:alpine"}) {
 		t.Fatal(projects)
 	}
@@ -425,8 +432,37 @@ func TestPrepareWithInstalledComposeConfigurationParser(t *testing.T) {
 	if err := os.Unsetenv("COMPOSE_PROFILES"); err != nil {
 		t.Fatal(err)
 	}
-	projects = Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("config-test", dir)}, ""))
+	projects = Prepare(t.Context(), os.Environ(), Discover([]container.Summary{labeledProject("config-test", dir)}, ""), nil)
 	if projects[0].Issue != "" || !slices.Equal(projects[0].Services, []string{"web", "worker"}) {
 		t.Fatal("profiles from env files were lost", projects)
+	}
+}
+
+func TestPrepareRecoversWrapperVariablesAndReportsBlankOnes(t *testing.T) {
+	dir, _, _ := composeFixture(t)
+	t.Setenv("DP_COMPOSE_REQUIRE", "RUNNER_STACK")
+	t.Setenv("DP_COMPOSE_OPTIONAL", "TAG")
+	projects := Discover([]container.Summary{labeledProject("demo", dir)}, "")
+	blocked := Prepare(t.Context(), os.Environ(), projects, nil)
+	if blocked[0].Issue != "needs RUNNER_STACK: use the wrapper" {
+		t.Fatalf("issue = %q", blocked[0].Issue)
+	}
+	var asked []string
+	lookup := func(project, name string) (string, string, bool) {
+		asked = append(asked, project+" "+name)
+		return "ci", "test", name == "RUNNER_STACK"
+	}
+	ready := Prepare(t.Context(), os.Environ(), projects, lookup)
+	p := ready[0]
+	if p.Issue != "" || !slices.Equal(p.Env, []string{"RUNNER_STACK=ci"}) || !slices.Equal(p.EnvSources, []string{"RUNNER_STACK=ci from test"}) {
+		t.Fatalf("variable not recovered: %+v", p)
+	}
+	if !slices.Equal(p.Unset, []string{"TAG"}) || !slices.Equal(asked, []string{"demo RUNNER_STACK", "demo TAG"}) {
+		t.Fatalf("blank variable not reported or looked up: unset %v, asked %v", p.Unset, asked)
+	}
+	configured := slices.Clone(projects)
+	configured[0].Env = []string{"RUNNER_STACK=from-config"}
+	if p := Prepare(t.Context(), os.Environ(), configured, lookup)[0]; p.Issue != "" || !slices.Equal(p.Env, []string{"RUNNER_STACK=from-config"}) {
+		t.Fatalf("configured value was not used or was overridden: %+v", p)
 	}
 }

@@ -33,17 +33,20 @@ func TestComposeProgressCoalescesScreenshotTranscript(t *testing.T) {
 	}
 	rendered := progress.render(120, "succeeded")
 	plain := ansi.Strip(rendered)
-	for _, id := range []string{"37fb86c2a767", "1c9ad473d925", "6141c6522f61", "be21ec85edee", "example-app"} {
-		if strings.Count(plain, id) != 1 {
-			t.Fatalf("resource %s repeated in compact output:\n%s", id, plain)
+	for _, id := range []string{"37fb86c2a767", "1c9ad473d925", "6141c6522f61", "be21ec85edee"} {
+		if strings.Contains(plain, id) {
+			t.Fatalf("finished layer %s listed in compact output:\n%s", id, plain)
 		}
+	}
+	if strings.Count(plain, "example-app") != 1 || !strings.Contains(plain, "Layers · 10 of 10 done") {
+		t.Fatalf("container or layer count missing:\n%s", plain)
 	}
 	for _, stale := range []string{"Downloading", "Extracting", "Verifying Checksum", "Recreated", "Starting", "0B"} {
 		if strings.Contains(plain, stale) {
 			t.Fatalf("old state %q survived:\n%s", stale, plain)
 		}
 	}
-	if !strings.Contains(plain, "Layers · 10 complete") || !strings.Contains(plain, "✓ example-app") || !strings.Contains(plain, "Started") || !strings.Contains(rendered, "\x1b[32m") {
+	if !strings.Contains(plain, "✓ example-app") || !strings.Contains(plain, "Started") || !strings.Contains(rendered, "\x1b[32m") {
 		t.Fatalf("completion summaries or actual completion styling missing:\n%s", rendered)
 	}
 	if len(strings.Split(plain, "\n")) >= len(strings.Split(output, "\n"))/2 {
@@ -131,7 +134,7 @@ func TestComposeDefaultViewIsCompactAndRawLogIsAvailable(t *testing.T) {
 	}
 	v.HandleKey(key("enter"))
 	plain := ansi.Strip(v.View())
-	if strings.Count(plain, "6141c6522f61") != 1 || strings.Contains(plain, "Downloading") || !strings.Contains(v.Footer(), "raw log") {
+	if strings.Contains(plain, "6141c6522f61") || strings.Contains(plain, "Downloading") || !strings.Contains(v.Footer(), "raw log") {
 		t.Fatal("default view still dumps the noisy transcript", plain)
 	}
 	v.HandleKey(key("l"))
@@ -139,7 +142,7 @@ func TestComposeDefaultViewIsCompactAndRawLogIsAvailable(t *testing.T) {
 		t.Fatal("raw log cannot be inspected")
 	}
 	v.HandleKey(key("l"))
-	if v.rawOutput || strings.Count(ansi.Strip(v.View()), "6141c6522f61") != 1 {
+	if v.rawOutput || strings.Contains(ansi.Strip(v.View()), "6141c6522f61") {
 		t.Fatal("cannot return to compact progress")
 	}
 }
@@ -155,12 +158,57 @@ func TestComposeProgressSummarizesChangesAndFailures(t *testing.T) {
 	if recreated, downloaded := updated.changes(); recreated != 1 || downloaded != 1 {
 		t.Fatal("recreated containers or new layers were not counted", recreated, downloaded)
 	}
-	if plain := ansi.Strip(updated.render(100, "succeeded")); !strings.Contains(plain, "Layers · 1 complete") || strings.Contains(plain, "Download complete") {
+	if plain := ansi.Strip(updated.render(100, "succeeded")); !strings.Contains(plain, "Layers · 1 of 1 done") || strings.Contains(plain, "Download complete") {
 		t.Fatal("a layer stayed in progress after its image was pulled:\n" + plain)
 	}
 	var failed composeProgress
 	failed.apply("Image web:9 Pulling\nImage web:9 Error manifest unknown\nError response from daemon: manifest for web:9 not found\n\npulling failed: exit status 1\n", true)
 	if got := failed.failure(); got != "Error response from daemon: manifest for web:9 not found" {
 		t.Fatalf("failure() = %q, want Compose's own error", got)
+	}
+}
+
+func TestComposeJSONProgressGroupsLayersUnderImages(t *testing.T) {
+	var out strings.Builder
+	for i := range 12 {
+		fmt.Fprintf(&out, `{"id":"Image app%02d:1","status":"Working","text":"Pulling"}`+"\n", i)
+		for l := range 8 {
+			fmt.Fprintf(&out, `{"id":"%02d%02d00000000","parent_id":"Image app%02d:1","status":"Done","text":"Pull complete"}`+"\n", i, l, i)
+		}
+		if i < 10 {
+			fmt.Fprintf(&out, `{"id":"Image app%02d:1","status":"Done","text":"Pulled"}`+"\n", i)
+		}
+	}
+	out.WriteString(`{"id":"aaaaaaaaaaaa","parent_id":"Image app11:1","status":"Working","text":"Downloading","details":"5MB","current":5000000,"total":20000000}` + "\n")
+	out.WriteString(`{"id":"Image bad:1","status":"Error","text":"Error","details":"manifest unknown"}` + "\n")
+	out.WriteString(`{"error":true,"message":"Error response from daemon: manifest unknown\nError response from daemon: manifest unknown"}` + "\n")
+	var progress composeProgress
+	progress.apply(out.String(), false)
+	plain := ansi.Strip(progress.render(140, "pulling"))
+	lines := strings.Split(plain, "\n")
+	if len(lines) > 14 {
+		t.Fatalf("12 images and 97 layers took %d lines:\n%s", len(lines), plain)
+	}
+	for _, want := range []string{
+		"Images · 10 of 13 pulled · 1 failed", "✓ 10 images pulled: app00:1", "app10:1", "8 of 8 layers",
+		"app11:1", "8 of 9 layers", "aaaaaaaaaaaa  Downloading [====>", "5MB / 20MB", "✗ bad:1", "manifest unknown",
+	} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("missing %q in:\n%s", want, plain)
+		}
+	}
+	if strings.Contains(plain, "0000000000") && strings.Count(plain, "00000000") > 0 {
+		t.Fatalf("finished layers listed:\n%s", plain)
+	}
+	if strings.Count(plain, "Error response from daemon: manifest unknown") != 1 || progress.failure() != "Error response from daemon: manifest unknown" {
+		t.Fatalf("JSON error message not shown once:\n%s", plain)
+	}
+}
+
+func TestPlainComposeLogRewritesJSONLines(t *testing.T) {
+	got := plainComposeLog(`$ docker compose pull` + "\n" + `{"id":"Image web:1","status":"Working","text":"Pulling"}` + "\n" + `{"id":"abc123def456","parent_id":"Image web:1","status":"Working","text":"Downloading","details":"5MB"}` + "\n" + `{"error":true,"message":"Error response from daemon: denied"}`)
+	want := "$ docker compose pull\nImage web:1 Pulling\nabc123def456 Downloading 5MB\nError response from daemon: denied"
+	if got != want {
+		t.Fatalf("got %q, want %q", got, want)
 	}
 }

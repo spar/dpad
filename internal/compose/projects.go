@@ -14,7 +14,9 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -35,6 +37,31 @@ type Project struct {
 	CLI               []string
 	ConfigHash        [32]byte
 	Issue             string
+	// Env holds KEY=VALUE pairs Compose needs for interpolation that a wrapper
+	// script would normally export, from config.yaml or a Lookup.
+	Env []string
+	// EnvSources says where each Env value came from, for the preview.
+	EnvSources []string
+	// Unset lists variables Compose replaced with a blank string.
+	Unset []string
+	// JSONProgress is set when the Compose CLI can report progress as JSON
+	// lines, which name each layer's image.
+	JSONProgress bool
+}
+
+// Lookup finds a value for a variable a project's Compose files need but the
+// environment lacks. source describes where the value came from.
+type Lookup func(project, name string) (value, source string, ok bool)
+
+// MissingVariableError is a variable Compose requires (${NAME:?hint}) that
+// is not set, typically because a wrapper script normally exports it.
+type MissingVariableError struct{ Name, Hint string }
+
+func (e *MissingVariableError) Error() string {
+	if e.Hint != "" {
+		return "needs " + e.Name + ": " + e.Hint
+	}
+	return "needs " + e.Name + ", which is not set"
 }
 
 // Discover includes stopped projects and ignores the dashboard's list filter.
@@ -86,14 +113,14 @@ const prepareWorkers = 4
 
 // Prepare validates source files and resolved configuration without pulling or
 // changing containers. Only configuration hashes and image names are retained.
-func Prepare(ctx context.Context, env []string, projects []Project) []Project {
+func Prepare(ctx context.Context, env []string, projects []Project, lookup Lookup) []Project {
 	out := slices.Clone(projects)
 	jobs := make(chan int)
 	var workers sync.WaitGroup
 	for range min(prepareWorkers, len(out)) {
 		workers.Go(func() {
 			for i := range jobs {
-				if err := prepare(ctx, env, &out[i]); err != nil {
+				if err := prepare(ctx, env, &out[i], lookup); err != nil {
 					out[i].Issue = err.Error()
 				}
 			}
@@ -109,7 +136,7 @@ func Prepare(ctx context.Context, env []string, projects []Project) []Project {
 	return out
 }
 
-func prepare(ctx context.Context, env []string, p *Project) error {
+func prepare(ctx context.Context, env []string, p *Project, lookup Lookup) error {
 	p.Remote = false
 	if !filepath.IsAbs(p.Directory) && !path.IsAbs(p.Directory) || strings.ContainsAny(p.Directory, "\x00\r\n") {
 		return errors.New("compose directory must be an absolute path without control characters")
@@ -157,7 +184,8 @@ func prepare(ctx context.Context, env []string, p *Project) error {
 		b, err := cmd.Output()
 		version := strings.TrimPrefix(strings.TrimSpace(string(b)), "v")
 		if err == nil && len(version) > 1 && version[0] >= '2' && version[0] <= '9' && version[1] == '.' {
-			return resolve(probeCtx, env, p)
+			p.JSONProgress = supportsJSONProgress(version)
+			return resolveWithLookup(probeCtx, env, p, lookup)
 		}
 	}
 	return errors.New("docker compose v2 or later is required on the execution host; SSH also requires noninteractive authentication")
@@ -170,36 +198,135 @@ func sourcePath(dir, file string) string {
 	return filepath.Join(dir, file)
 }
 
-func resolvedConfig(ctx context.Context, env []string, p Project, allProfiles bool) ([]byte, error) {
+// resolveWithLookup fills in variables the Compose files need from lookup.
+// Compose reports only the first missing required variable, so it retries
+// until nothing more can be found.
+func resolveWithLookup(ctx context.Context, env []string, p *Project, lookup Lookup) error {
+	tried := map[string]bool{}
+	for {
+		err := resolve(ctx, env, p)
+		names := p.Unset
+		var missing *MissingVariableError
+		switch {
+		case errors.As(err, &missing):
+			names = []string{missing.Name}
+		case err != nil:
+			return err
+		}
+		found := false
+		for _, name := range names {
+			if lookup == nil || tried[name] || hasVariable(p.Env, name) {
+				continue
+			}
+			tried[name] = true
+			if value, source, ok := lookup(p.Name, name); ok {
+				p.Env = append(p.Env, name+"="+value)
+				p.EnvSources = append(p.EnvSources, name+"="+value+" from "+source)
+				found = true
+			}
+		}
+		if !found {
+			return err
+		}
+	}
+}
+
+func hasVariable(env []string, name string) bool {
+	for _, entry := range env {
+		if key, _, _ := strings.Cut(entry, "="); key == name {
+			return true
+		}
+	}
+	return false
+}
+
+var (
+	composeLogLine  = regexp.MustCompile(`^time="[^"]*" level=(\w+) msg="((?:[^"\\]|\\.)*)"`)
+	requiredVarLine = regexp.MustCompile(`required variable (\S+) is missing a value(?::\s*(.*))?$`)
+	unsetVarLine    = regexp.MustCompile(`^The "(\S+)" variable is not set\. Defaulting to a blank string\.$`)
+)
+
+// composeMessages turns Compose's stderr into distinct plain messages,
+// dropping logrus timestamps, and collects variables it left blank.
+func composeMessages(stderr string) (errs, warnings, unset []string) {
+	for line := range strings.Lines(stderr) {
+		line = strings.TrimSpace(line)
+		level := "error"
+		if m := composeLogLine.FindStringSubmatch(line); m != nil {
+			level, line = m[1], m[2]
+			if unquoted, err := strconv.Unquote(`"` + m[2] + `"`); err == nil {
+				line = unquoted
+			}
+		}
+		if m := unsetVarLine.FindStringSubmatch(line); m != nil {
+			if !slices.Contains(unset, m[1]) {
+				unset = append(unset, m[1])
+			}
+			continue
+		}
+		target := &errs
+		if level == "warning" || level == "info" || level == "debug" {
+			target = &warnings
+		}
+		if line != "" && !slices.Contains(*target, line) {
+			*target = append(*target, line)
+		}
+	}
+	return errs, warnings, unset
+}
+
+func configError(stderr string, err error) error {
+	errs, warnings, unset := composeMessages(stderr)
+	for _, line := range errs {
+		if m := requiredVarLine.FindStringSubmatch(line); m != nil {
+			return &MissingVariableError{Name: m[1], Hint: strings.TrimSpace(m[2])}
+		}
+	}
+	messages := errs
+	if len(messages) == 0 {
+		messages = warnings
+	}
+	if len(messages) == 0 {
+		return fmt.Errorf("read Compose configuration: %w", err)
+	}
+	if len(unset) > 0 {
+		messages = append(messages, "not set: "+strings.Join(unset, ", "))
+	}
+	return errors.New("invalid Compose configuration: " + strings.Join(messages, "; "))
+}
+
+func resolvedConfig(ctx context.Context, env []string, p Project, allProfiles bool) ([]byte, []string, error) {
 	args := baseArgs(p)
 	if allProfiles {
 		args = append(args, "--profile", "*")
 	}
 	cmd, err := command(ctx, env, p, append(args, "config", "--format", "json")...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var config, stderr limitedOutput
 	config.limit, stderr.limit = 4<<20, 8192
 	cmd.Stdout, cmd.Stderr = &config, &stderr
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("read Compose configuration: %w: %s", err, strings.TrimSpace(stderr.String()))
+		return nil, nil, configError(stderr.String(), err)
 	}
 	if config.overflow {
-		return nil, errors.New("resolved Compose configuration exceeds 4 MiB")
+		return nil, nil, errors.New("resolved Compose configuration exceeds 4 MiB")
 	}
-	return []byte(config.String()), nil
+	_, _, unset := composeMessages(stderr.String())
+	return []byte(config.String()), unset, nil
 }
 
 func resolve(ctx context.Context, env []string, p *Project) error {
-	full, err := resolvedConfig(ctx, env, *p, true)
+	full, unset, err := resolvedConfig(ctx, env, *p, true)
 	if err != nil {
 		return err
 	}
-	active, err := resolvedConfig(ctx, env, *p, false)
+	active, _, err := resolvedConfig(ctx, env, *p, false)
 	if err != nil {
 		return err
 	}
+	p.Unset = unset
 	var model struct {
 		Services map[string]struct {
 			Image     string
@@ -249,8 +376,23 @@ func resolve(ctx context.Context, env []string, p *Project) error {
 	return nil
 }
 
+// supportsJSONProgress reports whether Compose has --progress json. It is in
+// v2.32 (pkg/progress/json.go); older releases may also have it, but plain
+// progress is the safe choice there.
+func supportsJSONProgress(version string) bool {
+	major, rest, _ := strings.Cut(version, ".")
+	minor, _, _ := strings.Cut(rest, ".")
+	ma, err1 := strconv.Atoi(major)
+	mi, err2 := strconv.Atoi(minor)
+	return err1 == nil && err2 == nil && (ma > 2 || ma == 2 && mi >= 32)
+}
+
 func baseArgs(p Project) []string {
-	args := []string{"--ansi", "never", "--progress", "plain", "--project-directory", p.Directory, "--project-name", p.Name}
+	return progressArgs(p, "plain")
+}
+
+func progressArgs(p Project, progress string) []string {
+	args := []string{"--ansi", "never", "--progress", progress, "--project-directory", p.Directory, "--project-name", p.Name}
 	for _, file := range p.Files {
 		args = append(args, "--file", file)
 	}
@@ -279,7 +421,7 @@ func command(ctx context.Context, env []string, p Project, args ...string) (*exe
 			return nil, err
 		}
 		cmd := exec.CommandContext(ctx, executable, append(slices.Clone(p.CLI[1:]), args...)...)
-		cmd.Env, cmd.Dir = slices.Clone(env), p.Directory
+		cmd.Env, cmd.Dir = append(slices.Clone(env), p.Env...), p.Directory
 		configureCommand(cmd)
 		return cmd, nil
 	}
@@ -299,6 +441,7 @@ func command(ctx context.Context, env []string, p Project, args ...string) (*exe
 		sshArgs = append(sshArgs, "-p", u.Port())
 	}
 	remote := []string{"env", "DOCKER_HOST=unix://" + socket, "DOCKER_CONTEXT=", "DOCKER_TLS=", "DOCKER_TLS_VERIFY=", "DOCKER_CERT_PATH="}
+	remote = append(remote, p.Env...)
 	remote = append(remote, p.CLI...)
 	remote = append(remote, args...)
 	for i := range remote {

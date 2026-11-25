@@ -194,10 +194,14 @@ pulled or recreated for it.
 Pressing `y` opens live progress straight away. When several projects update,
 the top half lists every project with its current step and elapsed time
 (`checking configuration`, `pulling images`, `recreating services`), and the
-bottom half shows the active project's images, layers and containers. Each
-resource has one row whose status updates in place, with completion checkmarks
-and status colors. Transfer amounts are shown when Compose reports them. Press
-`l` to switch between compact progress and the raw multiline log, `↑↓` or
+bottom half shows the active project's progress, laid out like
+`docker compose pull`: one row per image with its layer count and bytes, and
+the layers still downloading or extracting listed under it with a bar. Finished
+layers are counted, not listed. When a project has more than eight images or
+containers, the finished ones collapse into one line so the view fits the
+screen. With Compose 2.32 or later dpad reads Compose's JSON progress, which
+says which image each layer belongs to; older versions show layers as one
+group. Press `l` to switch between compact progress and the raw multiline log, `↑↓` or
 `pgup`/`pgdn` to read scrollback, `G` to follow the active project again,
 `[`/`]` to inspect another project's output, and `tab` for the full summary
 table. The raw log retains the latest 32 KiB per project.
@@ -227,11 +231,31 @@ or standalone Compose v2 (`docker-compose`). TCP-only remote daemons require the
 files to be available locally.
 
 Compose uses the labeled env-file overrides, or its normal `.env` discovery
-when no override was recorded. Original shell-only variables and unrecorded
-launch flags cannot be recovered;
-they must be available on the execution host or recorded in the project files.
-Resolved configuration is rechecked before confirmation, before pulling, and
-again before `up`; changes require a fresh preview. Configuration values are
+when no override was recorded. Docker does not record shell variables that a
+wrapper script exported when it ran Compose (for example `RUNNER_STACK` set by
+`./runners <stack>`). When the Compose files need such a variable, dpad looks
+for it in the environment of the project's containers and uses it if every
+container that sets it agrees on one value. The preview row then says
+`ready · sets RUNNER_STACK`, and `enter` shows the value and where it came
+from. Variables Compose would leave blank are shown as `left blank` so a
+missing value is not applied silently.
+
+When a required variable cannot be recovered, the project is blocked with
+Compose's own hint, such as `needs RUNNER_STACK: Run this through ./runners
+<stack> so RUNNER_STACK is set`, and `enter` shows how to set it in
+`config.yaml`:
+
+```yaml
+composeProjects:
+  expense-tracker-runner:   # Compose project name
+    env:
+      RUNNER_STACK: expense-tracker
+```
+
+Values from `config.yaml` take precedence over recovered ones. Unrecorded
+launch flags cannot be recovered. Resolved configuration is rechecked before
+pulling and again before `up`; a change fails that project and needs a fresh
+preview. Configuration values are
 hashed rather than displayed or retained as logs.
 
 Press `esc` from the live console or project list to cancel remaining work. In-flight
