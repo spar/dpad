@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { parseSums, formula, scoop, pkgbuild, srcinfo } = require('./packages.cjs');
+const { parseSums, formula, scoop, pkgbuild, srcinfo, wingetManifests } = require('./packages.cjs');
 
 const names = ['darwin-amd64.tar.gz', 'darwin-arm64.tar.gz', 'linux-amd64.tar.gz',
   'linux-arm64.tar.gz', 'windows-amd64.zip', 'windows-arm64.zip'].map(n => 'dpad-' + n);
@@ -40,6 +40,21 @@ test('renders matching PKGBUILD and .SRCINFO for the AUR', () => {
   assert.ok(pkg.includes(`sha256sums_aarch64=('${hash(3)}')`));
   assert.ok(info.includes(`\tsource_aarch64 = dpad-1.2.3-aarch64.tar.gz::${url('dpad-linux-arm64.tar.gz')}`));
   assert.ok(info.includes(`\tsha256sums_x86_64 = ${hash(2)}`));
+});
+
+test('renders winget manifests for the community repository', () => {
+  const { dir, files } = wingetManifests('v1.2.3', sums);
+  assert.equal(dir, 'manifests/s/spar/dpad/1.2.3');
+  assert.deepEqual(Object.keys(files).sort(),
+    ['spar.dpad.installer.yaml', 'spar.dpad.locale.en-US.yaml', 'spar.dpad.yaml']);
+  for (const [name, text] of Object.entries(files)) {
+    assert.match(text, /^PackageIdentifier: spar\.dpad\nPackageVersion: 1\.2\.3\n/m, name);
+    assert.match(text, /\nManifestVersion: 1\.28\.0\n$/, name);
+  }
+  const installer = files['spar.dpad.installer.yaml'];
+  assert.ok(installer.includes(`- Architecture: x64\n  InstallerUrl: ${url('dpad-windows-amd64.zip')}\n  InstallerSha256: ${hash(4)}\n`));
+  assert.ok(installer.includes(`- Architecture: arm64\n  InstallerUrl: ${url('dpad-windows-arm64.zip')}\n  InstallerSha256: ${hash(5)}\n`));
+  assert.match(installer, /RelativeFilePath: dpad\.exe\n {2}PortableCommandAlias: dp\n/);
 });
 
 test('rejects missing assets and odd tags', () => {

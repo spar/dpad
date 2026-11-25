@@ -186,6 +186,114 @@ async function publishManifests({ github, core, tag, sumsFile }) {
   }
 }
 
+const winget = { id: 'spar.dpad', schema: '1.28.0', upstream: { owner: 'microsoft', repo: 'winget-pkgs' } };
+
+// Multi-file manifest for microsoft/winget-pkgs. winget allows one alias per
+// file, so the portable install is exposed as `dp`, the command the docs use.
+function wingetManifests(tag, sums) {
+  const version = versionOf(tag);
+  const head = (type) => `# yaml-language-server: $schema=https://aka.ms/winget-manifest.${type}.${winget.schema}.schema.json
+
+PackageIdentifier: ${winget.id}
+PackageVersion: ${version}
+`;
+  const tail = (type) => `ManifestType: ${type}\nManifestVersion: ${winget.schema}\n`;
+  const installer = (arch, goarch) => {
+    const a = asset(tag, sums, `dpad-windows-${goarch}.zip`);
+    return `- Architecture: ${arch}\n  InstallerUrl: ${a.url}\n  InstallerSha256: ${a.sha256.toUpperCase()}\n`;
+  };
+  const dir = `manifests/${winget.id[0]}/${winget.id.replace('.', '/')}/${version}`;
+  return {
+    dir,
+    files: {
+      [`${winget.id}.yaml`]: head('version') + `DefaultLocale: en-US\n` + tail('version'),
+      [`${winget.id}.installer.yaml`]: head('installer') + `InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+- RelativeFilePath: dpad.exe
+  PortableCommandAlias: dp
+Commands:
+- dp
+Installers:
+${installer('x64', 'amd64')}${installer('arm64', 'arm64')}` + tail('installer'),
+      [`${winget.id}.locale.en-US.yaml`]: head('defaultLocale') + `PackageLocale: en-US
+Publisher: spar
+PublisherUrl: https://github.com/spar
+PublisherSupportUrl: ${homepage}/issues
+PackageName: dpad
+PackageUrl: ${homepage}
+License: MIT
+LicenseUrl: ${homepage}/blob/HEAD/LICENSE
+ShortDescription: ${desc}
+Description: dp adds live stats with sparklines, multi-container logs, Compose project controls and a full-screen terminal UI to the docker CLI. Commands it does not enhance are passed through to docker, which must be installed.
+Moniker: dpad
+Tags:
+- cli
+- containers
+- docker
+- docker-compose
+- terminal
+- tui
+ReleaseNotesUrl: ${homepage}/releases/tag/${tag}
+` + tail('defaultLocale'),
+    },
+  };
+}
+
+// Commits the manifests to a branch of the fork, cut from upstream's master,
+// and opens a pull request against microsoft/winget-pkgs. github must be
+// authenticated as the fork's owner.
+async function publishWinget({ github, core, tag, sumsFile, fork }) {
+  const sums = parseSums(fs.readFileSync(sumsFile, 'utf8'));
+  const { dir, files } = wingetManifests(tag, sums);
+  const version = versionOf(tag);
+  const up = winget.upstream;
+  const exists = async (path) => {
+    try {
+      await github.rest.repos.getContent({ ...up, path });
+      return true;
+    } catch (err) {
+      if (err.status === 404) return false;
+      throw err;
+    }
+  };
+  if (await exists(dir)) {
+    core.info(`${winget.id} ${version} is already in ${up.owner}/${up.repo}`);
+    return;
+  }
+  const branch = `${winget.id}-${version}`;
+  const open = await github.rest.pulls.list({ ...up, state: 'open', head: `${fork}:${branch}` });
+  if (open.data.length) {
+    core.info(`Pull request already open: ${open.data[0].html_url}`);
+    return;
+  }
+
+  const base = (await github.rest.git.getRef({ ...up, ref: 'heads/master' })).data.object.sha;
+  const repo = { owner: fork, repo: up.repo };
+  const tree = await github.rest.git.createTree({
+    ...repo,
+    base_tree: base,
+    tree: Object.entries(files).map(([name, content]) => ({ path: `${dir}/${name}`, mode: '100644', type: 'blob', content })),
+  });
+  const isNew = !(await exists(path.posix.dirname(dir)));
+  const title = isNew ? `New package: ${winget.id} version ${version}` : `New version: ${winget.id} version ${version}`;
+  const commit = await github.rest.git.createCommit({ ...repo, message: title, tree: tree.data.sha, parents: [base] });
+  try {
+    await github.rest.git.createRef({ ...repo, ref: `refs/heads/${branch}`, sha: commit.data.sha });
+  } catch (err) {
+    if (err.status !== 422) throw err;
+    await github.rest.git.updateRef({ ...repo, ref: `heads/${branch}`, sha: commit.data.sha, force: true });
+  }
+  const pr = await github.rest.pulls.create({
+    ...up,
+    title,
+    head: `${fork}:${branch}`,
+    base: 'master',
+    body: `## Description\n\n${title}, from the ${repo.owner}/dpad release ${tag} (${homepage}/releases/tag/${tag}).\n\nSubmitted by the dpad release workflow.`,
+  });
+  core.info(`Opened ${pr.data.html_url}`);
+}
+
 function writeAur({ tag, sumsFile, dir }) {
   const sums = parseSums(fs.readFileSync(sumsFile, 'utf8'));
   fs.mkdirSync(dir, { recursive: true });
@@ -193,4 +301,4 @@ function writeAur({ tag, sumsFile, dir }) {
   fs.writeFileSync(path.join(dir, '.SRCINFO'), srcinfo(tag, sums));
 }
 
-module.exports = { parseSums, formula, scoop, pkgbuild, srcinfo, publishManifests, writeAur };
+module.exports = { parseSums, formula, scoop, pkgbuild, srcinfo, wingetManifests, publishManifests, publishWinget, writeAur };

@@ -114,3 +114,4 @@ jobs:
     secrets:
       PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
       AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}

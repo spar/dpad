@@ -1,9 +1,9 @@
 name: Packages
 
-# Updates the Homebrew tap, Scoop bucket and AUR package for a published
-# release. ci.yml calls this after each release; run it by hand to republish
-# a tag. Each target is skipped until its secret is set; see
-# docs/package-managers.md.
+# Updates the Homebrew tap, Scoop bucket and AUR package, and opens a winget
+# pull request, for a published release. ci.yml calls this after each release;
+# run it by hand to republish a tag. Each target is skipped until its secret
+# is set; see docs/package-managers.md.
 on:
   workflow_call:
     inputs:
@@ -14,6 +14,8 @@ on:
       PACKAGES_TOKEN:
         required: false
       AUR_SSH_KEY:
+        required: false
+      WINGET_TOKEN:
         required: false
   workflow_dispatch:
     inputs:
@@ -32,6 +34,7 @@ jobs:
       TAG: ${{ inputs.tag }}
       HAS_PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN != '' }}
       HAS_AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY != '' }}
+      HAS_WINGET_TOKEN: ${{ secrets.WINGET_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -49,6 +52,14 @@ jobs:
           script: |
             const { publishManifests } = require(process.cwd() + '/scripts/release/packages.cjs')
             await publishManifests({ github, core, tag: process.env.TAG, sumsFile: process.env.RUNNER_TEMP + '/SHA256SUMS' })
+      - name: Open winget pull request
+        if: env.HAS_WINGET_TOKEN == 'true'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.WINGET_TOKEN }}
+          script: |
+            const { publishWinget } = require(process.cwd() + '/scripts/release/packages.cjs')
+            await publishWinget({ github, core, tag: process.env.TAG, sumsFile: process.env.RUNNER_TEMP + '/SHA256SUMS', fork: context.repo.owner })
       - name: Render AUR package
         if: env.HAS_AUR_SSH_KEY == 'true'
         uses: actions/github-script@v8
