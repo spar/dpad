@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "17 6 * * 1" # weekly, so new advisories against unchanged code still fail CI
 
 permissions:
   contents: read
@@ -53,7 +55,8 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
         with:
-          go-version: stable
+          # The toolchain in go.mod is the one release builds use, so scan its standard library.
+          go-version-file: go.mod
           cache: ${{ vars.CI_RUNNER == '' }}
       - run: make vuln
 
