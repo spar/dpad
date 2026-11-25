@@ -27,6 +27,9 @@ trap 'rm -rf "$work"' EXIT
 
 echo "capture: recording the TUI (about 100 seconds; restarts, pauses and stops a few demo containers)"
 python3 "$here/drive.py" "$work/raw" 150 30 "$here/tui.json" -- "$dp"
+echo "capture: recording the theme gallery"
+# No user config, so the picker lists only the built-in themes.
+DPAD_CONFIG="$work/none.yaml" DPAD_THEME=default python3 "$here/drive.py" "$work/raw" 150 30 "$here/themes.json" -- "$dp"
 echo "capture: recording CLI commands"
 python3 "$here/drive.py" "$work/raw" 160 39 "$here/cli.json" -- bash "$here/cli.sh" "$dp"
 
@@ -34,7 +37,12 @@ echo "capture: rendering"
 for name in containers stats projects logs details events prune; do
 	node "$here/svg.js" 150 30 dp "$out/$name.svg" "$work/raw/$name.bin"
 done
+mkdir -p "$out/themes"
+for snap in "$work"/raw/theme-*.bin; do
+	name="$(basename "$snap" .bin)"
+	node "$here/svg.js" 150 30 dp "$out/themes/${name#theme-}.svg" "$snap"
+done
 node "$here/svg.js" 160 39 '~/app' "$out/cli.svg" "$work/raw/cli.bin"
 node "$here/svg.js" --anim 10 150 30 dp "$out/demo.svg" "$work"/raw/tour-*.bin
-python3 "$here/font.py" "$out"/*.svg
+python3 "$here/font.py" "$out"/*.svg "$out"/themes/*.svg
 echo "capture: wrote $out"
