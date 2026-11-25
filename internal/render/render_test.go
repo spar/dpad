@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
@@ -283,5 +284,41 @@ func TestTableFitsWidthByDroppingAndShrinkingColumns(t *testing.T) {
 				t.Errorf("width %d: line %q is %d wide", tc.width, l, ansi.StringWidth(l))
 			}
 		}
+	}
+}
+
+func TestAccentTintsHeaderAndSelectionAndKeepsBars(t *testing.T) {
+	t.Cleanup(func() { SetAccent(nil) })
+	SetAccent(Cyan)
+	bar := Bar(90, 10)
+	out := Table{Columns: []Column{{Header: "NAME"}, {}, {Header: "PIDS"}}, Rows: [][]string{{"web", bar, "3"}}}.Window(0, 5)
+	if !strings.HasPrefix(out, Header.Render("NAME")) {
+		t.Fatalf("header not in the accent: %q", out)
+	}
+	row := strings.Split(out, "\n")[1]
+	bg := sgrPrefix(lipgloss.NewStyle().Background(Cyan))
+	if !strings.HasPrefix(row, sgrPrefix(Selected)) || !strings.Contains(row, bg) {
+		t.Fatalf("selected row lacks the accent background: %q", row)
+	}
+	if strings.Contains(row, "\x1b[7m") {
+		t.Fatalf("selected row is reversed: %q", row)
+	}
+	for _, seg := range strings.Split(row, "\x1b[m")[1:] {
+		if seg != "" && !strings.HasPrefix(seg, bg) {
+			t.Fatalf("a run after a reset lost the row background: %q", row)
+		}
+	}
+	if got, want := ansi.Strip(out), "NAME                PIDS\nweb    "+ansi.Strip(bar)+"   3"; got != want {
+		t.Fatalf("selected row text = %q, want %q", got, want)
+	}
+}
+
+func TestAccentKeepsReverseSelectionWithoutColor(t *testing.T) {
+	t.Cleanup(func() { colorDisabled = false; SetAccent(nil) })
+	colorDisabled = true
+	SetAccent(Cyan)
+	out := Table{Columns: []Column{{Header: "NAME"}}, Rows: [][]string{{"web"}}}.Window(0, 5)
+	if !strings.Contains(out, "\x1b[7m") {
+		t.Fatalf("selection would be invisible without color: %q", out)
 	}
 }

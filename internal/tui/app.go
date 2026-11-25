@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"slices"
 	"strings"
 
@@ -17,10 +18,37 @@ import (
 )
 
 var (
-	tabActive   = lipgloss.NewStyle().Bold(true).Reverse(true).Padding(0, 1)
-	tabInactive = lipgloss.NewStyle().Padding(0, 1).Foreground(render.Gray)
-	keyStyle    = lipgloss.NewStyle().Bold(true)
+	keyStyle = lipgloss.NewStyle().Bold(true)
+	brand    = lipgloss.NewStyle().Bold(true).Foreground(render.Green).Render("▍") + render.Bold.Render("dpad")
+	// Each tab has its own accent, carried into its headers and selection.
+	// Red stays free to mean an error.
+	tabAccents = []color.Color{
+		render.Cyan, lipgloss.Color("12"), render.Yellow, render.Magenta,
+		render.Green, lipgloss.Color("13"), lipgloss.Color("14"),
+	}
 )
+
+func tabAccent(i int) color.Color { return tabAccents[i%len(tabAccents)] }
+
+// tabLabel renders a tab: a filled accent block when active, otherwise its
+// number in the accent and its name dimmed. label is "N" or "N Title".
+func tabLabel(i int, label string, active bool) string {
+	if active {
+		st := lipgloss.NewStyle().Bold(true).Padding(0, 1)
+		if render.ColorDisabled() {
+			st = st.Reverse(true)
+		} else {
+			st = st.Background(tabAccent(i)).Foreground(lipgloss.Color("0"))
+		}
+		return st.Render(label)
+	}
+	num, name, _ := strings.Cut(label, " ")
+	s := lipgloss.NewStyle().Bold(true).Foreground(tabAccent(i)).Render(num)
+	if name != "" {
+		s += " " + render.Dim.Render(name)
+	}
+	return " " + s + " "
+}
 
 // App is the full-screen TUI with Containers / Images / Stats / Projects / Events / Volumes / Networks tabs.
 type App struct {
@@ -122,7 +150,7 @@ func (a *App) Init() tea.Cmd {
 	return tea.Batch(append(cmds, a.tabs[a.active].Focus())...)
 }
 
-func (a *App) bodyHeight() int { return max(a.height-4, 1) }
+func (a *App) bodyHeight() int { return max(a.height-5, 1) }
 
 func (a *App) resize(width, height int) {
 	a.width, a.height = width, height
@@ -491,6 +519,7 @@ func (a *App) View() tea.View {
 }
 
 func (a *App) render() string {
+	render.SetAccent(tabAccent(a.active))
 	var body, status string
 	details := a.detailScreens()
 	switch {
@@ -528,7 +557,7 @@ func (a *App) render() string {
 	if n := a.bodyHeight() - lipgloss.Height(body); n > 0 {
 		body += strings.Repeat("\n", n)
 	}
-	return strings.Join([]string{a.tabBar(), a.connectionBar(), body, render.Dim.Render(status), a.footer()}, "\n")
+	return strings.Join([]string{a.tabBar(), a.tabRule(), a.connectionBar(), body, render.Dim.Render(status), a.footer()}, "\n")
 }
 
 func (a *App) tabBar() string {
@@ -539,15 +568,11 @@ func (a *App) tabBar() string {
 // tabBarParts returns the tab bar's space-separated parts and the tab each
 // shows (-1 for the logo), narrowing labels until the bar fits.
 func (a *App) tabBarParts() ([]string, []int) {
-	parts := []string{render.Accent.Render("dpad") + " "}
+	parts := []string{brand + " "}
 	owners := []int{-1}
 	for i, t := range a.tabs {
 		label := fmt.Sprintf("%d %s", i+1, t.Title())
-		if i == a.active {
-			parts = append(parts, tabActive.Render(label))
-		} else {
-			parts = append(parts, tabInactive.Render(label))
-		}
+		parts = append(parts, tabLabel(i, label, i == a.active))
 		owners = append(owners, i)
 	}
 	fits := func() bool { return a.width <= 0 || lipgloss.Width(strings.Join(parts, " ")) <= a.width }
@@ -560,13 +585,30 @@ func (a *App) tabBarParts() ([]string, []int) {
 	}
 	for i := range parts {
 		if i != a.active {
-			parts[i] = tabInactive.Render(fmt.Sprint(i + 1))
+			parts[i] = tabLabel(i, fmt.Sprint(i+1), false)
 		}
 	}
 	if fits() {
 		return parts, owners
 	}
 	return parts[a.active : a.active+1], owners[a.active : a.active+1]
+}
+
+// tabRule underlines the active tab with a heavy accent line and the rest of
+// the row with a faint one.
+func (a *App) tabRule() string {
+	parts, owners := a.tabBarParts()
+	pos := 0
+	for i, p := range parts {
+		w := lipgloss.Width(p)
+		if owners[i] == a.active {
+			return render.Dim.Render(strings.Repeat("─", pos)) +
+				lipgloss.NewStyle().Foreground(tabAccent(a.active)).Render(strings.Repeat("━", w)) +
+				render.Dim.Render(strings.Repeat("─", max(a.width-pos-w, 0)))
+		}
+		pos += w + 1
+	}
+	return render.Dim.Render(strings.Repeat("─", a.width))
 }
 
 func (a *App) footer() string {

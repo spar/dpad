@@ -10,6 +10,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"dpad/internal/render"
@@ -100,7 +101,7 @@ func (a *App) connectionBar() string {
 	}
 	state := render.Dim.Render("connecting")
 	if a.daemon.connected {
-		state = render.Accent.Render("connected")
+		state = lipgloss.NewStyle().Foreground(render.Green).Render("● connected")
 	} else if a.daemon.err != nil {
 		if a.daemon.everConnected {
 			state = render.Warn.Render("reconnecting")

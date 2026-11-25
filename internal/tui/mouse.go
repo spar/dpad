@@ -7,9 +7,9 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-// bodyTop is the screen row where tab bodies start, below the tab and
-// connection bars.
-const bodyTop = 2
+// bodyTop is the screen row where tab bodies start, below the tab bar, its
+// rule and the connection bar.
+const bodyTop = 3
 
 const doubleClick = 400 * time.Millisecond
 
@@ -44,7 +44,7 @@ func (a *App) handleMouse(msg tea.MouseMsg) tea.Cmd {
 		if a.overlay() || a.typing() {
 			return nil
 		}
-		if m.Y == 0 {
+		if m.Y <= 1 {
 			if i := a.tabAt(m.X); i >= 0 && i != a.active {
 				return a.switchTab(i)
 			}
