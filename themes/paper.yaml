@@ -1,0 +1,62 @@
+# Dark ink on off-white paper, for light terminals or bright rooms.
+name: paper
+description: Dark ink on off-white, for light terminals
+author: dpad
+
+terminal:
+  background: "#fbfaf6"
+  foreground: "#1f2328"
+
+ui:
+  brand: "#1a7f37"
+  dim: "#6a737d"
+  header: "#0550ae"
+  accent: "#0a6f7c"
+  success: "#1a7f37"
+  warning: "#8a5d00"
+  error: "#cf222e"
+  onAccent: "#ffffff"
+  matchText: "#1f2328"
+  matchBackground: "#ffd33d"
+
+tabs:
+  containers: "#0a6f7c"
+  images: "#0550ae"
+  stats: "#8a5d00"
+  projects: "#8250df"
+  events: "#1a7f37"
+  volumes: "#bf3989"
+  networks: "#a14c00"
+
+states:
+  running: "#1a7f37"
+  exited: "#6a737d"
+  failed: "#cf222e"
+  paused: "#8a5d00"
+  restarting: "#8250df"
+  created: "#0550ae"
+  dead: "#cf222e"
+
+health:
+  healthy: "#1a7f37"
+  unhealthy: "#cf222e"
+  starting: "#8a5d00"
+
+usage:
+  low: "#1a7f37"
+  medium: "#8a5d00"
+  high: "#cf222e"
+  track: "#d0d7de"
+  sparkline: "#0550ae"
+
+logs:
+  error: "#cf222e"
+  warn: "#8a5d00"
+  info: "#1a7f37"
+  debug: "#0550ae"
+
+columns:
+  ports: "#0a6f7c"
+  tag: "#8a5d00"
+
+names: ["#0a6f7c", "#8250df", "#0550ae", "#8a5d00", "#1a7f37", "#bf3989", "#a14c00"]

@@ -10,35 +10,58 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/colorprofile"
+
+	"dpad/internal/theme"
 )
 
-// ANSI palette so colors follow the user's terminal theme.
+// Styles derived from the active theme; ApplyTheme sets them.
 var (
-	Green   = lipgloss.Color("2")
-	Red     = lipgloss.Color("1")
-	Yellow  = lipgloss.Color("3")
-	Blue    = lipgloss.Color("4")
-	Magenta = lipgloss.Color("5")
-	Cyan    = lipgloss.Color("6")
-	Gray    = lipgloss.Color("8")
-
-	Header   = lipgloss.NewStyle().Bold(true).Foreground(Blue)
-	Dim      = lipgloss.NewStyle().Foreground(Gray)
+	Header   lipgloss.Style
+	Dim      lipgloss.Style
 	Bold     = lipgloss.NewStyle().Bold(true)
 	Selected = lipgloss.NewStyle().Reverse(true)
-	Match    = lipgloss.NewStyle().Background(Yellow).Foreground(lipgloss.Color("0"))
-	Error    = lipgloss.NewStyle().Bold(true).Foreground(Red)
-	Warn     = lipgloss.NewStyle().Foreground(Yellow)
-	Accent   = lipgloss.NewStyle().Bold(true).Foreground(Cyan)
+	Match    lipgloss.Style
+	Error    lipgloss.Style
+	Warn     lipgloss.Style
+	Accent   lipgloss.Style
+	Success  lipgloss.Style
+	Brand    lipgloss.Style
 )
 
 var (
-	defaultHeader   = Header
+	active          *theme.Theme
+	generation      int
+	defaultHeader   lipgloss.Style
 	defaultSelected = Selected
 	// barOn and barOff wrap a usage bar inside the selected row so the bar
 	// keeps its own colors; barBg is laid under the bar's styled runs.
 	barOn, barOff, barBg = "\x1b[27m", "\x1b[7m", ""
 )
+
+func init() { ApplyTheme(theme.Default()) }
+
+// ApplyTheme makes t the theme every style is drawn from.
+func ApplyTheme(t *theme.Theme) {
+	active = t
+	generation++
+	ui := t.UI
+	defaultHeader = fg(ui.Header.C()).Bold(true)
+	Header = defaultHeader
+	Dim = fg(ui.Dim.C())
+	Match = fg(ui.MatchText.C()).Background(ui.MatchBackground.C())
+	Error = fg(ui.Error.C()).Bold(true)
+	Warn = fg(ui.Warning.C())
+	Accent = fg(ui.Accent.C()).Bold(true)
+	Success = fg(ui.Success.C())
+	Brand = fg(ui.Brand.C()).Bold(true)
+}
+
+// Theme returns the active theme.
+func Theme() *theme.Theme { return active }
+
+// ThemeGeneration changes whenever the theme does, so views can tell when
+// text they cached was styled with an older theme.
+func ThemeGeneration() int { return generation }
 
 // SetAccent tints table headers and the selected row with c, or restores the
 // defaults when c is nil. The selected row keeps reverse video when color is
@@ -53,10 +76,13 @@ func SetAccent(c color.Color) {
 	if colorDisabled {
 		return
 	}
-	Selected = lipgloss.NewStyle().Background(c).Foreground(lipgloss.Color("0"))
+	Selected = OnAccent(c)
 	barBg = sgrPrefix(lipgloss.NewStyle().Background(c))
 	barOn, barOff = "\x1b[m"+barBg, sgrPrefix(Selected)
 }
+
+// OnAccent is text on a filled accent background, as in the active tab.
+func OnAccent(c color.Color) lipgloss.Style { return fg(active.UI.OnAccent.C()).Background(c) }
 
 // sgrPrefix returns the escape sequence s opens a rendered string with.
 func sgrPrefix(s lipgloss.Style) string {
@@ -91,55 +117,70 @@ func NewWriter(w io.Writer) io.Writer {
 	return &colorprofile.Writer{Forward: w, Profile: Out.Profile}
 }
 
-func fg(c color.Color) lipgloss.Style { return lipgloss.NewStyle().Foreground(c) }
+// fg is a style with foreground c; nil keeps the terminal's color.
+func fg(c color.Color) lipgloss.Style {
+	if c == nil {
+		return lipgloss.NewStyle()
+	}
+	return lipgloss.NewStyle().Foreground(c)
+}
 
 // StateStyle colors a container state; exitCode only matters for "exited".
 func StateStyle(state string, exitCode int) lipgloss.Style {
+	st := active.States
 	switch state {
 	case "running":
-		return fg(Green)
+		return fg(st.Running.C())
 	case "exited":
 		if exitCode != 0 {
-			return fg(Red)
+			return fg(st.Failed.C())
 		}
-		return fg(Gray)
+		return fg(st.Exited.C())
 	case "paused":
-		return fg(Yellow)
+		return fg(st.Paused.C())
 	case "restarting":
-		return fg(Magenta)
+		return fg(st.Restarting.C())
 	case "created":
-		return fg(Blue)
+		return fg(st.Created.C())
 	case "dead":
-		return Error
+		return fg(st.Dead.C()).Bold(true)
 	default:
-		return fg(Gray)
+		return fg(st.Exited.C())
 	}
 }
 
 // HealthBadge renders a short health marker, or "" when there is no healthcheck.
 func HealthBadge(status string) string {
+	h := active.Health
 	switch status {
 	case "healthy":
-		return fg(Green).Render("♥ healthy")
+		return fg(h.Healthy.C()).Render("♥ healthy")
 	case "unhealthy":
-		return fg(Red).Bold(true).Render("✗ unhealthy")
+		return fg(h.Unhealthy.C()).Bold(true).Render("✗ unhealthy")
 	case "starting":
-		return fg(Yellow).Render("… starting")
+		return fg(h.Starting.C()).Render("… starting")
 	}
 	return ""
 }
 
-// PercentStyle colors a usage percentage: green <50, yellow <80, red otherwise.
+// PercentStyle colors a usage percentage: low <50, medium <80, high otherwise.
 func PercentStyle(p float64) lipgloss.Style {
+	u := active.Usage
 	switch {
 	case p < 50:
-		return fg(Green)
+		return fg(u.Low.C())
 	case p < 80:
-		return fg(Yellow)
+		return fg(u.Medium.C())
 	default:
-		return fg(Red).Bold(true)
+		return fg(u.High.C()).Bold(true)
 	}
 }
+
+// Sparkline is the style of the Stats history sparklines.
+func Sparkline() lipgloss.Style { return fg(active.Usage.Sparkline.C()) }
+
+func portsStyle() lipgloss.Style { return fg(active.Columns.Ports.C()) }
+func tagStyle() lipgloss.Style   { return fg(active.Columns.Tag.C()) }
 
 // Bar renders a fixed-width usage bar for a 0–100 percentage.
 func Bar(p float64, width int) string {
@@ -150,23 +191,37 @@ func Bar(p float64, width int) string {
 		p = 100
 	}
 	n := int(p/100*float64(width) + 0.5)
-	return PercentStyle(p).Render(strings.Repeat("█", n)) + Dim.Render(strings.Repeat("░", width-n))
+	return PercentStyle(p).Render(strings.Repeat("█", n)) + fg(active.Usage.Track.C()).Render(strings.Repeat("░", width-n))
 }
 
-var namePalette = []color.Color{
-	Cyan, Magenta, Blue, Yellow, Green,
-	lipgloss.Color("14"), lipgloss.Color("13"), lipgloss.Color("12"), lipgloss.Color("11"), lipgloss.Color("10"),
+func paletteStyle(i int) lipgloss.Style {
+	names := active.Names
+	return fg(names[i%len(names)].C())
 }
 
 // NameColors hands out palette colors in order of first use, so a handful of
 // containers shown together never share a color (unlike hashing).
-type NameColors map[string]lipgloss.Style
+type NameColors map[string]int
 
 func (n NameColors) Style(name string) lipgloss.Style {
-	if s, ok := n[name]; ok {
-		return s
+	i, ok := n[name]
+	if !ok {
+		i = len(n)
+		n[name] = i
 	}
-	s := fg(namePalette[len(n)%len(namePalette)])
-	n[name] = s
-	return s
+	return paletteStyle(i)
+}
+
+// Swatch previews t in a few cells: its tab accents, then success, warning
+// and error.
+func Swatch(t *theme.Theme) string {
+	colors := append(t.TabAccents(), t.UI.Success.C(), t.UI.Warning.C(), t.UI.Error.C())
+	var b strings.Builder
+	for i, c := range colors {
+		if i == len(colors)-3 {
+			b.WriteByte(' ')
+		}
+		b.WriteString(fg(c).Render("██"))
+	}
+	return b.String()
 }

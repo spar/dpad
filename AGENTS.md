@@ -19,12 +19,14 @@ Setup instructions for macOS, Linux and Windows are in
 |---|---|
 | `main.go` | entry point |
 | `cmd/` | cobra commands and the routing that sends unknown commands to `docker` |
-| `internal/config/` | the optional `config.yaml`: mouse setting and custom commands |
+| `internal/config/` | the optional `config.yaml`: mouse setting, theme and custom commands |
 | `internal/docker/` | Engine API client, docker-context resolution, stats math, events, log streaming |
 | `internal/passthrough/` | executes the real `docker` binary |
-| `internal/render/` | theme, ANSI-aware table, formatters, log-level highlighting |
+| `internal/render/` | styles from the active theme, ANSI-aware table, formatters, log-level highlighting |
+| `internal/theme/` | loads and validates theme files (built-in and the user's own) |
 | `internal/sortx/` | sort keys shared by the CLI and the TUI |
 | `internal/tui/` | the Bubble Tea app (`app.go`) and its views |
+| `themes/` | built-in color themes, one YAML file each, embedded in the binary |
 | `testenv/` | demo compose environment (`make demo-up`) |
 | `scripts/screenshots/` | regenerates `docs/images` from the demo (`make screenshots`) |
 
@@ -46,6 +48,8 @@ checks (`.github/workflows/`).
 - Follow `gofmt` and the linters configured in `.golangci.yml`.
 - Keep comments rare; explain why, not what.
 - Don't add abstractions, options or error handling the change doesn't need.
+- Take colors from the theme (`render` styles, `render.Theme()`), never
+  hard-coded values; [docs/themes.md](docs/themes.md) lists the roles.
 - Add or update tests next to the code you change (`*_test.go`). Tests use fakes
   (`fake_test.go`) rather than a live Docker daemon.
 

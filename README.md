@@ -221,6 +221,16 @@ known hosts apply, rootless sockets work (`ssh://me@server/run/user/1000/docker.
 and dropped connections reconnect in the background. Details are in
 [Daemon connection](docs/usage.md#daemon-connection).
 
+### Themes
+
+<img src="docs/images/themes/matrix.svg" alt="The Containers tab in the matrix theme: green text on black" width="100%">
+
+dpad ships ten color themes, from the default that follows your terminal's
+palette to matrix, amber CRT, black and white, high contrast and a light theme.
+Press `C` to preview them live and save your pick, or set `theme: matrix` in `config.yaml`. A
+theme is one YAML file, so you can write your own or contribute one. See the
+[gallery and theme guide](docs/themes.md).
+
 <sub>All screenshots are real, unedited output from the bundled demo environment (`make demo-up`), captured with `make screenshots`.</sub>
 
 ## Commands
@@ -231,6 +241,7 @@ and dropped connections reconnect in the background. Details are in
 | `dp ps [-a] [-f name=value...] [--sort name\|created\|status] [-r]` | State colors (running, exited ok/error, paused, restarting), a health badge, and compact `8080→80/tcp` ports |
 | `dp images [--sort size\|created\|name] [-r]` | Human sizes and a total-size footer; dangling images are dimmed |
 | `dp stats [--sort cpu\|mem\|net\|io\|pids\|name] [-r] [--no-stream] [--totals]` | Live sorting, CPU/memory bars, network/disk throughput; `t` toggles rates and totals |
+| `dp themes` | Lists the color themes with a swatch of each; pick one with `--theme`, `DPAD_THEME` or `theme:` in `config.yaml` |
 | `dp logs [-f] [-n N] [-t] [--since T] [--grep RE] TARGET...` | Accepts containers, Compose services and projects, and unique name prefixes. Interleaves containers with colored name prefixes, highlights log levels, marks stderr with `┃`, highlights `--grep` matches |
 
 Sorts default to the natural direction for each key: biggest first for numbers,
@@ -259,6 +270,7 @@ would type `docker`:
 | `P` / `K` / `D` | pause / kill / remove (`S` resumes a paused container) |
 | `u` / `U` | update the selected / all Compose projects: `pull`, then `up -d`, with live progress (Projects tab) |
 | `c` | choose a Docker context |
+| `C` | choose a color theme, previewed live |
 | `?` | help for the current view |
 
 The full key list and the behavior of each tab are in [docs/usage.md](docs/usage.md).
@@ -331,6 +343,7 @@ it hasn't had a commit since July 2024. More tools are listed in
 ## Documentation
 
 - **[Using dpad](docs/usage.md):** every tab, key and action, Compose updates, stats details, contexts and SSH.
+- **[Themes](docs/themes.md):** the built-in themes, choosing one, writing your own, and the theme file format.
 - **[Running locally](docs/local-development.md):** prerequisites for macOS, Linux and Windows, building, installing, troubleshooting.
 - **[Demo environment](testenv/README.md):** what each demo container shows, plus a guided feature tour.
 - **[Self-hosted CI runners](docs/self-hosted-runner.md):** running CI on your own Docker hosts with the shared runners from gh-private-runners.
@@ -346,14 +359,17 @@ make test vet lint
 
 Tests use fakes rather than a live Docker daemon, so they run anywhere. Commit
 messages follow [Conventional Commits](https://www.conventionalcommits.org/)
-(`fix(stats): ...`, `feat(tui): ...`). [AGENTS.md](AGENTS.md) describes the
-code layout and conventions in more detail.
+(`fix(stats): ...`, `feat(tui): ...`). [CONTRIBUTING.md](CONTRIBUTING.md) has
+the checklist, including how to add a theme, and [AGENTS.md](AGENTS.md)
+describes the code layout and conventions in more detail.
 
 | Path | Contents |
 |---|---|
 | `cmd/` | cobra commands and passthrough routing |
 | `internal/docker/` | Engine API client, contexts, stats math, events, log streaming |
-| `internal/render/` | theme, ANSI-aware table, formatters, log-level highlighting |
+| `internal/render/` | styles from the active theme, ANSI-aware table, formatters, log-level highlighting |
+| `internal/theme/` | loads and validates theme files |
+| `themes/` | the built-in themes, one YAML file each |
 | `internal/tui/` | the Bubble Tea app and its views |
 | `testenv/` | demo Compose environment |
 | `scripts/screenshots/` | regenerates the README images from the demo environment |

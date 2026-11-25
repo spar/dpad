@@ -110,7 +110,7 @@ function drawRow(line, cell) {
     if (run && run.text.trim()) {
       const cls = [run.fg.startsWith('#') ? '' : run.fg, run.bold ? 'b' : '', run.dim ? 'd' : '', run.italic ? 'i' : '', run.underline ? 'u' : '']
         .filter(Boolean).join(' ');
-      const attrs = (cls ? ` class="${cls}"` : '') + (run.fg.startsWith('#') ? ` fill="${run.fg}"` : '');
+      const attrs = (cls ? ` class="${cls}"` : '') + (run.fg.startsWith('#') ? ` style="fill:${run.fg}"` : '');
       texts.push(`<text x="${n(run.x * CW)}" y="${BASE}"${attrs}>${esc(run.text.replace(/\s+$/, ''))}</text>`);
     }
     run = null;
@@ -186,6 +186,18 @@ function snapshot(term, cell) {
   return out;
 }
 
+// A theme can set the terminal's default colors (OSC 10 and 11) while dp
+// runs; draw the screen in the last ones set, as a terminal would.
+const initial = { foreground: theme.foreground, background: theme.background };
+function defaultColors(text) {
+  const re = /\x1b\](1[01]);(#[0-9a-fA-F]{6})(?:\x07|\x1b\\)|\x1b\](11[01])(?:\x07|\x1b\\)/g;
+  for (const [, set, hex, reset] of text.matchAll(re)) {
+    if (set) theme[set === '10' ? 'foreground' : 'background'] = hex;
+    else if (reset === '110') theme.foreground = initial.foreground;
+    else theme.background = initial.background;
+  }
+}
+
 const write = (term, data) => new Promise((resolve) => term.write(data, resolve));
 
 (async () => {
@@ -198,6 +210,7 @@ const write = (term, data) => new Promise((resolve) => term.write(data, resolve)
     await write(term, all.subarray(fps ? written : 0));
     written = all.length;
     frames.push(snapshot(term, cell));
+    if (!fps) defaultColors(all.toString('latin1'));
   }
 
   const rowIds = new Map();

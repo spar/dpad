@@ -1,0 +1,63 @@
+# Black and white, with grays for secondary text. Bold and the selected row
+# carry emphasis instead of hue.
+name: mono
+description: Black and white, no hue at all
+author: dpad
+
+terminal:
+  background: "#000000"
+  foreground: "#ffffff"
+
+ui:
+  brand: "#ffffff"
+  dim: "#8c8c8c"
+  header: "#ffffff"
+  accent: "#ffffff"
+  success: "#ffffff"
+  warning: "#d0d0d0"
+  error: "#ffffff"
+  onAccent: "#000000"
+  matchText: "#000000"
+  matchBackground: "#b0b0b0"
+
+tabs:
+  containers: "#ffffff"
+  images: "#ffffff"
+  stats: "#ffffff"
+  projects: "#ffffff"
+  events: "#ffffff"
+  volumes: "#ffffff"
+  networks: "#ffffff"
+
+states:
+  running: "#ffffff"
+  exited: "#8c8c8c"
+  failed: "#ffffff"
+  paused: "#d0d0d0"
+  restarting: "#d0d0d0"
+  created: "#d0d0d0"
+  dead: "#ffffff"
+
+health:
+  healthy: "#d0d0d0"
+  unhealthy: "#ffffff"
+  starting: "#8c8c8c"
+
+usage:
+  low: "#d0d0d0"
+  medium: "#e8e8e8"
+  high: "#ffffff"
+  track: "#3a3a3a"
+  sparkline: "#ffffff"
+
+logs:
+  error: "#ffffff"
+  warn: "#e8e8e8"
+  info: "#d0d0d0"
+  debug: "#8c8c8c"
+
+columns:
+  ports: "#d0d0d0"
+  tag: "#d0d0d0"
+
+names: ["#ffffff", "#c8c8c8", "#a0a0a0"]

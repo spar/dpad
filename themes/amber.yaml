@@ -1,0 +1,63 @@
+# An amber monochrome CRT, as on terminals of the early 1980s. Shades of amber
+# carry every role; errors lean toward red-orange.
+name: amber
+description: Amber monochrome CRT
+author: dpad
+
+terminal:
+  background: "#140c00"
+  foreground: "#ffb000"
+
+ui:
+  brand: "#ffcc33"
+  dim: "#a26a00"
+  header: "#ffe0a0"
+  accent: "#ffcc33"
+  success: "#ffcc33"
+  warning: "#ffe0a0"
+  error: "#ff5a1f"
+  onAccent: "#140c00"
+  matchText: "#140c00"
+  matchBackground: "#ffe0a0"
+
+tabs:
+  containers: "#ffb000"
+  images: "#ffcc33"
+  stats: "#ffe0a0"
+  projects: "#ff9900"
+  events: "#ffc04d"
+  volumes: "#e69500"
+  networks: "#ffd980"
+
+states:
+  running: "#ffcc33"
+  exited: "#a26a00"
+  failed: "#ff5a1f"
+  paused: "#ffe0a0"
+  restarting: "#ff9900"
+  created: "#ffc04d"
+  dead: "#ff5a1f"
+
+health:
+  healthy: "#ffcc33"
+  unhealthy: "#ff5a1f"
+  starting: "#ffe0a0"
+
+usage:
+  low: "#ffb000"
+  medium: "#ffe0a0"
+  high: "#ff5a1f"
+  track: "#4a3000"
+  sparkline: "#ffcc33"
+
+logs:
+  error: "#ff5a1f"
+  warn: "#ffe0a0"
+  info: "#ffcc33"
+  debug: "#a26a00"
+
+columns:
+  ports: "#ffcc33"
+  tag: "#ffe0a0"
+
+names: ["#ffcc33", "#ffe0a0", "#ff9900", "#ffc04d", "#e69500", "#ffd980"]

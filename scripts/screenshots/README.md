@@ -26,7 +26,7 @@ To write somewhere other than `docs/images`, run
 ## How it works
 
 1. `drive.py` runs `dp` in a pseudo-terminal at a fixed size, types the keys
-   listed in a scenario (`tui.json`, `cli.json`) and saves everything `dp`
+   listed in a scenario (`tui.json`, `themes.json`, `cli.json`) and saves everything `dp`
    writes at each `snap` step and, while recording, ten times a second.
    The TUI scenario restarts, pauses and stops a few demo containers so the
    Events tab has something to show; they are running again afterwards.

@@ -13,6 +13,7 @@ import (
 	"github.com/moby/moby/api/types/image"
 
 	"dpad/internal/docker"
+	"dpad/internal/theme"
 )
 
 func TestPorts(t *testing.T) {
@@ -156,7 +157,7 @@ func BenchmarkTableWindow(b *testing.B) {
 	for i := range 200 {
 		tbl.Rows = append(tbl.Rows, []string{
 			Dim.Render("0123456789ab"), Bold.Render(fmt.Sprintf("service-%d", i)), "nginx:1.27-alpine",
-			fg(Green).Render("running"), fg(Green).Render("Up 3 hours"), HealthBadge("healthy"), "8080→80/tcp",
+			Success.Render("running"), Success.Render("Up 3 hours"), HealthBadge("healthy"), "8080→80/tcp",
 		})
 	}
 	for b.Loop() {
@@ -167,7 +168,7 @@ func BenchmarkTableWindow(b *testing.B) {
 func TestTableTrimsStyledEmptyCells(t *testing.T) {
 	tbl := Table{
 		Columns: []Column{{Header: "NAME"}, {Header: "PORTS"}},
-		Rows:    [][]string{{"web", fg(Cyan).Render("")}},
+		Rows:    [][]string{{"web", portsStyle().Render("")}},
 	}
 	if got := ansi.Strip(strings.Split(tbl.String(), "\n")[1]); got != "web" {
 		t.Errorf("row = %q, want trailing padding trimmed", got)
@@ -176,7 +177,7 @@ func TestTableTrimsStyledEmptyCells(t *testing.T) {
 
 func TestWidthMatchesAnsi(t *testing.T) {
 	for _, s := range []string{
-		"", "plain", Bold.Render("bold"), fg(Cyan).Render(""), Dim.Render("0123456789ab") + "  x",
+		"", "plain", Bold.Render("bold"), portsStyle().Render(""), Dim.Render("0123456789ab") + "  x",
 		"8080→80/tcp", Bar(42, 10), HealthBadge("healthy"), "\x1b]8;;http://x\x1b\\link\x1b]8;;\x1b\\",
 		"tab\there", "日本語", "e\u0301",
 	} {
@@ -289,14 +290,14 @@ func TestTableFitsWidthByDroppingAndShrinkingColumns(t *testing.T) {
 
 func TestAccentTintsHeaderAndSelectionAndKeepsBars(t *testing.T) {
 	t.Cleanup(func() { SetAccent(nil) })
-	SetAccent(Cyan)
+	SetAccent(lipgloss.Color("6"))
 	bar := Bar(90, 10)
 	out := Table{Columns: []Column{{Header: "NAME"}, {}, {Header: "PIDS"}}, Rows: [][]string{{"web", bar, "3"}}}.Window(0, 5)
 	if !strings.HasPrefix(out, Header.Render("NAME")) {
 		t.Fatalf("header not in the accent: %q", out)
 	}
 	row := strings.Split(out, "\n")[1]
-	bg := sgrPrefix(lipgloss.NewStyle().Background(Cyan))
+	bg := sgrPrefix(lipgloss.NewStyle().Background(lipgloss.Color("6")))
 	if !strings.HasPrefix(row, sgrPrefix(Selected)) || !strings.Contains(row, bg) {
 		t.Fatalf("selected row lacks the accent background: %q", row)
 	}
@@ -316,9 +317,32 @@ func TestAccentTintsHeaderAndSelectionAndKeepsBars(t *testing.T) {
 func TestAccentKeepsReverseSelectionWithoutColor(t *testing.T) {
 	t.Cleanup(func() { colorDisabled = false; SetAccent(nil) })
 	colorDisabled = true
-	SetAccent(Cyan)
+	SetAccent(lipgloss.Color("6"))
 	out := Table{Columns: []Column{{Header: "NAME"}}, Rows: [][]string{{"web"}}}.Window(0, 5)
 	if !strings.Contains(out, "\x1b[7m") {
 		t.Fatalf("selection would be invisible without color: %q", out)
+	}
+}
+
+func TestThemeDrivesStyles(t *testing.T) {
+	t.Cleanup(func() { ApplyTheme(theme.Default()) })
+	// The default theme keeps the terminal's ANSI colors.
+	if got, want := StateStyle("running", 0).Render("x"), lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Render("x"); got != want {
+		t.Errorf("default running = %q, want %q", got, want)
+	}
+	matrix, err := theme.Load("matrix", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gen := ThemeGeneration()
+	ApplyTheme(matrix)
+	if ThemeGeneration() == gen {
+		t.Error("generation did not change")
+	}
+	if got, want := StateStyle("running", 0).Render("x"), lipgloss.NewStyle().Foreground(lipgloss.Color("#00ff41")).Render("x"); got != want {
+		t.Errorf("matrix running = %q, want %q", got, want)
+	}
+	if !strings.Contains(Swatch(matrix), "█") {
+		t.Error("swatch is empty")
 	}
 }

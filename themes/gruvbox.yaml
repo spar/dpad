@@ -1,0 +1,63 @@
+# Colors from the gruvbox dark palette (MIT License).
+name: gruvbox
+description: Gruvbox's warm retro dark palette
+author: dpad
+source: https://github.com/morhetz/gruvbox
+
+terminal:
+  background: "#282828"
+  foreground: "#ebdbb2"
+
+ui:
+  brand: "#b8bb26"
+  dim: "#928374"
+  header: "#83a598"
+  accent: "#8ec07c"
+  success: "#b8bb26"
+  warning: "#fabd2f"
+  error: "#fb4934"
+  onAccent: "#282828"
+  matchText: "#282828"
+  matchBackground: "#fabd2f"
+
+tabs:
+  containers: "#8ec07c"
+  images: "#83a598"
+  stats: "#fabd2f"
+  projects: "#d3869b"
+  events: "#b8bb26"
+  volumes: "#fe8019"
+  networks: "#d5c4a1"
+
+states:
+  running: "#b8bb26"
+  exited: "#928374"
+  failed: "#fb4934"
+  paused: "#fabd2f"
+  restarting: "#d3869b"
+  created: "#83a598"
+  dead: "#fb4934"
+
+health:
+  healthy: "#b8bb26"
+  unhealthy: "#fb4934"
+  starting: "#fabd2f"
+
+usage:
+  low: "#b8bb26"
+  medium: "#fabd2f"
+  high: "#fb4934"
+  track: "#504945"
+  sparkline: "#83a598"
+
+logs:
+  error: "#fb4934"
+  warn: "#fabd2f"
+  info: "#b8bb26"
+  debug: "#83a598"
+
+columns:
+  ports: "#8ec07c"
+  tag: "#fabd2f"
+
+names: ["#8ec07c", "#d3869b", "#83a598", "#fabd2f", "#b8bb26", "#fe8019", "#d5c4a1"]

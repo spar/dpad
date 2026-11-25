@@ -1,0 +1,62 @@
+# Saturated colors on pure black for the most legible text.
+name: high-contrast
+description: Saturated colors on pure black for maximum legibility
+author: dpad
+
+terminal:
+  background: "#000000"
+  foreground: "#ffffff"
+
+ui:
+  brand: "#00ff00"
+  dim: "#c0c0c0"
+  header: "#ffff00"
+  accent: "#00ffff"
+  success: "#00ff00"
+  warning: "#ffff00"
+  error: "#ff4040"
+  onAccent: "#000000"
+  matchText: "#000000"
+  matchBackground: "#ffff00"
+
+tabs:
+  containers: "#00ffff"
+  images: "#6fb7ff"
+  stats: "#ffff00"
+  projects: "#ff66ff"
+  events: "#00ff00"
+  volumes: "#ffa0ff"
+  networks: "#a0ffff"
+
+states:
+  running: "#00ff00"
+  exited: "#c0c0c0"
+  failed: "#ff4040"
+  paused: "#ffff00"
+  restarting: "#ff66ff"
+  created: "#6fb7ff"
+  dead: "#ff4040"
+
+health:
+  healthy: "#00ff00"
+  unhealthy: "#ff4040"
+  starting: "#ffff00"
+
+usage:
+  low: "#00ff00"
+  medium: "#ffff00"
+  high: "#ff4040"
+  track: "#808080"
+  sparkline: "#ffffff"
+
+logs:
+  error: "#ff4040"
+  warn: "#ffff00"
+  info: "#00ff00"
+  debug: "#6fb7ff"
+
+columns:
+  ports: "#00ffff"
+  tag: "#ffff00"
+
+names: ["#00ffff", "#ff66ff", "#6fb7ff", "#ffff00", "#00ff00", "#a0ffff", "#ffa0ff", "#ffffff"]

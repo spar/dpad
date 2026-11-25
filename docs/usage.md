@@ -17,7 +17,7 @@ overview, installation and screenshots, see the [README](../README.md).
 - [Custom commands](#custom-commands): the config file, key bindings, templates
 - [Narrow terminals](#narrow-terminals)
 - [Responsiveness](#responsiveness)
-- [Colors](#colors)
+- [Colors](#colors): themes, `NO_COLOR`
 - [Daemon connection](#daemon-connection): contexts, remote daemons over SSH, connection status, switching contexts
 
 
@@ -50,6 +50,7 @@ overview, installation and screenshots, see the [README](../README.md).
 | `X` | preview a prune of stopped containers or unused images, volumes, networks or build cache (asks y) |
 | `ctrl+r` | refresh |
 | `c` (list tabs) | choose a Docker context for this session |
+| `C` | choose a color theme; the screen previews each one (`enter` keeps it and saves it to `config.yaml`, `esc` cancels) |
 | `?` | help |
 | `q` | quit |
 
@@ -505,6 +506,7 @@ customCommands:
     command: docker compose -p {{.Project}} down
 
 # mouse: false   # leave the mouse to the terminal
+# theme: matrix   # see docs/themes.md
 ```
 
 | Field | Meaning |
@@ -566,7 +568,10 @@ and subscription recovery remain immediate.
 
 ## Colors
 
-Output is plain when piped, when `NO_COLOR` is set, or with `--no-color`.
+Colors come from the active theme: press `C` to pick one, or set `theme:` in
+`config.yaml`, `--theme` or `DPAD_THEME`. [Themes](themes.md) has the gallery
+and the theme file format. Output is plain when piped, when `NO_COLOR` is set,
+or with `--no-color`.
 
 ## Daemon connection
 

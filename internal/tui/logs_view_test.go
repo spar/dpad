@@ -63,7 +63,7 @@ func TestProjectLogsMergePrefixAndFilter(t *testing.T) {
 	if !strings.Contains(text, "web │ ERROR from web") || !strings.Contains(text, "db  ┃ ERROR from db") {
 		t.Fatalf("project logs lost source names or stderr marker: %q", text)
 	}
-	if v.colors["web"].Render("source") == v.colors["db"].Render("source") {
+	if v.colors.Style("web").Render("source") == v.colors.Style("db").Render("source") {
 		t.Fatal("source colors are not distinct")
 	}
 	v.setQuery("from web")

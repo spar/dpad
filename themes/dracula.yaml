@@ -1,0 +1,63 @@
+# Colors from the Dracula palette (MIT License).
+name: dracula
+description: Dracula's purple-tinted dark palette
+author: dpad
+source: https://draculatheme.com
+
+terminal:
+  background: "#282a36"
+  foreground: "#f8f8f2"
+
+ui:
+  brand: "#50fa7b"
+  dim: "#6272a4"
+  header: "#bd93f9"
+  accent: "#8be9fd"
+  success: "#50fa7b"
+  warning: "#ffb86c"
+  error: "#ff5555"
+  onAccent: "#282a36"
+  matchText: "#282a36"
+  matchBackground: "#f1fa8c"
+
+tabs:
+  containers: "#8be9fd"
+  images: "#bd93f9"
+  stats: "#f1fa8c"
+  projects: "#ff79c6"
+  events: "#50fa7b"
+  volumes: "#ffb86c"
+  networks: "#a4ffff"
+
+states:
+  running: "#50fa7b"
+  exited: "#6272a4"
+  failed: "#ff5555"
+  paused: "#f1fa8c"
+  restarting: "#ff79c6"
+  created: "#bd93f9"
+  dead: "#ff5555"
+
+health:
+  healthy: "#50fa7b"
+  unhealthy: "#ff5555"
+  starting: "#f1fa8c"
+
+usage:
+  low: "#50fa7b"
+  medium: "#ffb86c"
+  high: "#ff5555"
+  track: "#44475a"
+  sparkline: "#bd93f9"
+
+logs:
+  error: "#ff5555"
+  warn: "#ffb86c"
+  info: "#50fa7b"
+  debug: "#bd93f9"
+
+columns:
+  ports: "#8be9fd"
+  tag: "#f1fa8c"
+
+names: ["#8be9fd", "#ff79c6", "#bd93f9", "#f1fa8c", "#50fa7b", "#ffb86c", "#a4ffff", "#ff92df", "#d6acff", "#69ff94"]

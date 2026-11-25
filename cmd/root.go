@@ -35,7 +35,12 @@ func buildVersion() string {
 	return version
 }
 
-var noColor bool
+var (
+	noColor   bool
+	themeName string
+	// themeErr is why the chosen theme could not be used; the TUI shows it.
+	themeErr error
+)
 
 var (
 	// errSilent signals failure when the details were already printed.
@@ -79,17 +84,22 @@ so "dp network ls" or "dp ps --format ..." behave exactly like docker.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Args:          cobra.NoArgs,
-		PersistentPreRun: func(*cobra.Command, []string) {
+		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 			render.SetupColor(noColor)
+			themeErr = setupTheme(themeName)
+			if themeErr != nil && cmd != cmd.Root() {
+				fmt.Fprintf(os.Stderr, "dp: %v; using the default theme\n", themeErr)
+			}
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return withClient(cmd.Context(), func(ctx context.Context, c *docker.Client) error {
-				return tui.Run(ctx, c)
+				return tui.Run(ctx, c, themeErr)
 			})
 		},
 	}
 	root.PersistentFlags().BoolVar(&noColor, "no-color", false, "disable colored output (also honors NO_COLOR)")
-	root.AddCommand(newPsCmd(), newImagesCmd(), newStatsCmd(), newLogsCmd())
+	root.PersistentFlags().StringVar(&themeName, "theme", "", "color theme, by name or path to a .yaml file (also $DPAD_THEME; dp themes lists them)")
+	root.AddCommand(newPsCmd(), newImagesCmd(), newStatsCmd(), newLogsCmd(), newThemesCmd())
 
 	// Flags we don't implement (e.g. `ps --format`) mean the user wants docker's behavior.
 	root.SetFlagErrorFunc(func(*cobra.Command, error) error { return errPassthrough })
@@ -100,8 +110,8 @@ so "dp network ls" or "dp ps --format ..." behave exactly like docker.`,
 func shouldPassthrough(root *cobra.Command, args []string) bool {
 	// Leading dp flags don't decide anything: `dp --no-color network ls` is
 	// still a docker command.
-	for len(args) > 0 && isDPFlag(args[0]) {
-		args = args[1:]
+	for len(args) > 0 && dpFlagArgs(args) > 0 {
+		args = args[dpFlagArgs(args):]
 	}
 	if len(args) == 0 {
 		return false
@@ -125,20 +135,31 @@ func shouldPassthrough(root *cobra.Command, args []string) bool {
 // belong to a program run inside a container.
 func dockerArgs(args []string, anywhere bool) []string {
 	out := make([]string, 0, len(args))
-	for i, a := range args {
+	for i := 0; i < len(args); {
+		a := args[i]
 		if a == "--" || !anywhere && !strings.HasPrefix(a, "-") {
 			return append(out, args[i:]...)
 		}
-		if !isDPFlag(a) {
-			out = append(out, a)
+		if n := dpFlagArgs(args[i:]); n > 0 {
+			i += n
+			continue
 		}
+		out = append(out, a)
+		i++
 	}
 	return out
 }
 
-// isDPFlag reports whether arg is a flag only dp understands.
-func isDPFlag(arg string) bool {
-	return arg == "--no-color" || strings.HasPrefix(arg, "--no-color=")
+// dpFlagArgs returns how many of args, from the first, are a flag only dp
+// understands, together with its value: 0 when args[0] isn't one.
+func dpFlagArgs(args []string) int {
+	switch a := args[0]; {
+	case a == "--no-color" || strings.HasPrefix(a, "--no-color="), strings.HasPrefix(a, "--theme="):
+		return 1
+	case a == "--theme":
+		return min(2, len(args))
+	}
+	return 0
 }
 
 func withClient(ctx context.Context, fn func(context.Context, *docker.Client) error) error {

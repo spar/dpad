@@ -1,0 +1,64 @@
+# Colors from the Nord palette (MIT License). The dim gray and the red are
+# lightened a little so they stay readable on the dark background.
+name: nord
+description: Nord's cool arctic blues
+author: dpad
+source: https://www.nordtheme.com
+
+terminal:
+  background: "#2e3440"
+  foreground: "#d8dee9"
+
+ui:
+  brand: "#a3be8c"
+  dim: "#7b88a1"
+  header: "#81a1c1"
+  accent: "#88c0d0"
+  success: "#a3be8c"
+  warning: "#ebcb8b"
+  error: "#d57780"
+  onAccent: "#2e3440"
+  matchText: "#2e3440"
+  matchBackground: "#ebcb8b"
+
+tabs:
+  containers: "#88c0d0"
+  images: "#81a1c1"
+  stats: "#ebcb8b"
+  projects: "#b48ead"
+  events: "#a3be8c"
+  volumes: "#d08770"
+  networks: "#8fbcbb"
+
+states:
+  running: "#a3be8c"
+  exited: "#7b88a1"
+  failed: "#d57780"
+  paused: "#ebcb8b"
+  restarting: "#b48ead"
+  created: "#81a1c1"
+  dead: "#d57780"
+
+health:
+  healthy: "#a3be8c"
+  unhealthy: "#d57780"
+  starting: "#ebcb8b"
+
+usage:
+  low: "#a3be8c"
+  medium: "#ebcb8b"
+  high: "#d57780"
+  track: "#434c5e"
+  sparkline: "#88c0d0"
+
+logs:
+  error: "#d57780"
+  warn: "#ebcb8b"
+  info: "#a3be8c"
+  debug: "#81a1c1"
+
+columns:
+  ports: "#88c0d0"
+  tag: "#ebcb8b"
+
+names: ["#88c0d0", "#b48ead", "#81a1c1", "#ebcb8b", "#a3be8c", "#8fbcbb", "#d08770"]

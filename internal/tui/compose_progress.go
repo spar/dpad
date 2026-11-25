@@ -264,7 +264,7 @@ func (p *composeProgress) row(r composeResource, aborted bool) composeRow {
 	row := composeRow{icon: "…", name: r.name, status: r.status, style: render.Accent}
 	switch {
 	case r.done():
-		row.icon, row.style = "✓", lipgloss.NewStyle().Foreground(render.Green)
+		row.icon, row.style = "✓", render.Success
 	case r.failed():
 		row.icon, row.style = "✗", render.Error
 	case r.status == "Warning":
@@ -349,7 +349,7 @@ func (p *composeProgress) renderGroup(kind string, rows []composeResource, width
 			}
 		}
 		text := fmt.Sprintf("%s ready: %s", countLabel(complete, strings.ToLower(kind)+"s"), strings.Join(names, ", "))
-		green := lipgloss.NewStyle().Foreground(render.Green)
+		green := render.Success
 		lines = append(lines, ansi.Truncate("    "+green.Render("✓")+" "+text, width, "…"))
 	}
 	var shown []composeRow
@@ -432,7 +432,7 @@ func (p *composeProgress) renderPull(images, layers []composeResource, width int
 				names = append(names, r.name)
 			}
 		}
-		green := lipgloss.NewStyle().Foreground(render.Green)
+		green := render.Success
 		lines = append(lines, ansi.Truncate("    "+green.Render("✓")+" "+countLabel(complete, "images")+" pulled: "+strings.Join(names, ", "), width, "…"))
 	}
 	var shown []composeRow

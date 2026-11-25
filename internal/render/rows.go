@@ -49,7 +49,7 @@ func ContainerRow(c container.Summary) []string {
 		st.Render(state),
 		st.Render(c.Status),
 		health,
-		fg(Cyan).Render(Ports(c.Ports)),
+		portsStyle().Render(Ports(c.Ports)),
 	}
 }
 
@@ -66,7 +66,7 @@ func ImageRows(img image.Summary) [][]string {
 	rows := make([][]string, 0, len(img.RepoTags))
 	for _, rt := range img.RepoTags {
 		repo, tag := SplitRepoTag(rt)
-		rows = append(rows, []string{Bold.Render(repo), fg(Yellow).Render(tag), Dim.Render(id), created, size})
+		rows = append(rows, []string{Bold.Render(repo), tagStyle().Render(tag), Dim.Render(id), created, size})
 	}
 	return rows
 }

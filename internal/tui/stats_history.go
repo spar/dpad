@@ -112,6 +112,7 @@ type statsHistoryCache struct {
 	version    uint64
 	end        int64
 	width      int
+	theme      int
 	name, text string
 }
 
@@ -122,11 +123,12 @@ func (v *StatsView) historyPanel(id, name string, now time.Time) string {
 	}
 	end := h.endSecond(now)
 	c := &v.historyCache
-	if c.history == h && c.version == h.version && c.end == end && c.width == v.width && c.name == name {
+	if c.history == h && c.version == h.version && c.end == end && c.width == v.width && c.name == name && c.theme == render.ThemeGeneration() {
 		return c.text
 	}
 	width := min(max(v.width-55, 12), 60)
 	cpu, mem, s := h.chart(end, width)
+	cpu, mem = render.Sparkline().Render(cpu), render.Sparkline().Render(mem)
 	title := render.Bold.Render("History · " + name + " · last 2m")
 	var cpuLine, memLine string
 	if s.count == 0 {
@@ -142,6 +144,6 @@ func (v *StatsView) historyPanel(id, name string, now time.Time) string {
 		lines[i] = ansi.Truncate(lines[i], v.width, "…")
 	}
 	text := strings.Join(lines, "\n")
-	*c = statsHistoryCache{history: h, version: h.version, end: end, width: v.width, name: name, text: text}
+	*c = statsHistoryCache{history: h, version: h.version, end: end, width: v.width, theme: render.ThemeGeneration(), name: name, text: text}
 	return text
 }

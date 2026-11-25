@@ -113,3 +113,37 @@ composeProjects:
 		t.Fatal("per-project Compose env not parsed", cfg.ComposeProjects, err)
 	}
 }
+
+func TestSaveTheme(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "dpad", "config.yaml")
+	t.Setenv("DPAD_CONFIG", path)
+	if err := SaveTheme("amber"); err != nil {
+		t.Fatal(err)
+	}
+	original := "# my settings\nmouse: false # keep the terminal's\ntheme: amber\ncustomCommands:\n  - name: top\n    key: T\n    command: docker top {{.ID}}\n"
+	if err := os.WriteFile(path, []byte(original), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveTheme("nord"); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := os.ReadFile(path)
+	if want := strings.Replace(original, "theme: amber", "theme: nord", 1); string(got) != want {
+		t.Errorf("file = %q, want %q", got, want)
+	}
+	if fi, _ := os.Stat(path); runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600 {
+		t.Errorf("mode = %v, want 0600 kept", fi.Mode().Perm())
+	}
+	if err := os.WriteFile(path, []byte("mouse: false"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveTheme("mono"); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(path); string(got) != "mouse: false\ntheme: mono\n" {
+		t.Errorf("appended file = %q", got)
+	}
+}

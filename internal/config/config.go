@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"slices"
 	"strings"
@@ -23,6 +24,8 @@ type Config struct {
 	Mouse           *bool                     `yaml:"mouse"`
 	CustomCommands  []CustomCommand           `yaml:"customCommands"`
 	ComposeProjects map[string]ComposeProject `yaml:"composeProjects"`
+	// Theme names the color theme; see docs/themes.md.
+	Theme string `yaml:"theme"`
 }
 
 // ComposeProject holds per-project settings for Compose updates, keyed by
@@ -57,7 +60,7 @@ const (
 var ReservedKeys = []string{
 	"q", "ctrl+c", "tab", "shift+tab", "left", "right", "up", "down", "h", "j", "k", "l",
 	"/", "esc", "?", "ctrl+r", "enter", "space", "pgup", "pgdown", "ctrl+u", "ctrl+d", "home", "end", "g", "G",
-	"d", "e", "S", "x", "X", "R", "P", "K", "D", "u", "U", "c",
+	"d", "e", "S", "x", "X", "R", "P", "K", "D", "u", "U", "c", "C",
 	"s", "r", "t", "v", "m", "n", "i", "p", "a",
 	"1", "2", "3", "4", "5", "6", "7", "8", "9",
 }
@@ -195,4 +198,59 @@ func quote(s string) string {
 		return "'" + s + "'"
 	}
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
+var themeLine = regexp.MustCompile(`(?m)^theme:.*$`)
+
+// SaveTheme sets theme: in the config file, creating the file if needed. It
+// edits only that line, so the rest of the file, comments included, stays
+// as the user wrote it.
+func SaveTheme(name string) error {
+	path, err := Path()
+	if err != nil {
+		return err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	line := "theme: " + name
+	switch {
+	case themeLine.Match(data):
+		data = themeLine.ReplaceAll(data, []byte(line))
+	default:
+		if len(data) > 0 && data[len(data)-1] != '\n' {
+			data = append(data, '\n')
+		}
+		data = append(data, line+"\n"...)
+	}
+	var check struct {
+		Theme string `yaml:"theme"`
+	}
+	if err := yaml.Unmarshal(data, &check); err != nil || check.Theme != name {
+		return fmt.Errorf("%s: could not set theme: %s; set it by hand", path, name)
+	}
+	mode := fs.FileMode(0o644)
+	if fi, err := os.Stat(path); err == nil {
+		mode = fi.Mode().Perm()
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".config-*.yaml")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(tmp.Name(), mode); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), path)
 }

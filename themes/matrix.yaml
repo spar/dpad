@@ -1,0 +1,63 @@
+# Green phosphor on black. Red is kept for errors and high usage so they
+# still stand out.
+name: matrix
+description: Green phosphor on black
+author: dpad
+
+terminal:
+  background: "#000000"
+  foreground: "#00cc33"
+
+ui:
+  brand: "#00ff41"
+  dim: "#11893a"
+  header: "#b6ffb6"
+  accent: "#66ff99"
+  success: "#00ff41"
+  warning: "#c6ff3d"
+  error: "#ff3b3b"
+  onAccent: "#000000"
+  matchText: "#000000"
+  matchBackground: "#c6ff3d"
+
+tabs:
+  containers: "#00ff41"
+  images: "#66ff99"
+  stats: "#c6ff3d"
+  projects: "#00e6a0"
+  events: "#39d353"
+  volumes: "#b6ffb6"
+  networks: "#7dffbf"
+
+states:
+  running: "#00ff41"
+  exited: "#11893a"
+  failed: "#ff3b3b"
+  paused: "#c6ff3d"
+  restarting: "#66ff99"
+  created: "#00e6a0"
+  dead: "#ff3b3b"
+
+health:
+  healthy: "#00ff41"
+  unhealthy: "#ff3b3b"
+  starting: "#c6ff3d"
+
+usage:
+  low: "#00cc33"
+  medium: "#c6ff3d"
+  high: "#ff3b3b"
+  track: "#0b3d17"
+  sparkline: "#00ff41"
+
+logs:
+  error: "#ff3b3b"
+  warn: "#c6ff3d"
+  info: "#00ff41"
+  debug: "#11893a"
+
+columns:
+  ports: "#66ff99"
+  tag: "#c6ff3d"
+
+names: ["#00ff41", "#b6ffb6", "#66ff99", "#c6ff3d", "#00e6a0", "#39d353", "#7dffbf", "#9dffa0"]

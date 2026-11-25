@@ -48,6 +48,7 @@ type list[T any] struct {
 	// Cache of visible and its row keys; nil when items, filter or sort change.
 	rowCache                 []row
 	keyCache                 []string
+	rowTheme                 int // theme generation rowCache was styled with
 	rowVersion, tableVersion uint64
 	table                    *render.PreparedTable
 	tableRows                []row
@@ -79,7 +80,7 @@ func (l *list[T]) setSort(key sortx.Key, reverse bool) {
 
 // visible returns the rows that match the filter, in sort order, and their keys.
 func (l *list[T]) visible() ([]row, []string) {
-	if l.rowCache != nil {
+	if l.rowCache != nil && l.rowTheme == render.ThemeGeneration() {
 		return l.rowCache, l.keyCache
 	}
 	items := make([]T, 0, len(l.items))
@@ -98,7 +99,7 @@ func (l *list[T]) visible() ([]row, []string) {
 		keys[i] = r.key
 	}
 	l.rowVersion++
-	l.rowCache, l.keyCache = rows, keys
+	l.rowCache, l.keyCache, l.rowTheme = rows, keys, render.ThemeGeneration()
 	return rows, keys
 }
 

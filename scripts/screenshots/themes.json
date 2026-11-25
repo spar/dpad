@@ -1,0 +1,15 @@
+[
+  {"wait": 3},
+  {"keys": "jjjj", "delay": 0.2}, {"wait": 1},
+  {"snap": "theme-default"},
+  {"keys": "C"}, {"wait": 0.5}, {"keys": "j"}, {"wait": 1}, {"snap": "theme-picker"},
+  {"keys": "\r"}, {"wait": 0.3}, {"keys": "k"}, {"wait": 1.2}, {"snap": "theme-amber"},
+  {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "j"}, {"wait": 1.2}, {"snap": "theme-catppuccin-mocha"},
+  {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "k"}, {"wait": 1.2}, {"snap": "theme-dracula"},
+  {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "j"}, {"wait": 1.2}, {"snap": "theme-gruvbox"},
+  {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "k"}, {"wait": 1.2}, {"snap": "theme-high-contrast"},
+  {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "j"}, {"wait": 1.2}, {"snap": "theme-matrix"},
+  {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "k"}, {"wait": 1.2}, {"snap": "theme-mono"},
+  {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "j"}, {"wait": 1.2}, {"snap": "theme-nord"},
+  {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "k"}, {"wait": 1.2}, {"snap": "theme-paper"}
+]
