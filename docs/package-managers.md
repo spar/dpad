@@ -1,14 +1,16 @@
 # Package managers
 
-Each release updates three packages from the release's `SHA256SUMS`:
+Each release updates these packages from the release's `SHA256SUMS`:
 
 | Package manager | Where it lives | Install command |
 |---|---|---|
 | Homebrew (macOS, Linux) | [spar/homebrew-tap](https://github.com/spar/homebrew-tap), `Formula/dpad.rb` | `brew install spar/tap/dpad` |
 | Scoop (Windows) | [spar/scoop-bucket](https://github.com/spar/scoop-bucket), `bucket/dpad.json` | `scoop bucket add spar https://github.com/spar/scoop-bucket` then `scoop install spar/dpad` |
+| winget (Windows) | [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs), `manifests/s/spar/dpad`, not published yet (see [winget](#winget)) | `winget install spar.dpad` |
 | AUR (Arch Linux) | `dpad-bin`, not published yet (see [AUR](#aur)) | `yay -S dpad-bin` (or any AUR helper) |
 
-All three install the prebuilt release binaries as `dpad` plus a `dp` alias.
+Homebrew, Scoop and the AUR install the prebuilt binaries as `dpad` plus a `dp`
+alias. winget allows one command per file, so it installs `dp` only.
 
 ## How it works
 
@@ -20,6 +22,12 @@ workflow downloads `SHA256SUMS` from the release and renders the manifests with
 
 - The Homebrew formula and Scoop manifest are committed to their repositories
   through the GitHub API with the `PACKAGES_TOKEN` secret.
+- The winget manifests (schema 1.28.0) are committed to a new branch of the
+  `spar/winget-pkgs` fork, cut from upstream `master`, and a pull request is
+  opened against microsoft/winget-pkgs with the `WINGET_TOKEN` secret. The step
+  does nothing if that version is already upstream or its pull request is open.
+  winget's moderators review and merge it; that usually takes from a few hours
+  to a few days.
 - `PKGBUILD` and `.SRCINFO` are pushed to `ssh://aur@aur.archlinux.org/dpad-bin.git`
   with the `AUR_SSH_KEY` secret. The workflow checks the AUR host key against the
   Ed25519 fingerprint published on aur.archlinux.org.
@@ -50,6 +58,24 @@ gh workflow run packages.yml --repo spar/dpad -f tag=v0.4.0
    ```sh
    gh secret set PACKAGES_TOKEN --repo spar/dpad
    ```
+
+### winget
+
+1. Fork [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) to
+   `spar/winget-pkgs`.
+2. Create a [classic personal access token](https://github.com/settings/tokens/new)
+   with the `public_repo` scope. Fine-grained tokens cannot open pull requests
+   on repositories you don't own. Add the `workflow` scope too if branch creation
+   fails with a permissions error, which happens when upstream changed workflow
+   files.
+3. Save it as an Actions secret:
+
+   ```sh
+   gh secret set WINGET_TOKEN --repo spar/dpad
+   ```
+
+4. Sign the Microsoft Contributor License Agreement when the bot asks on the
+   first pull request. Later pull requests don't ask again.
 
 ### AUR
 
