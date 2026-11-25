@@ -7,17 +7,102 @@
 `dp` adds live stats with sparklines, multi-container logs, Compose project controls<br>
 and a full-screen terminal UI. Anything it doesn't enhance goes straight to `docker`.
 
+[![Latest release](https://img.shields.io/github/v/release/spar/dpad)](https://github.com/spar/dpad/releases/latest)
 [![CI](https://github.com/spar/dpad/actions/workflows/ci.yml/badge.svg)](https://github.com/spar/dpad/actions/workflows/ci.yml)
-![Go 1.26.7+](https://img.shields.io/badge/go-1.26.7%2B-00ADD8?logo=go&logoColor=white)
-![macOS and Linux](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-informational)
+![macOS, Linux and Windows](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-informational)
 [![MIT license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Built with Bubble Tea](https://img.shields.io/badge/built%20with-Bubble%20Tea-ff5f87)](https://github.com/charmbracelet/bubbletea)
 
-**[Quick start](#quick-start) · [Features](#features) · [Performance](#performance) · [Commands](#commands) · [Docs](#documentation)**
+```sh
+brew install spar/tap/dpad
+```
+
+<sub>On Windows, use [Scoop](#scoop-windows). Install scripts and archives are under [Install](#install).</sub>
+
+**[Install](#install) · [Quick start](#quick-start) · [Features](#features) · [Commands](#commands) · [Compared with other tools](#compared-with-other-tools) · [Docs](#documentation)**
 
 <img src="docs/images/demo.svg" alt="dp terminal UI: moving between the Containers, Stats and Projects tabs, following a Compose project's logs and filtering them by regex" width="100%">
 
 </div>
+
+## Install
+
+dpad needs a running Docker engine and the Docker CLI. Every install method
+provides both `dpad` and the short `dp` command.
+
+### Homebrew (macOS and Linux)
+
+```sh
+brew install spar/tap/dpad
+```
+
+Upgrade with `brew upgrade dpad`.
+
+### Scoop (Windows)
+
+```powershell
+scoop bucket add spar https://github.com/spar/scoop-bucket
+scoop install spar/dpad
+```
+
+Upgrade with `scoop update dpad`.
+
+### Install script
+
+Without a package manager, run one command to install or upgrade the latest
+release. The installer detects amd64 or arm64, verifies the binary against the
+release’s SHA-256 checksum, and installs both `dpad` and `dp` for your user.
+
+**macOS or Linux** (including WSL2):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/spar/dpad/main/scripts/install.sh | sh
+```
+
+The commands install into `~/.local/bin`. If your shell cannot find `dp`,
+add `export PATH="$HOME/.local/bin:$PATH"` to your shell profile.
+
+**Windows** (PowerShell):
+
+```powershell
+& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/spar/dpad/main/scripts/install.ps1')))
+```
+
+The Windows installer adds `%LOCALAPPDATA%\Programs\dpad` to your user PATH.
+
+### Release archives
+
+Download the archive for your OS and CPU from
+[GitHub Releases](https://github.com/spar/dpad/releases/latest)
+(`.tar.gz` for macOS and Linux, `.zip` for Windows), check it against
+`SHA256SUMS` and put the `dpad` binary on your PATH.
+
+### From source
+
+To build from source with **Go 1.26.7+**, run:
+
+```sh
+git clone https://github.com/spar/dpad.git
+cd dpad
+make install
+```
+
+Run `dp --version` to check the installation. Shell completion, other install
+locations and troubleshooting are covered in
+[Running locally](docs/local-development.md).
+
+## Quick start
+
+```bash
+dp                    # full-screen TUI
+dp ps -a              # colored, sortable ps
+dp stats --sort mem   # live stats, biggest memory users first
+dp logs -f api worker # Compose services or containers, one stream
+```
+
+Want something to look at? `make demo-up` starts about 20 demo containers that
+exercise every feature (busy CPUs, memory near its limit, health checks,
+crash loops, JSON and logfmt logs). `make demo-down` removes them.
 
 ## Why dp
 
@@ -45,80 +130,6 @@ the commands you already know and fills those gaps:
 `dp` talks to the Docker Engine API directly and uses your existing contexts and
 `DOCKER_HOST`. Switching contexts inside `dp` does not change the Docker CLI's
 saved current context.
-
-## Quick start
-
-Use dpad with a running Docker engine and the Docker CLI. Every install method
-below provides both `dpad` and the short `dp` command.
-
-**Homebrew** (macOS and Linux):
-
-```sh
-brew install spar/tap/dpad
-```
-
-**Scoop** (Windows):
-
-```powershell
-scoop bucket add spar https://github.com/spar/scoop-bucket
-scoop install spar/dpad
-```
-
-Upgrade with `brew upgrade dpad` or `scoop update dpad`.
-
-### Install script
-
-Without a package manager, run one command to install or upgrade the latest
-release. The installer detects amd64 or arm64, verifies the binary against the
-release’s SHA-256 checksum, and installs both `dpad` and `dp` for your user.
-
-**macOS or Linux** (including WSL2):
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/spar/dpad/main/scripts/install.sh | sh
-```
-
-The commands install into `~/.local/bin`. If your shell cannot find `dp`,
-add `export PATH="$HOME/.local/bin:$PATH"` to your shell profile.
-
-**Windows** (PowerShell):
-
-```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/spar/dpad/main/scripts/install.ps1')))
-```
-
-The Windows installer adds `%LOCALAPPDATA%\Programs\dpad` to your user PATH.
-Run `dp --version` to check the installation. For manual installation, download
-the archive for your OS and CPU from
-[GitHub Releases](https://github.com/spar/dpad/releases/latest)
-(`.tar.gz` for macOS and Linux, `.zip` for Windows), check it against
-`SHA256SUMS` and put the `dpad` binary on your PATH.
-
-### From source
-
-To build from source with **Go 1.26.7+**, run:
-
-```sh
-git clone https://github.com/spar/dpad.git
-cd dpad
-make install
-```
-
-### First commands
-
-```bash
-dp                    # full-screen TUI
-dp ps -a              # colored, sortable ps
-dp stats --sort mem   # live stats, biggest memory users first
-dp logs -f api worker # Compose services or containers, one stream
-```
-
-Want something to look at? `make demo-up` starts about 20 demo containers that
-exercise every feature (busy CPUs, memory near its limit, health checks,
-crash loops, JSON and logfmt logs). `make demo-down` removes them.
-
-Windows (WSL2 or Git Bash), shell completion, other install locations and
-troubleshooting are covered in [Running locally](docs/local-development.md).
 
 ## Features
 
@@ -210,43 +221,6 @@ and dropped connections reconnect in the background. Details are in
 
 <sub>All screenshots are real, unedited output from the bundled demo environment (`make demo-up`), captured with `make screenshots`.</sub>
 
-## Performance
-
-`dp` is built to stay responsive with hundreds of containers and to cost little
-while it sits open in a terminal tab.
-
-**How it stays light**
-
-- One Docker event subscription drives the container lists, Projects and the Events timeline. Bursts of events are coalesced into at most one list refresh per second.
-- Stats updates are batched before redrawing. Project grouping, rates and sparklines are computed from the same stream and add no Docker requests.
-- Buffers have fixed limits: 5,000 log lines, 1,000 events, and 120 one-second history buckets (about 6 KiB) per container.
-- The TUI renders at up to 120 frames per second, and frames that haven't changed write nothing. Over SSH, event and log redraws are batched further.
-
-**Measured with the 19-container demo running**
-
-| | Result |
-|---|---|
-| Binary | 10.5 MiB, static and stripped (`CGO_ENABLED=0`) |
-| Memory | about 22 MB resident with the TUI open and live stats streaming |
-| CPU | about 2.5% of one core in the same state (30-second average) |
-| `dp ps -a` | 111 to 122 ms, against 135 to 140 ms for `docker ps -a` (mean of 50 runs) |
-| `dp images` | 89 ms, against 108 ms for `docker images` (mean of 50 runs) |
-
-**Microbenchmarks with 1,000 containers** (`go test -bench`)
-
-| Operation | Time per op |
-|---|---|
-| Move the selection and redraw the Containers tab (140×40 terminal) | 0.11 ms |
-| Move the selection and redraw the Projects tab (100 projects) | 0.11 ms |
-| Redraw the Stats tab | 0.035 ms |
-| Apply a stats batch for 1,000 containers, then redraw (100 collapsed projects) | 2.9 ms |
-| Apply a stats batch for 1,000 containers, then redraw (flat view) | 19 ms |
-| Record one sparkline sample | 17 ns, 0 allocations |
-| Compute network and disk rates for one sample | 51 ns, 0 allocations |
-
-<sub>Measured on a 4-vCPU Intel Xeon @ 2.10 GHz Linux VM with Docker Engine 29.9 and Go 1.26.7. Your numbers will differ; reproduce the benchmarks with
-<code>go test -run '^$' -bench . -benchmem ./internal/...</code>.</sub>
-
 ## Commands
 
 | Command | What it adds over docker |
@@ -286,6 +260,71 @@ would type `docker`:
 | `?` | help for the current view |
 
 The full key list and the behavior of each tab are in [docs/usage.md](docs/usage.md).
+
+## Performance
+
+`dp` is built to stay responsive with hundreds of containers and to cost little
+while it sits open in a terminal tab.
+
+**How it stays light**
+
+- One Docker event subscription drives the container lists, Projects and the Events timeline. Bursts of events are coalesced into at most one list refresh per second.
+- Stats updates are batched before redrawing. Project grouping, rates and sparklines are computed from the same stream and add no Docker requests.
+- Buffers have fixed limits: 5,000 log lines, 1,000 events, and 120 one-second history buckets (about 6 KiB) per container.
+- The TUI renders at up to 120 frames per second, and frames that haven't changed write nothing. Over SSH, event and log redraws are batched further.
+
+**Measured with the 19-container demo running**
+
+| | Result |
+|---|---|
+| Binary | 10.5 MiB, static and stripped (`CGO_ENABLED=0`) |
+| Memory | about 22 MB resident with the TUI open and live stats streaming |
+| CPU | about 2.5% of one core in the same state (30-second average) |
+| `dp ps -a` | 111 to 122 ms, against 135 to 140 ms for `docker ps -a` (mean of 50 runs) |
+| `dp images` | 89 ms, against 108 ms for `docker images` (mean of 50 runs) |
+
+**Microbenchmarks with 1,000 containers** (`go test -bench`)
+
+| Operation | Time per op |
+|---|---|
+| Move the selection and redraw the Containers tab (140×40 terminal) | 0.11 ms |
+| Move the selection and redraw the Projects tab (100 projects) | 0.11 ms |
+| Redraw the Stats tab | 0.035 ms |
+| Apply a stats batch for 1,000 containers, then redraw (100 collapsed projects) | 2.9 ms |
+| Apply a stats batch for 1,000 containers, then redraw (flat view) | 19 ms |
+| Record one sparkline sample | 17 ns, 0 allocations |
+| Compute network and disk rates for one sample | 51 ns, 0 allocations |
+
+<sub>Measured on a 4-vCPU Intel Xeon @ 2.10 GHz Linux VM with Docker Engine 29.9 and Go 1.26.7. Your numbers will differ; reproduce the benchmarks with
+<code>go test -run '^$' -bench . -benchmem ./internal/...</code>.</sub>
+
+## Compared with other tools
+
+[lazydocker](https://github.com/jesseduffield/lazydocker),
+[dry](https://github.com/moncho/dry), [ctop](https://github.com/bcicen/ctop),
+[oxker](https://github.com/mrjackwills/oxker) and
+[dtop](https://github.com/amir20/dtop) are all good terminal tools for Docker.
+This table covers where they differ from `dp`:
+
+| | dpad | lazydocker | dry | ctop | oxker | dtop |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| Also replaces `docker` commands in the shell | ✓ | | | | | |
+| Compose projects view | ✓ | ✓ | ✓ | | | column only |
+| Logs from several containers in one stream | any mix of containers, services and projects | per service or project | per service or project | | | |
+| Search or filter logs | live regex filter | | search | | search | |
+| Events timeline | ✓ filterable | | last 10 events | | | |
+| Prune | ✓ with a preview | ✓ | ✓ | | | |
+| Custom commands | ✓ | ✓ | | | | |
+| Several hosts in one view | | | | | | ✓ |
+| Docker Swarm | | | ✓ | | | |
+
+<sub>Based on each project's README and docs as of 24 November 2026. An empty cell means the feature isn't documented there, not that it can't be done another way.</sub>
+
+Each of them also does things `dp` doesn't. lazydocker has the largest community
+and shows image layer history. dry manages Swarm and detects Compose drift. dtop
+watches several hosts in one table. ctop is a minimal `top` for containers, though
+it hasn't had a commit since July 2024. More tools are listed in
+[Awesome Docker](https://github.com/veggiemonk/awesome-docker#terminal).
 
 ## Documentation
 
