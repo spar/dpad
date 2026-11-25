@@ -56,7 +56,7 @@ func (t Table) Prepare() *PreparedTable {
 	widths := make([]int, n)
 	headers, headerW := make([]string, n), make([]int, n)
 	for i, c := range t.Columns {
-		headers[i], headerW[i] = Header.Render(c.Header), width(c.Header)
+		headers[i], headerW[i] = c.Header, width(c.Header)
 		widths[i] = headerW[i]
 	}
 	// Truncate and measure every cell once.
@@ -147,7 +147,12 @@ func (t *PreparedTable) lines(selected, start, end int) []string {
 	}
 
 	out := make([]string, 0, end-start+1)
-	out = append(out, line(t.headers, t.headerWidths))
+	headers := make([]string, len(t.headers))
+	for i, h := range t.headers {
+		headers[i] = Header.Render(h)
+	}
+	out = append(out, line(headers, t.headerWidths))
+	selPre, _, _ := strings.Cut(Selected.Render("\uE000"), "\uE000")
 	for r := start; r < end; r++ {
 		if r != selected {
 			out = append(out, line(t.cells[r], t.cellWidths[r]))
@@ -169,7 +174,7 @@ func (t *PreparedTable) lines(selected, start, end int) []string {
 		l = Selected.Render(l)
 		// Reversed, a bar's filled blocks read as empty, so bars keep their colors.
 		for bar, styled := range bars {
-			l = strings.ReplaceAll(l, bar, "\x1b[27m"+styled+"\x1b[7m")
+			l = strings.ReplaceAll(l, bar, "\x1b[0m"+styled+selPre)
 		}
 		out = append(out, l)
 	}

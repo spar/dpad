@@ -100,7 +100,7 @@ func (a *App) connectionBar() string {
 	}
 	state := render.Dim.Render("connecting")
 	if a.daemon.connected {
-		state = render.Accent.Render("connected")
+		state = connectedLabel()
 	} else if a.daemon.err != nil {
 		if a.daemon.everConnected {
 			state = render.Warn.Render("reconnecting")

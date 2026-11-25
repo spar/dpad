@@ -122,27 +122,27 @@ func (a *App) Init() tea.Cmd {
 	return tea.Batch(append(cmds, a.tabs[a.active].Focus())...)
 }
 
-func (a *App) bodyHeight() int { return max(a.height-4, 1) }
+func (a *App) bodyHeight() int { return max(a.height-4-extraRows(), 1) }
 
 func (a *App) resize(width, height int) {
 	a.width, a.height = width, height
 	for _, t := range a.tabs {
-		t.SetSize(a.width, a.bodyHeight())
+		t.SetSize(a.bodyWidth(), a.bodyHeight())
 	}
 	if a.logs != nil {
-		a.logs.SetSize(a.width, a.bodyHeight())
+		a.logs.SetSize(a.bodyWidth(), a.bodyHeight())
 	}
 	for _, v := range a.detailScreens() {
-		v.SetSize(a.width, a.bodyHeight())
+		v.SetSize(a.bodyWidth(), a.bodyHeight())
 	}
 	if a.projectAction != nil {
-		a.projectAction.SetSize(a.width, a.bodyHeight())
+		a.projectAction.SetSize(a.bodyWidth(), a.bodyHeight())
 	}
 	if a.composeUpdate != nil {
-		a.composeUpdate.SetSize(a.width, a.bodyHeight())
+		a.composeUpdate.SetSize(a.bodyWidth(), a.bodyHeight())
 	}
 	if a.prune != nil {
-		a.prune.SetSize(a.width, a.bodyHeight())
+		a.prune.SetSize(a.bodyWidth(), a.bodyHeight())
 	}
 	if a.shell != nil {
 		a.shell.input.SetWidth(max(width-38, 1))
@@ -380,7 +380,7 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	switch key {
 	case "X":
 		var cmd tea.Cmd
-		a.prune, cmd = newPruneView(a.ctx, a.client, pruneKindFor(a.tabs[a.active]), a.width, a.bodyHeight())
+		a.prune, cmd = newPruneView(a.ctx, a.client, pruneKindFor(a.tabs[a.active]), a.bodyWidth(), a.bodyHeight())
 		return cmd
 	case "u", "U":
 		return a.openComposeUpdate(key == "U")
@@ -418,13 +418,13 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		if projects, ok := a.tabs[a.active].(*ProjectsView); ok {
 			if p := projects.selectedProject(); p != nil {
 				var cmd tea.Cmd
-				a.logs, cmd = newProjectLogsView(a.ctx, a.client, p.name, p.containers, a.width, a.bodyHeight())
+				a.logs, cmd = newProjectLogsView(a.ctx, a.client, p.name, p.containers, a.bodyWidth(), a.bodyHeight())
 				return cmd
 			}
 		}
 		if id, name, ok := a.tabs[a.active].Selected(); ok {
 			var cmd tea.Cmd
-			a.logs, cmd = NewLogsView(a.ctx, a.client, id, name, a.width, a.bodyHeight())
+			a.logs, cmd = NewLogsView(a.ctx, a.client, id, name, a.bodyWidth(), a.bodyHeight())
 			return cmd
 		}
 	case "d":
@@ -491,6 +491,7 @@ func (a *App) View() tea.View {
 }
 
 func (a *App) render() string {
+	a.applyLook()
 	var body, status string
 	details := a.detailScreens()
 	switch {
@@ -528,6 +529,12 @@ func (a *App) render() string {
 	if n := a.bodyHeight() - lipgloss.Height(body); n > 0 {
 		body += strings.Repeat("\n", n)
 	}
+	switch look {
+	case "2":
+		return strings.Join([]string{a.tabBar(), a.tabUnderline(), a.connectionBar(), body, render.Dim.Render(status), a.footer()}, "\n")
+	case "3":
+		return strings.Join([]string{a.tabBar(), a.connectionBar(), a.frame(a.tabs[a.active].Title(), body, render.Dim.Render(status)), a.footer()}, "\n")
+	}
 	return strings.Join([]string{a.tabBar(), a.connectionBar(), body, render.Dim.Render(status), a.footer()}, "\n")
 }
 
@@ -539,13 +546,16 @@ func (a *App) tabBar() string {
 // tabBarParts returns the tab bar's space-separated parts and the tab each
 // shows (-1 for the logo), narrowing labels until the bar fits.
 func (a *App) tabBarParts() ([]string, []int) {
-	parts := []string{render.Accent.Render("dpad") + " "}
+	parts := []string{lookBrand()}
 	owners := []int{-1}
 	for i, t := range a.tabs {
 		label := fmt.Sprintf("%d %s", i+1, t.Title())
-		if i == a.active {
+		switch {
+		case look != "":
+			parts = append(parts, lookTab(i, label, i == a.active))
+		case i == a.active:
 			parts = append(parts, tabActive.Render(label))
-		} else {
+		default:
 			parts = append(parts, tabInactive.Render(label))
 		}
 		owners = append(owners, i)
@@ -560,7 +570,11 @@ func (a *App) tabBarParts() ([]string, []int) {
 	}
 	for i := range parts {
 		if i != a.active {
-			parts[i] = tabInactive.Render(fmt.Sprint(i + 1))
+			if look != "" {
+				parts[i] = lookTab(i, fmt.Sprint(i+1), false)
+			} else {
+				parts[i] = tabInactive.Render(fmt.Sprint(i + 1))
+			}
 		}
 	}
 	if fits() {
