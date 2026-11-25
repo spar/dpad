@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/images/logo.svg" alt="dpad logo" width="112">
+
 # dpad
 
 ### A colorful, interactive companion to the `docker` CLI
