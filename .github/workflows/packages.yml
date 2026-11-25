@@ -36,7 +36,7 @@ jobs:
       HAS_AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY != '' }}
       HAS_WINGET_TOKEN: ${{ secrets.WINGET_TOKEN != '' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
       - name: Download release checksums
@@ -46,7 +46,7 @@ jobs:
             -o "$RUNNER_TEMP/SHA256SUMS"
       - name: Update Homebrew formula and Scoop manifest
         if: env.HAS_PACKAGES_TOKEN == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           github-token: ${{ secrets.PACKAGES_TOKEN }}
           script: |
@@ -54,7 +54,7 @@ jobs:
             await publishManifests({ github, core, tag: process.env.TAG, sumsFile: process.env.RUNNER_TEMP + '/SHA256SUMS' })
       - name: Open winget pull request
         if: env.HAS_WINGET_TOKEN == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           github-token: ${{ secrets.WINGET_TOKEN }}
           script: |
@@ -62,7 +62,7 @@ jobs:
             await publishWinget({ github, core, tag: process.env.TAG, sumsFile: process.env.RUNNER_TEMP + '/SHA256SUMS', fork: context.repo.owner })
       - name: Render AUR package
         if: env.HAS_AUR_SSH_KEY == 'true'
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             const { writeAur } = require(process.cwd() + '/scripts/release/packages.cjs')
