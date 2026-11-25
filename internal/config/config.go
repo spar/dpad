@@ -20,8 +20,17 @@ import (
 // Config is the contents of config.yaml. A missing file is the zero Config
 // with Mouse on.
 type Config struct {
-	Mouse          *bool           `yaml:"mouse"`
-	CustomCommands []CustomCommand `yaml:"customCommands"`
+	Mouse           *bool                     `yaml:"mouse"`
+	CustomCommands  []CustomCommand           `yaml:"customCommands"`
+	ComposeProjects map[string]ComposeProject `yaml:"composeProjects"`
+}
+
+// ComposeProject holds per-project settings for Compose updates, keyed by
+// Compose project name.
+type ComposeProject struct {
+	// Env is set while dpad runs Compose for the project, for variables a
+	// wrapper script would normally export.
+	Env map[string]string `yaml:"env"`
 }
 
 // MouseEnabled reports whether the TUI should capture the mouse.

@@ -51,6 +51,7 @@ type App struct {
 	mouse           bool
 	click           lastClick
 	commands        []config.CustomCommand
+	composeProjects map[string]config.ComposeProject
 }
 
 // Run starts the TUI and blocks until the user quits.

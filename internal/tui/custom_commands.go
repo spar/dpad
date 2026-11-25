@@ -22,6 +22,7 @@ type commandDoneMsg struct {
 func (a *App) configure(cfg config.Config, err error) {
 	a.mouse = cfg.MouseEnabled()
 	a.commands = cfg.CustomCommands
+	a.composeProjects = cfg.ComposeProjects
 	if err != nil && a.flash == "" {
 		a.flash, a.flashErr = "config: "+strings.Join(strings.Fields(err.Error()), " "), true
 	}

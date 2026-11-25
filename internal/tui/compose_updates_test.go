@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/moby/moby/api/types/container"
 
 	"dpad/internal/compose"
 )
@@ -89,7 +91,7 @@ func loadComposePreview(t *testing.T, v *composeUpdateView, load tea.Cmd) {
 		if v.stage != "reading" || !strings.Contains(ansi.Strip(v.View()), "reading Compose files") {
 			t.Fatal("discovered projects are not listed while their files are read", v.View())
 		}
-		v.Update(v.prepare(msg.projects)())
+		v.Update(v.prepare(msg.projects, msg.containers)())
 	}
 }
 
@@ -397,5 +399,55 @@ func TestComposeUpdateExecutionHostSelectionRequiresNewPreview(t *testing.T) {
 	v.Update(composePlanMsg{view: v, gen: v.gen, projects: []compose.Project{p}})
 	if v.HandleKey(key("h")) == nil || v.locations["demo"] != "local" {
 		t.Fatal("could not switch back to local execution")
+	}
+}
+
+type envClient struct {
+	fakeClient
+	env map[string][]string
+}
+
+func (c *envClient) Inspect(_ context.Context, id string) (container.InspectResponse, error) {
+	return container.InspectResponse{Config: &container.Config{Env: c.env[id]}}, nil
+}
+
+func TestContainerEnvLookupNeedsOneAgreedValue(t *testing.T) {
+	items := []container.Summary{
+		composeContainer("runner", "ci", "runner", "running"),
+		composeContainer("dind", "ci", "dind", "running"),
+		composeContainer("other", "mixed", "a", "running"),
+		composeContainer("other2", "mixed", "b", "running"),
+	}
+	c := &envClient{env: map[string][]string{
+		"runner": {"PATH=/bin", "RUNNER_STACK=expense-tracker"},
+		"dind":   {"PATH=/bin"},
+		"other":  {"RUNNER_STACK=a"},
+		"other2": {"RUNNER_STACK=b"},
+	}}
+	lookup := containerEnvLookup(t.Context(), c, items)
+	if value, _, ok := lookup("ci", "RUNNER_STACK"); !ok || value != "expense-tracker" {
+		t.Fatal("value set by one container was not recovered", value, ok)
+	}
+	if _, _, ok := lookup("mixed", "RUNNER_STACK"); ok {
+		t.Fatal("containers disagreeing on a value still produced one")
+	}
+	if _, _, ok := lookup("ci", "TAG"); ok {
+		t.Fatal("a variable no container sets was invented")
+	}
+}
+
+func TestBlockedMissingVariableExplainsConfigFix(t *testing.T) {
+	v, _ := newComposeUpdate(t.Context(), &fakeClient{}, "", 100, 30)
+	defer v.Close()
+	p := compose.Project{Name: "ci-runner", Directory: "/srv/ci", Issue: (&compose.MissingVariableError{Name: "RUNNER_STACK", Hint: "set by ./runners"}).Error()}
+	v.Update(composePlanMsg{view: v, gen: v.gen, projects: []compose.Project{p}})
+	plain := ansi.Strip(v.View())
+	if !strings.Contains(plain, "blocked: needs RUNNER_STACK: set by ./runners") || !strings.Contains(plain, "–") {
+		t.Fatal("blocked row does not give the short reason", plain)
+	}
+	v.HandleKey(key("enter"))
+	plain = ansi.Strip(v.View())
+	if !strings.Contains(plain, "composeProjects:") || !strings.Contains(plain, "RUNNER_STACK: <value>") {
+		t.Fatal("details do not say how to set the variable", plain)
 	}
 }

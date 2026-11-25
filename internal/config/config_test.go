@@ -101,3 +101,15 @@ func TestRenderQuotesValuesSoTheyStayOneWord(t *testing.T) {
 		t.Fatal("value was run as a command")
 	}
 }
+
+func TestParseComposeProjectEnv(t *testing.T) {
+	cfg, err := Parse([]byte(`
+composeProjects:
+  ci-runner:
+    env:
+      RUNNER_STACK: ci
+`))
+	if err != nil || cfg.ComposeProjects["ci-runner"].Env["RUNNER_STACK"] != "ci" {
+		t.Fatal("per-project Compose env not parsed", cfg.ComposeProjects, err)
+	}
+}

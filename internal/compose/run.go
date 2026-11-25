@@ -76,7 +76,11 @@ func update(ctx context.Context, env []string, p Project, out chan<- Event, emit
 			send(state, log.String()+"\n"+err.Error())
 			return
 		}
-		args := append(baseArgs(p), step.args...)
+		progress := "plain"
+		if p.JSONProgress {
+			progress = "json"
+		}
+		args := append(progressArgs(p, progress), step.args...)
 		args = append(args, "--")
 		args = append(args, p.Services...)
 		cmd, err := command(ctx, env, p, args...)

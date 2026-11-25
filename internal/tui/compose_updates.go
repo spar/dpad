@@ -4,15 +4,19 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/moby/moby/api/types/container"
 
 	"dpad/internal/compose"
+	"dpad/internal/config"
 	"dpad/internal/render"
 	"dpad/internal/sortx"
 )
@@ -20,10 +24,11 @@ import (
 // composeDiscoveredMsg lists projects from container labels so the preview can
 // show them while their Compose files are still being read.
 type composeDiscoveredMsg struct {
-	view     *composeUpdateView
-	gen      int
-	projects []compose.Project
-	err      error
+	view       *composeUpdateView
+	gen        int
+	projects   []compose.Project
+	containers []container.Summary
+	err        error
 }
 
 type composePlanMsg struct {
@@ -67,6 +72,7 @@ type composeUpdateView struct {
 	started, finished       time.Time
 	ticking                 bool
 	now                     func() time.Time
+	projectConfig           map[string]config.ComposeProject
 }
 
 func newComposeUpdate(ctx context.Context, c dockerClient, selected string, width, height int) (*composeUpdateView, tea.Cmd) {
@@ -84,6 +90,9 @@ func newComposeUpdate(ctx context.Context, c dockerClient, selected string, widt
 			services := fmt.Sprint(len(r.project.Services))
 			if r.state == "reading" {
 				where, services = "", ""
+			}
+			if r.project.Issue != "" {
+				services = "–"
 			}
 			return []row{{key: r.project.Name, cells: []string{r.project.Name, where, services, v.result(r)}}}
 		},
@@ -103,18 +112,71 @@ func (v *composeUpdateView) plan() tea.Cmd {
 		if err != nil {
 			return composeDiscoveredMsg{view: v, gen: gen, err: err}
 		}
-		return composeDiscoveredMsg{view: v, gen: gen, projects: compose.Discover(items, v.selected)}
+		return composeDiscoveredMsg{view: v, gen: gen, projects: compose.Discover(items, v.selected), containers: items}
 	}
 }
 
-func (v *composeUpdateView) prepare(projects []compose.Project) tea.Cmd {
+func (v *composeUpdateView) prepare(projects []compose.Project, containers []container.Summary) tea.Cmd {
 	locations := maps.Clone(v.locations)
 	gen := v.gen
 	return func() tea.Msg {
 		for i := range projects {
-			projects[i].Location = locations[projects[i].Name]
+			p := &projects[i]
+			p.Location = locations[p.Name]
+			env := v.projectConfig[p.Name].Env
+			for _, name := range slices.Sorted(maps.Keys(env)) {
+				p.Env = append(p.Env, name+"="+env[name])
+				p.EnvSources = append(p.EnvSources, name+"="+env[name]+" from config.yaml")
+			}
 		}
-		return composePlanMsg{view: v, gen: gen, projects: compose.Prepare(v.ctx, v.env, projects)}
+		lookup := containerEnvLookup(v.ctx, v.client, containers)
+		return composePlanMsg{view: v, gen: gen, projects: compose.Prepare(v.ctx, v.env, projects, lookup)}
+	}
+}
+
+// containerEnvLookup recovers a variable a wrapper script set when the project
+// was started, from the environment of the project's containers. It only
+// answers when every container that sets the variable agrees on one value.
+func containerEnvLookup(ctx context.Context, c dockerClient, containers []container.Summary) compose.Lookup {
+	var mu sync.Mutex
+	envs := map[string][]string{}
+	inspect := func(id string) []string {
+		mu.Lock()
+		defer mu.Unlock()
+		if env, ok := envs[id]; ok {
+			return env
+		}
+		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		info, err := c.Inspect(ctx, id)
+		if err == nil && info.Config != nil {
+			envs[id] = info.Config.Env
+		} else {
+			envs[id] = nil
+		}
+		return envs[id]
+	}
+	return func(project, name string) (string, string, bool) {
+		values := map[string]bool{}
+		for _, item := range containers {
+			if item.Labels[composeProjectLabel] != project {
+				continue
+			}
+			for _, entry := range inspect(item.ID) {
+				if key, value, _ := strings.Cut(entry, "="); key == name {
+					values[value] = true
+				}
+			}
+		}
+		if len(values) != 1 {
+			return "", "", false
+		}
+		for value := range values {
+			if value != "" {
+				return value, "the project's containers", true
+			}
+		}
+		return "", "", false
 	}
 }
 
@@ -167,7 +229,7 @@ func (v *composeUpdateView) Update(msg tea.Msg) tea.Cmd {
 			return nil
 		}
 		v.stage, v.started = "reading", v.now()
-		return tea.Batch(v.prepare(msg.projects), v.tick())
+		return tea.Batch(v.prepare(msg.projects, msg.containers), v.tick())
 	case composePlanMsg:
 		if msg.view != v || msg.gen != v.gen || v.ctx.Err() != nil {
 			return nil
@@ -427,11 +489,26 @@ func (v *composeUpdateView) updateOutput(top bool) {
 			content = "Waiting for Compose output…"
 		}
 	} else {
-		content = fmt.Sprintf("Project: %s\nRun on: %s\nDirectory: %s\nCompose files:\n  %s\nEnvironment files:\n  %s\nServices: %s\nImages (configured tags):\n  %s\n\nCommands: docker compose pull, then docker compose up -d\nServices whose image changed are recreated; named volumes are kept.\n\n%s\n%s", p.Name, where, p.Directory, strings.Join(p.Files, "\n  "), strings.Join(p.EnvFiles, "\n  "), strings.Join(p.Services, ", "), strings.Join(p.Images, "\n  "), r.state, r.output)
+		content = fmt.Sprintf("Project: %s\nRun on: %s\nDirectory: %s\nCompose files:\n  %s\nEnvironment files:\n  %s\nServices: %s\nImages (configured tags):\n  %s\n", p.Name, where, p.Directory, strings.Join(p.Files, "\n  "), strings.Join(p.EnvFiles, "\n  "), strings.Join(p.Services, ", "), strings.Join(p.Images, "\n  "))
+		if len(p.EnvSources) > 0 {
+			content += "Variables set for Compose:\n  " + strings.Join(p.EnvSources, "\n  ") + "\n"
+		}
+		if len(p.Unset) > 0 {
+			content += "Not set, Compose uses a blank string: " + strings.Join(p.Unset, ", ") + "\n"
+		}
+		content += "\nCommands: docker compose pull, then docker compose up -d\nServices whose image changed are recreated; named volumes are kept.\n"
+		if p.Issue != "" {
+			content += "\nBlocked: " + p.Issue + "\n"
+			if name, ok := strings.CutPrefix(p.Issue, "needs "); ok {
+				name, _, _ = strings.Cut(name, ":")
+				name, _, _ = strings.Cut(name, ",")
+				content += fmt.Sprintf("\nIf a wrapper script normally sets it, add it to config.yaml:\n\n  composeProjects:\n    %s:\n      env:\n        %s: <value>\n", p.Name, name)
+			}
+		}
 	}
 	bottom := v.vp.AtBottom()
 	if !v.progressMode() || v.rawOutput {
-		content = composeOutputText(content)
+		content = plainComposeLog(composeOutputText(content))
 	}
 	v.vp.SetContent(content)
 	if top && !v.progressMode() {
@@ -570,6 +647,16 @@ func (v *composeUpdateView) result(r composeUpdateRow) string {
 	case "reading":
 		return render.Dim.Render("reading Compose files…")
 	case "ready":
+		if len(r.project.Unset) > 0 {
+			return render.Warn.Render("ready · left blank: " + strings.Join(r.project.Unset, ", "))
+		}
+		if len(r.project.EnvSources) > 0 {
+			names := make([]string, len(r.project.EnvSources))
+			for i, source := range r.project.EnvSources {
+				names[i], _, _ = strings.Cut(source, "=")
+			}
+			return "ready · sets " + strings.Join(names, ", ")
+		}
 		return "ready"
 	case "waiting":
 		return render.Dim.Render("waiting")
@@ -802,5 +889,6 @@ func (a *App) openComposeUpdate(all bool) tea.Cmd {
 	}
 	var cmd tea.Cmd
 	a.composeUpdate, cmd = newComposeUpdate(a.ctx, a.client, selected, a.width, a.bodyHeight())
+	a.composeUpdate.projectConfig = a.composeProjects
 	return cmd
 }
