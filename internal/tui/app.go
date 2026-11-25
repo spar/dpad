@@ -17,30 +17,26 @@ import (
 	"dpad/internal/sortx"
 )
 
-var (
-	keyStyle = lipgloss.NewStyle().Bold(true)
-	brand    = lipgloss.NewStyle().Bold(true).Foreground(render.Green).Render("▍") + render.Bold.Render("dpad")
-	// Each tab has its own accent, carried into its headers and selection.
-	// Red stays free to mean an error.
-	tabAccents = []color.Color{
-		render.Cyan, lipgloss.Color("12"), render.Yellow, render.Magenta,
-		render.Green, lipgloss.Color("13"), lipgloss.Color("14"),
-	}
-)
+var keyStyle = lipgloss.NewStyle().Bold(true)
 
-func tabAccent(i int) color.Color { return tabAccents[i%len(tabAccents)] }
+func brand() string { return render.Brand.Render("▍") + render.Bold.Render("dpad") }
+
+// Each tab has its own accent from the theme, carried into its headers and
+// selection.
+func tabAccent(i int) color.Color {
+	accents := render.Theme().TabAccents()
+	return accents[i%len(accents)]
+}
 
 // tabLabel renders a tab: a filled accent block when active, otherwise its
 // number in the accent and its name dimmed. label is "N" or "N Title".
 func tabLabel(i int, label string, active bool) string {
 	if active {
-		st := lipgloss.NewStyle().Bold(true).Padding(0, 1)
-		if render.ColorDisabled() {
-			st = st.Reverse(true)
-		} else {
-			st = st.Background(tabAccent(i)).Foreground(lipgloss.Color("0"))
+		st := lipgloss.NewStyle().Reverse(true)
+		if c := tabAccent(i); c != nil && !render.ColorDisabled() {
+			st = render.OnAccent(c)
 		}
-		return st.Render(label)
+		return st.Bold(true).Padding(0, 1).Render(label)
 	}
 	num, name, _ := strings.Cut(label, " ")
 	s := lipgloss.NewStyle().Bold(true).Foreground(tabAccent(i)).Render(num)
@@ -70,6 +66,7 @@ type App struct {
 	composeUpdate   *composeUpdateView
 	shell           *shellPrompt
 	contextPicker   *contextPicker
+	themePicker     *themePicker
 	nextContext     string
 	actionsInFlight int
 	help            bool
@@ -82,11 +79,16 @@ type App struct {
 	composeProjects map[string]config.ComposeProject
 }
 
-// Run starts the TUI and blocks until the user quits.
-func Run(ctx context.Context, c dockerClient) error {
+// Run starts the TUI and blocks until the user quits. themeErr, when set,
+// is shown once: why the chosen theme could not be used.
+func Run(ctx context.Context, c dockerClient, themeErr error) error {
 	cfg, cfgErr := config.Load()
 	return runSessions(ctx, c, func(app *App) error {
 		app.configure(cfg, cfgErr)
+		if themeErr != nil && app.flash == "" {
+			app.flash, app.flashErr = oneLine(themeErr.Error())+"; using the default theme", true
+			themeErr = nil
+		}
 		_, err := tea.NewProgram(app, programOptions(app.ctx)...).Run()
 		return err
 	}, func(ctx context.Context, name string) (dockerClient, error) {
@@ -178,6 +180,7 @@ func (a *App) resize(width, height int) {
 	if a.contextPicker != nil {
 		a.contextPicker.SetSize(width, a.bodyHeight())
 	}
+	a.sizeThemePicker()
 }
 
 // setFilter sets the active tab's filter and the input showing it.
@@ -315,6 +318,8 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		return v.HandleKey(msg)
 	case a.contextPicker != nil:
 		return a.updateContextPicker(msg)
+	case a.themePicker != nil:
+		return a.updateThemePicker(key)
 	case a.projectAction != nil:
 		v := a.projectAction
 		if key == "esc" || key == "q" || key == "n" {
@@ -418,6 +423,12 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 			return nil
 		}
 		return a.openContextPicker()
+	case "C":
+		if render.ColorDisabled() {
+			a.flash, a.flashErr = "colors are off (NO_COLOR or --no-color), so themes don't apply", true
+			return nil
+		}
+		a.openThemePicker()
 	case "q":
 		return tea.Quit
 	case "tab", "right", "l":
@@ -512,6 +523,10 @@ func (a *App) switchTab(i int) tea.Cmd {
 func (a *App) View() tea.View {
 	v := tea.NewView(a.render())
 	v.AltScreen = true
+	if t := render.Theme(); !render.ColorDisabled() {
+		// Bubble Tea restores the terminal's own colors on exit.
+		v.BackgroundColor, v.ForegroundColor = t.Terminal.Background.C(), t.Terminal.Foreground.C()
+	}
 	if a.mouse {
 		v.MouseMode = tea.MouseModeCellMotion
 	}
@@ -528,6 +543,9 @@ func (a *App) render() string {
 	case a.contextPicker != nil:
 		body = a.contextPicker.View()
 		status = "Choose a Docker context for this session · switching clears resource data"
+	case a.themePicker != nil:
+		body = a.themePickerView()
+		status = "Choose a color theme · the screen previews the highlighted one"
 	case a.projectAction != nil:
 		body, status = a.projectAction.View(), a.projectAction.Status()
 	case a.prune != nil:
@@ -568,7 +586,7 @@ func (a *App) tabBar() string {
 // tabBarParts returns the tab bar's space-separated parts and the tab each
 // shows (-1 for the logo), narrowing labels until the bar fits.
 func (a *App) tabBarParts() ([]string, []int) {
-	parts := []string{brand + " "}
+	parts := []string{brand() + " "}
 	owners := []int{-1}
 	for i, t := range a.tabs {
 		label := fmt.Sprintf("%d %s", i+1, t.Title())
@@ -620,6 +638,8 @@ func (a *App) footer() string {
 			return a.contextPicker.search.View() + " " + render.Dim.Render("enter keep filter · esc cancel filter")
 		}
 		return hints("↑↓/j/k", "move", "/", "filter", "enter", "switch context", "esc", "cancel")
+	case a.themePicker != nil:
+		return hints("↑↓/j/k", "preview", "enter", "use for this session", "esc", "cancel")
 	case a.projectAction != nil:
 		return a.projectAction.Footer()
 	case a.prune != nil:
@@ -724,6 +744,7 @@ func (a *App) helpView() string {
 		{"S / x / R", "start (or unpause) / stop / restart selected container"},
 		{"P / K / D", "pause / kill / remove selected container (remove kills it first if running)"},
 		{"X", "prune: preview, then remove stopped containers or unused images, volumes, networks, build cache"},
+		{"C", "choose a color theme, previewed as you move"},
 		{"ctrl+r", "refresh now"},
 		{"q, ctrl+c", "quit"},
 	}

@@ -1,0 +1,63 @@
+# Colors from Catppuccin Mocha (MIT License).
+name: catppuccin-mocha
+description: Catppuccin Mocha's soft pastels on dark
+author: dpad
+source: https://catppuccin.com
+
+terminal:
+  background: "#1e1e2e"
+  foreground: "#cdd6f4"
+
+ui:
+  brand: "#a6e3a1"
+  dim: "#7f849c"
+  header: "#89b4fa"
+  accent: "#89dceb"
+  success: "#a6e3a1"
+  warning: "#fab387"
+  error: "#f38ba8"
+  onAccent: "#1e1e2e"
+  matchText: "#1e1e2e"
+  matchBackground: "#f9e2af"
+
+tabs:
+  containers: "#89dceb"
+  images: "#89b4fa"
+  stats: "#f9e2af"
+  projects: "#cba6f7"
+  events: "#a6e3a1"
+  volumes: "#f5c2e7"
+  networks: "#94e2d5"
+
+states:
+  running: "#a6e3a1"
+  exited: "#7f849c"
+  failed: "#f38ba8"
+  paused: "#f9e2af"
+  restarting: "#cba6f7"
+  created: "#89b4fa"
+  dead: "#f38ba8"
+
+health:
+  healthy: "#a6e3a1"
+  unhealthy: "#f38ba8"
+  starting: "#f9e2af"
+
+usage:
+  low: "#a6e3a1"
+  medium: "#fab387"
+  high: "#f38ba8"
+  track: "#45475a"
+  sparkline: "#b4befe"
+
+logs:
+  error: "#f38ba8"
+  warn: "#fab387"
+  info: "#a6e3a1"
+  debug: "#74c7ec"
+
+columns:
+  ports: "#89dceb"
+  tag: "#f9e2af"
+
+names: ["#89dceb", "#cba6f7", "#89b4fa", "#f9e2af", "#a6e3a1", "#f5c2e7", "#94e2d5", "#fab387", "#b4befe", "#74c7ec"]

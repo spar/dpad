@@ -11,7 +11,6 @@ import (
 
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 
@@ -642,7 +641,7 @@ func (v *composeUpdateView) result(r composeUpdateRow) string {
 		}
 		elapsed = " " + clock(end.Sub(r.began))
 	}
-	green := lipgloss.NewStyle().Foreground(render.Green)
+	green := render.Success
 	switch r.state {
 	case "reading":
 		return render.Dim.Render("reading Compose files…")
@@ -805,7 +804,7 @@ func (v *composeUpdateView) progressHeading() string {
 	case "failed", "unknown":
 		style = render.Error
 	case "succeeded":
-		style = lipgloss.NewStyle().Bold(true).Foreground(render.Green)
+		style = render.Success.Bold(true)
 	}
 	return ansi.Truncate(style.Render(text), v.width, "…")
 }

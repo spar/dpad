@@ -20,6 +20,10 @@ func TestDockerArgs(t *testing.T) {
 		{[]string{"logs", "--", "--no-color"}, true, []string{"logs", "--", "--no-color"}},
 		{[]string{"--no-color", "network", "ls"}, false, []string{"network", "ls"}},
 		{[]string{"exec", "web", "ls", "--no-color"}, false, []string{"exec", "web", "ls", "--no-color"}},
+		{[]string{"--theme", "matrix", "network", "ls"}, false, []string{"network", "ls"}},
+		{[]string{"--theme=amber", "--no-color", "volume", "ls"}, false, []string{"volume", "ls"}},
+		{[]string{"ps", "--theme", "mono", "-q"}, true, []string{"ps", "-q"}},
+		{[]string{"exec", "web", "app", "--theme", "x"}, false, []string{"exec", "web", "app", "--theme", "x"}},
 	}
 	for _, tt := range tests {
 		if got := dockerArgs(tt.args, tt.anywhere); !slices.Equal(got, tt.want) {
@@ -41,6 +45,10 @@ func TestShouldPassthrough(t *testing.T) {
 		"network ls":                true,
 		"--context prod ps":         true,
 		"--no-color --context x ps": true,
+		"--theme matrix":            false,
+		"--theme matrix ps":         false,
+		"--theme=matrix network ls": true,
+		"--theme matrix network ls": true,
 		"-H tcp://h:2375 ps":        true,
 	} {
 		if got := shouldPassthrough(root, strings.Fields(args)); got != want {
@@ -79,6 +87,7 @@ func TestRunPassesThrough(t *testing.T) {
 		"--context prod images":       "--context prod images",
 		"exec web ls --no-color":      "exec web ls --no-color",
 		"logs --details --no-color w": "logs --details w",
+		"--theme amber network ls":    "network ls",
 	} {
 		got := fakeDocker(t)
 		if code := run(strings.Fields(args)); code != 0 {

@@ -15,7 +15,7 @@ func StableNameStyle(name string) lipgloss.Style {
 	for i := range len(name) {
 		hash = (hash ^ uint32(name[i])) * 16777619
 	}
-	return fg(namePalette[hash%uint32(len(namePalette))])
+	return paletteStyle(int(hash % uint32(len(active.Names))))
 }
 
 type Level int
@@ -65,13 +65,13 @@ func parseLevel(s string) Level {
 func levelStyles(l Level) (token, text lipgloss.Style) {
 	switch l {
 	case LevelError:
-		return fg(Red).Bold(true), fg(Red)
+		return fg(active.Logs.Error.C()).Bold(true), fg(active.Logs.Error.C())
 	case LevelWarn:
-		return fg(Yellow).Bold(true), fg(Yellow)
+		return fg(active.Logs.Warn.C()).Bold(true), fg(active.Logs.Warn.C())
 	case LevelInfo:
-		return fg(Green).Bold(true), lipgloss.NewStyle()
+		return fg(active.Logs.Info.C()).Bold(true), lipgloss.NewStyle()
 	case LevelDebug:
-		return fg(Blue), Dim
+		return fg(active.Logs.Debug.C()), Dim
 	}
 	return lipgloss.NewStyle(), lipgloss.NewStyle()
 }
@@ -84,11 +84,11 @@ func LogLine(l docker.LogLine, nameStyle lipgloss.Style, prefixWidth int, timest
 		b.WriteString(nameStyle.Render(l.Container + strings.Repeat(" ", max(0, prefixWidth-len(l.Container)))))
 		sep := Dim.Render(" │ ")
 		if l.Stderr {
-			sep = fg(Red).Render(" ┃ ")
+			sep = fg(active.Logs.Error.C()).Render(" ┃ ")
 		}
 		b.WriteString(sep)
 	} else if l.Stderr {
-		b.WriteString(fg(Red).Render("┃ "))
+		b.WriteString(fg(active.Logs.Error.C()).Render("┃ "))
 	}
 	if timestamps && !l.Time.IsZero() {
 		b.WriteString(Dim.Render(l.Time.Local().Format("2006-01-02T15:04:05.000")) + " ")

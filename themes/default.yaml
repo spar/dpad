@@ -1,0 +1,63 @@
+# The look dpad ships with. Every color is one of the terminal's 16 ANSI
+# colors, so the theme follows the palette your terminal already uses.
+name: default
+description: Your terminal's own palette, with an accent color per tab
+author: dpad
+
+terminal:
+  background: default
+  foreground: default
+
+ui:
+  brand: green
+  dim: bright-black
+  header: blue
+  accent: cyan
+  success: green
+  warning: yellow
+  error: red
+  onAccent: black
+  matchText: black
+  matchBackground: yellow
+
+tabs:
+  containers: cyan
+  images: bright-blue
+  stats: yellow
+  projects: magenta
+  events: green
+  volumes: bright-magenta
+  networks: bright-cyan
+
+states:
+  running: green
+  exited: bright-black
+  failed: red
+  paused: yellow
+  restarting: magenta
+  created: blue
+  dead: red
+
+health:
+  healthy: green
+  unhealthy: red
+  starting: yellow
+
+usage:
+  low: green
+  medium: yellow
+  high: red
+  track: bright-black
+  sparkline: default
+
+logs:
+  error: red
+  warn: yellow
+  info: green
+  debug: blue
+
+columns:
+  ports: cyan
+  tag: yellow
+
+names: [cyan, magenta, blue, yellow, green, bright-cyan, bright-magenta, bright-blue, bright-yellow, bright-green]

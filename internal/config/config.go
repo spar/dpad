@@ -23,6 +23,8 @@ type Config struct {
 	Mouse           *bool                     `yaml:"mouse"`
 	CustomCommands  []CustomCommand           `yaml:"customCommands"`
 	ComposeProjects map[string]ComposeProject `yaml:"composeProjects"`
+	// Theme names the color theme; see docs/themes.md.
+	Theme string `yaml:"theme"`
 }
 
 // ComposeProject holds per-project settings for Compose updates, keyed by
@@ -57,7 +59,7 @@ const (
 var ReservedKeys = []string{
 	"q", "ctrl+c", "tab", "shift+tab", "left", "right", "up", "down", "h", "j", "k", "l",
 	"/", "esc", "?", "ctrl+r", "enter", "space", "pgup", "pgdown", "ctrl+u", "ctrl+d", "home", "end", "g", "G",
-	"d", "e", "S", "x", "X", "R", "P", "K", "D", "u", "U", "c",
+	"d", "e", "S", "x", "X", "R", "P", "K", "D", "u", "U", "c", "C",
 	"s", "r", "t", "v", "m", "n", "i", "p", "a",
 	"1", "2", "3", "4", "5", "6", "7", "8", "9",
 }
