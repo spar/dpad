@@ -168,29 +168,45 @@ and selection; container lists refresh when work finishes.
 
 ### Update Compose projects
 
-From Projects, press `u` on a project or one of its containers to update that
-project, or `U` to update all discovered projects on the current daemon. The
-all-project preview includes projects hidden by the list filter and stopped
-projects that still have containers. Projects with no containers cannot be
-discovered from daemon labels.
+This is the TUI version of running `docker compose pull` and then
+`docker compose up -d` in each project's folder. From Projects, press `u` on a
+project or one of its containers to update that project, or `U` to update all
+discovered projects on the current daemon. The Projects footer lists both
+keys. The all-project preview includes projects hidden by the list
+filter and stopped projects that still have containers. Projects with no
+containers cannot be discovered from daemon labels.
 
-Review the project list, then press `enter` for its execution host, working
-directory, Compose files, env files, services, and image tags. Press `esc` to
-return to the preview and `y` to confirm. Updating can recreate or start services.
-Missing or inconsistent Compose labels, unavailable files, or invalid configuration
-block that project; the preview shows why. Valid projects can still be confirmed.
+The preview lists the projects straight away and reads their Compose files in
+the background, four at a time, with an elapsed timer. When reading finishes,
+each row says `ready` or why it is blocked. Press `y` to start, from the list or
+from the `enter` details page, which shows the execution host, working
+directory, Compose files, env files, services, and image tags. Updating can
+recreate or start services. Missing or inconsistent Compose labels, unavailable
+files, or invalid configuration block that project. Valid projects can still be
+started.
 
 Each project runs Compose `pull --include-deps`, followed by
 `up -d --no-build --pull never` only if the pull succeeds. Projects run one at a
-time. Confirmation opens compact live Compose progress automatically. Each image,
-layer, and container has one row whose status updates in place, with completion
-checkmarks, status colors, and separate pull/start headings. Transfer amounts are
-shown when Compose reports them. Press `l` to switch between compact progress and
-the raw multiline log. Bulk updates follow the active project. Use `↑↓` or
-`pgup`/`pgdn` to read scrollback, `G` to
-follow the active project again, `[`/`]` to inspect another project's output,
-and `tab` for the project list. The raw log retains the latest 32 KiB per project, and
-the console stays open after completion. A failed
+time. Before each step dpad reads the project's configuration again; if it no
+longer matches the preview, that project fails with a message and nothing is
+pulled or recreated for it.
+
+Pressing `y` opens live progress straight away. When several projects update,
+the top half lists every project with its current step and elapsed time
+(`checking configuration`, `pulling images`, `recreating services`), and the
+bottom half shows the active project's images, layers and containers. Each
+resource has one row whose status updates in place, with completion checkmarks
+and status colors. Transfer amounts are shown when Compose reports them. Press
+`l` to switch between compact progress and the raw multiline log, `↑↓` or
+`pgup`/`pgdn` to read scrollback, `G` to follow the active project again,
+`[`/`]` to inspect another project's output, and `tab` for the full summary
+table. The raw log retains the latest 32 KiB per project.
+
+When the update finishes, each project's RESULT says what happened:
+`updated, N recreated`, `already up to date`, or `failed:` with Compose's error
+message. A bulk update ends on this summary table with the first failed project
+selected; `enter` opens its full output. Closing the view shows the totals in
+the Projects status bar. A failed
 project does not stop the remaining projects. The update uses the tags already
 in the Compose files; it does not upgrade pinned versions, edit files, build
 images, run `down`, prune images, or remove volumes. Services without profiles,

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -21,6 +22,13 @@ type composeProgress struct {
 	order     []string
 	messages  []string
 	omitted   bool
+	// pulled is set once Compose reaches the up step. Plain progress does not
+	// always print "Pull complete" for every layer, so earlier layer states are
+	// stale after that.
+	pulled bool
+	// recreated and downloaded survive later status lines so the result can say
+	// whether anything changed.
+	recreated, downloaded map[string]bool
 }
 
 func composeOutputText(output string) string {
@@ -31,7 +39,7 @@ func composeOutputText(output string) string {
 // only the latest state, including resources that leave the bounded raw tail.
 func (p *composeProgress) apply(output string, final bool) {
 	if p.resources == nil {
-		p.resources = map[string]composeResource{}
+		p.resources, p.recreated, p.downloaded = map[string]composeResource{}, map[string]bool{}, map[string]bool{}
 	}
 	text := composeOutputText(output)
 	p.messages = nil
@@ -41,6 +49,9 @@ func (p *composeProgress) apply(output string, final bool) {
 			break
 		}
 		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "[2/2]") {
+			p.pulled = true
+		}
 		if line == "" || strings.HasPrefix(line, "$") || strings.HasPrefix(line, "[1/2]") || strings.HasPrefix(line, "[2/2]") || line == "Update complete." {
 			continue
 		}
@@ -57,6 +68,12 @@ func (p *composeProgress) apply(output string, final bool) {
 			continue
 		}
 		key := resource.kind + ":" + resource.name
+		switch {
+		case resource.kind == "Container" && (resource.status == "Recreate" || resource.status == "Recreated" || resource.status == "Creating" || resource.status == "Created"):
+			p.recreated[resource.name] = true
+		case resource.kind == "Layer" && resource.status != "Already exists":
+			p.downloaded[resource.name] = true
+		}
 		if _, exists := p.resources[key]; !exists {
 			if len(p.order) == maxComposeResources {
 				delete(p.resources, p.order[0])
@@ -141,6 +158,9 @@ func (p *composeProgress) render(width int, state string) string {
 		for _, kind := range group.kinds {
 			for _, key := range p.order {
 				if r := p.resources[key]; r.kind == kind {
+					if r.kind == "Layer" && p.pulled && !r.done() && r.status != "Error" && r.status != "Failed" {
+						r.status, r.detail = "Pull complete", ""
+					}
 					rows = append(rows, r)
 				}
 			}
@@ -234,4 +254,28 @@ func (p *composeProgress) render(width int, state string) string {
 		return "Waiting for Compose progress…"
 	}
 	return strings.Join(lines, "\n")
+}
+
+// changes reports what an update did, for its result summary.
+func (p *composeProgress) changes() (recreated, downloaded int) {
+	return len(p.recreated), len(p.downloaded)
+}
+
+// failure picks the most useful single line from a failed update: Compose's
+// own error over dpad's "pulling failed: exit status 1" trailer.
+func (p *composeProgress) failure() string {
+	for _, m := range slices.Backward(p.messages) {
+		if strings.HasPrefix(strings.ToLower(m), "error") {
+			return m
+		}
+	}
+	for _, key := range p.order {
+		if r := p.resources[key]; (r.status == "Error" || r.status == "Failed") && r.detail != "" {
+			return r.detail
+		}
+	}
+	if len(p.messages) > 0 {
+		return p.messages[len(p.messages)-1]
+	}
+	return ""
 }

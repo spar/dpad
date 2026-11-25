@@ -76,6 +76,23 @@ func TestTUIComposeHelper(t *testing.T) {
 	os.Exit(0)
 }
 
+// loadComposePreview runs the discovery and Compose-file reading steps that
+// newComposeUpdate starts, without waiting on the elapsed-time ticker.
+func loadComposePreview(t *testing.T, v *composeUpdateView, load tea.Cmd) {
+	t.Helper()
+	msg, ok := load().(composeDiscoveredMsg)
+	if !ok {
+		t.Fatal("update did not start by discovering projects")
+	}
+	v.Update(msg)
+	if len(msg.projects) > 0 {
+		if v.stage != "reading" || !strings.Contains(ansi.Strip(v.View()), "reading Compose files") {
+			t.Fatal("discovered projects are not listed while their files are read", v.View())
+		}
+		v.Update(v.prepare(msg.projects)())
+	}
+}
+
 func finishComposeUpdate(t *testing.T, v *composeUpdateView, cmd tea.Cmd) {
 	t.Helper()
 	for cmd != nil {
@@ -92,7 +109,7 @@ func TestComposeUpdateSingleAndAllIgnoreListFilterOnlyForAll(t *testing.T) {
 	a.setFilter("a")
 	load := a.handleKey(key("u"))
 	v := a.composeUpdate
-	v.Update(load())
+	loadComposePreview(t, v, load)
 	if v.stage != "preview" || len(v.projects) != 1 || v.projects[0].Name != "a" {
 		t.Fatal("single project preview is wrong", v.projects)
 	}
@@ -100,8 +117,8 @@ func TestComposeUpdateSingleAndAllIgnoreListFilterOnlyForAll(t *testing.T) {
 		t.Fatal("preview changed a project")
 	}
 	press(a, "enter")
-	if !v.showOutput || !strings.Contains(ansi.Strip(v.View()), "Directory:") {
-		t.Fatal("source preview unavailable")
+	if !v.showOutput || !strings.Contains(ansi.Strip(v.View()), "Directory:") || !strings.Contains(v.Footer(), "start update") {
+		t.Fatal("source preview unavailable or cannot start the update from it")
 	}
 	press(a, "esc", "esc")
 	if a.composeUpdate != nil || a.tabs[3].Filter() != "a" {
@@ -109,47 +126,62 @@ func TestComposeUpdateSingleAndAllIgnoreListFilterOnlyForAll(t *testing.T) {
 	}
 	load = a.handleKey(key("U"))
 	v = a.composeUpdate
-	defer v.Close()
-	v.Update(load())
-	if len(v.projects) != 2 || !strings.Contains(v.View(), "filter ignored") {
+	loadComposePreview(t, v, load)
+	if len(v.projects) != 2 || !strings.Contains(v.View(), "all 2 projects") {
 		t.Fatal("all projects used the tab filter")
 	}
 	if err := os.WriteFile(model, []byte(`{"services":{"web":{"image":"web:changed"}}}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	check := v.HandleKey(key("y"))
+	if v.HandleKey(key("y")) == nil || v.stage != "running" || !v.showOutput {
+		t.Fatal("confirmation did not start the update and open live progress")
+	}
 	if v.HandleKey(key("y")) != nil {
 		t.Fatal("duplicate confirmation accepted")
 	}
-	if v.Update(check()) != nil || v.stage != "preview" || !strings.Contains(v.note, "changed") {
-		t.Fatal("changed configuration did not require fresh confirmation")
-	}
+	finishComposeUpdate(t, v, v.waitEvents())
 	if _, err := os.Stat(log); !os.IsNotExist(err) {
 		t.Fatal("stale preview performed writes")
 	}
-	check = v.HandleKey(key("y"))
-	cmd := v.Update(check())
+	if !strings.Contains(v.Status(), "2 failed") || !strings.Contains(ansi.Strip(v.View()), "configuration changed") {
+		t.Fatal("changed configuration was not reported per project", v.Status(), v.View())
+	}
+	press(a, "esc")
+	if !a.flashErr || !strings.Contains(a.flash, "2 failed") {
+		t.Fatal("closing a failed update left no summary", a.flash)
+	}
+	load = a.handleKey(key("U"))
+	v = a.composeUpdate
+	defer v.Close()
+	loadComposePreview(t, v, load)
+	v.HandleKey(key("y"))
 	if !v.showOutput || !v.followActive {
 		t.Fatal("confirmation did not automatically open live Compose output")
 	}
+	cmd := v.waitEvents()
 	press(a, "c", "R")
 	if a.contextPicker != nil || a.projectAction != nil || a.confirm != nil {
 		t.Fatal("busy update allowed another action/context switch")
 	}
 	finishComposeUpdate(t, v, cmd)
-	if v.stage != "done" || !strings.Contains(v.Status(), "2 succeeded") {
+	if v.stage != "done" || !strings.Contains(v.Status(), "2 up to date") {
 		t.Fatal(v.stage, v.Status())
 	}
-	if !v.showOutput || !strings.Contains(ansi.Strip(v.View()), "Update complete") || strings.Contains(ansi.Strip(v.View()), "Directory:") {
-		t.Fatal("completed update did not keep its console visible")
+	plain := ansi.Strip(v.View())
+	if v.showOutput || !strings.Contains(plain, "Finished in") || strings.Count(plain, "already up to date") != 3 {
+		t.Fatal("completed bulk update did not show a per-project summary", plain)
+	}
+	press(a, "enter")
+	if !v.showOutput || strings.Contains(ansi.Strip(v.View()), "Directory:") {
+		t.Fatal("completed update output is unavailable")
 	}
 	b, err := os.ReadFile(log)
 	if err != nil || string(b) != "pull a\nup a\npull b\nup b\n" {
 		t.Fatalf("update commands = %q, %v", b, err)
 	}
 	press(a, "esc")
-	if a.tabs[3].Filter() != "a" {
-		t.Fatal("completed update lost tab filter")
+	if a.tabs[3].Filter() != "a" || a.flashErr || !strings.Contains(a.flash, "2 already up to date") {
+		t.Fatal("completed update lost tab filter or summary", a.flash)
 	}
 }
 
@@ -157,7 +189,7 @@ func progressFixture(t *testing.T) *composeUpdateView {
 	t.Helper()
 	v, _ := newComposeUpdate(t.Context(), &fakeClient{}, "", 90, 16)
 	t.Cleanup(v.Close)
-	v.Update(composePlanMsg{view: v, projects: []compose.Project{{Name: "alpha"}, {Name: "beta"}}})
+	v.Update(composePlanMsg{view: v, gen: v.gen, projects: []compose.Project{{Name: "alpha"}, {Name: "beta"}}})
 	v.stage, v.showOutput, v.followActive = "running", true, true
 	v.operationCancel = func() {}
 	v.SetSize(90, 16)
@@ -178,14 +210,14 @@ func TestComposeRawLogDisplaysNativeMultilineOutputAndPhase(t *testing.T) {
 			t.Fatalf("Compose line was flattened or hidden: %q\n%s", line, v.View())
 		}
 	}
-	if !strings.Contains(ansi.Strip(v.View()), "alpha · project 1/2 · local · 1/2 Pulling images") {
+	if !strings.Contains(ansi.Strip(v.View()), "alpha · project 1 of 2 · local · pulling images") || !strings.Contains(ansi.Strip(v.View()), "beta") {
 		t.Fatal("current project and pull phase are unclear")
 	}
 	if strings.Contains(v.View(), "Directory:") || !strings.Contains(v.Footer(), "cancel remaining") {
 		t.Fatal("live console is cluttered or lacks cancellation")
 	}
 	v.Update(composeEventsMsg{view: v, events: []compose.Event{{Project: "alpha", State: "starting", Output: output + "\n[2/2] Start updated services\nContainer alpha-web Recreated\nContainer alpha-web Started\n"}}})
-	if !strings.Contains(ansi.Strip(v.View()), "2/2 Starting updated services") || !strings.Contains(v.View(), "Container alpha-web Started") {
+	if !strings.Contains(ansi.Strip(v.View()), "recreating services") || !strings.Contains(v.View(), "Container alpha-web Started") {
 		t.Fatal("container recreation phase is hidden")
 	}
 }
@@ -282,17 +314,16 @@ func TestComposeUpdateBlockedTargetsAndClosedPreviewNeverRun(t *testing.T) {
 	delete(c.containers[0].Labels, composeProjectLabel+".config_files")
 	load := a.handleKey(key("u"))
 	v := a.composeUpdate
-	v.Update(load())
+	loadComposePreview(t, v, load)
 	if v.ready() != 0 || v.HandleKey(key("y")) != nil || !strings.Contains(v.Status(), "1 blocked") {
 		t.Fatal("blocked project could be confirmed")
 	}
 	press(a, "esc")
 	load = a.handleKey(key("U"))
 	v = a.composeUpdate
-	v.Update(load())
-	check := v.HandleKey(key("y"))
+	msg := load()
 	press(a, "esc")
-	if v.Update(check()) != nil || v.ctx.Err() == nil {
+	if v.Update(msg) != nil || v.ctx.Err() == nil {
 		t.Fatal("closed preview started an update")
 	}
 	if _, err := os.Stat(log); !os.IsNotExist(err) {
@@ -313,6 +344,12 @@ func TestComposeUpdateRequiresProjectsTabAndWaitsForActions(t *testing.T) {
 		t.Fatal("update raced an in-flight container action")
 	}
 	a.actionsInFlight = 0
+	a.setFilter("no-such-project")
+	press(a, "u")
+	if a.composeUpdate != nil || !a.flashErr || !strings.Contains(a.flash, "select a project") {
+		t.Fatal("u without a selection gave no explanation", a.flash)
+	}
+	a.setFilter("")
 	a.tabs[3].HandleKey("j")
 	load := a.handleKey(key("u"))
 	if load == nil || a.composeUpdate.selected != "a" {
@@ -325,7 +362,7 @@ func TestComposeUpdateOutputAndSmallTerminals(t *testing.T) {
 	v, _ := newComposeUpdate(t.Context(), &fakeClient{}, "demo", 80, 12)
 	defer v.Close()
 	p := compose.Project{Name: "demo", Directory: "/srv/demo", Files: []string{"/srv/demo/compose.yaml"}, Services: []string{"web"}, Images: []string{"web:latest"}}
-	v.Update(composePlanMsg{view: v, projects: []compose.Project{p}})
+	v.Update(composePlanMsg{view: v, gen: v.gen, projects: []compose.Project{p}})
 	for _, size := range [][2]int{{80, 12}, {30, 5}, {10, 1}} {
 		v.SetSize(size[0], size[1])
 		for _, output := range []bool{false, true} {
@@ -349,7 +386,7 @@ func TestComposeUpdateExecutionHostSelectionRequiresNewPreview(t *testing.T) {
 	v, _ := newComposeUpdate(t.Context(), c, "demo", 100, 16)
 	defer v.Close()
 	p := compose.Project{Name: "demo", Directory: "/srv/demo", Services: []string{"web"}}
-	v.Update(composePlanMsg{view: v, projects: []compose.Project{p}})
+	v.Update(composePlanMsg{view: v, gen: v.gen, projects: []compose.Project{p}})
 	if !strings.Contains(v.Footer(), "local/SSH") || v.HandleKey(key("h")) == nil || v.stage != "loading" || v.locations["demo"] != "ssh" {
 		t.Fatal("execution-host change did not load a fresh preview")
 	}
@@ -357,7 +394,7 @@ func TestComposeUpdateExecutionHostSelectionRequiresNewPreview(t *testing.T) {
 		t.Fatal("host change could be confirmed before preview loaded")
 	}
 	p.Remote, p.Location = true, "ssh"
-	v.Update(composePlanMsg{view: v, projects: []compose.Project{p}})
+	v.Update(composePlanMsg{view: v, gen: v.gen, projects: []compose.Project{p}})
 	if v.HandleKey(key("h")) == nil || v.locations["demo"] != "local" {
 		t.Fatal("could not switch back to local execution")
 	}
