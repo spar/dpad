@@ -275,6 +275,9 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 				v.operationCancel()
 				v.stage = "cancelling"
 			} else {
+				if v.stage == "done" {
+					a.flash, a.flashErr = v.summary()
+				}
 				v.Close()
 				a.composeUpdate = nil
 			}
@@ -613,10 +616,11 @@ func (a *App) footer() string {
 		return hints("tab", "switch", "c", "context", "/", "filter", "r", "reverse time", "g", "top/follow", "d/enter", "container details", "?", "help", "q", "quit")
 	}
 
-	keys := []string{"tab", "switch", "c", "context", "/", "filter", "s/r", "sort: " + string(a.tabs[a.active].SortKey())}
+	keys := []string{"tab", "switch"}
 	if _, ok := a.tabs[a.active].(*ProjectsView); ok {
-		keys = append(keys, "u/U", "update project/all")
+		keys = append(keys, "u", "update project (pull + up)", "U", "update all")
 	}
+	keys = append(keys, "c", "context", "/", "filter", "s/r", "sort: "+string(a.tabs[a.active].SortKey()))
 	if stats, ok := a.tabs[a.active].(*StatsView); ok {
 		view := "projects"
 		if stats.grouped {

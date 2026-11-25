@@ -216,5 +216,5 @@ func (v *ProjectsView) Status() string {
 }
 
 func (v *ProjectsView) Help() [][2]string {
-	return append(v.list.Help(), [2]string{"space", "expand/collapse selected project"}, [2]string{"enter", "follow selected project's or container's logs"}, [2]string{"S/x/R on project", "preview start/stop/restart of existing project containers"}, [2]string{"u / U", "preview Compose image update for selected/all discovered projects"})
+	return append(v.list.Help(), [2]string{"space", "expand/collapse selected project"}, [2]string{"enter", "follow selected project's or container's logs"}, [2]string{"S/x/R on project", "preview start/stop/restart of existing project containers"}, [2]string{"u / U", "update the selected / all projects: docker compose pull, then up -d"})
 }

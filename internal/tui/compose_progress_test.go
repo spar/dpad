@@ -126,6 +126,10 @@ func TestComposeDefaultViewIsCompactAndRawLogIsAvailable(t *testing.T) {
 	v.SetSize(120, 42)
 	output := screenshotComposeOutput(t)
 	v.Update(composeEventsMsg{view: v, events: []compose.Event{{Project: "alpha", State: "succeeded", Output: output}}, done: true})
+	if v.showOutput || !strings.Contains(ansi.Strip(v.View()), "✓ updated, 1 recreated") {
+		t.Fatal("bulk update did not finish on its summary table", v.View())
+	}
+	v.HandleKey(key("enter"))
 	plain := ansi.Strip(v.View())
 	if strings.Count(plain, "6141c6522f61") != 1 || strings.Contains(plain, "Downloading") || !strings.Contains(v.Footer(), "raw log") {
 		t.Fatal("default view still dumps the noisy transcript", plain)
@@ -137,5 +141,26 @@ func TestComposeDefaultViewIsCompactAndRawLogIsAvailable(t *testing.T) {
 	v.HandleKey(key("l"))
 	if v.rawOutput || strings.Count(ansi.Strip(v.View()), "6141c6522f61") != 1 {
 		t.Fatal("cannot return to compact progress")
+	}
+}
+
+func TestComposeProgressSummarizesChangesAndFailures(t *testing.T) {
+	var unchanged composeProgress
+	unchanged.apply("Image web:latest Pulling\nImage web:latest Pulled\n[2/2] Start updated services\nContainer demo-web-1 Running\n", true)
+	if recreated, downloaded := unchanged.changes(); recreated != 0 || downloaded != 0 {
+		t.Fatal("an up-to-date project reported changes", recreated, downloaded)
+	}
+	var updated composeProgress
+	updated.apply("Image web:latest Pulling\n6141c6522f61 Downloading 1kB\n6141c6522f61 Download complete\nImage web:latest Pulled\n[2/2] Start updated services\nContainer demo-web-1 Recreate\nContainer demo-web-1 Recreated\nContainer demo-web-1 Started\n", true)
+	if recreated, downloaded := updated.changes(); recreated != 1 || downloaded != 1 {
+		t.Fatal("recreated containers or new layers were not counted", recreated, downloaded)
+	}
+	if plain := ansi.Strip(updated.render(100, "succeeded")); !strings.Contains(plain, "Layers · 1 complete") || strings.Contains(plain, "Download complete") {
+		t.Fatal("a layer stayed in progress after its image was pulled:\n" + plain)
+	}
+	var failed composeProgress
+	failed.apply("Image web:9 Pulling\nImage web:9 Error manifest unknown\nError response from daemon: manifest for web:9 not found\n\npulling failed: exit status 1\n", true)
+	if got := failed.failure(); got != "Error response from daemon: manifest for web:9 not found" {
+		t.Fatalf("failure() = %q, want Compose's own error", got)
 	}
 }

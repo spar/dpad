@@ -255,7 +255,7 @@ would type `docker`:
 | `e` | open a shell in the container |
 | `S` / `x` / `R` | start / stop / restart, after a `y/N` confirmation |
 | `P` / `K` / `D` | pause / kill / remove (`S` resumes a paused container) |
-| `u` / `U` | update the selected / all Compose projects (Projects tab) |
+| `u` / `U` | update the selected / all Compose projects: `pull`, then `up -d`, with live progress (Projects tab) |
 | `c` | choose a Docker context |
 | `?` | help for the current view |
 

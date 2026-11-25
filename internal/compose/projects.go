@@ -16,6 +16,7 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/moby/moby/api/types/container"
@@ -79,19 +80,32 @@ func splitPaths(raw string) []string {
 	return strings.Split(raw, ",")
 }
 
+// prepareWorkers bounds concurrent Compose CLI probes. Each project costs three
+// CLI runs, so a serial preview of a few dozen projects took close to a minute.
+const prepareWorkers = 4
+
 // Prepare validates source files and resolved configuration without pulling or
 // changing containers. Only configuration hashes and image names are retained.
 func Prepare(ctx context.Context, env []string, projects []Project) []Project {
 	out := slices.Clone(projects)
+	jobs := make(chan int)
+	var workers sync.WaitGroup
+	for range min(prepareWorkers, len(out)) {
+		workers.Go(func() {
+			for i := range jobs {
+				if err := prepare(ctx, env, &out[i]); err != nil {
+					out[i].Issue = err.Error()
+				}
+			}
+		})
+	}
 	for i := range out {
-		p := &out[i]
-		if p.Issue != "" {
-			continue
-		}
-		if err := prepare(ctx, env, p); err != nil {
-			p.Issue = err.Error()
+		if out[i].Issue == "" {
+			jobs <- i
 		}
 	}
+	close(jobs)
+	workers.Wait()
 	return out
 }
 
