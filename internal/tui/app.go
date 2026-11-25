@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"slices"
 	"strings"
 
@@ -17,10 +18,37 @@ import (
 )
 
 var (
-	tabActive   = lipgloss.NewStyle().Bold(true).Reverse(true).Padding(0, 1)
-	tabInactive = lipgloss.NewStyle().Padding(0, 1).Foreground(render.Gray)
-	keyStyle    = lipgloss.NewStyle().Bold(true)
+	keyStyle = lipgloss.NewStyle().Bold(true)
+	brand    = lipgloss.NewStyle().Bold(true).Foreground(render.Green).Render("▍") + render.Bold.Render("dpad")
+	// Each tab has its own accent, carried into its headers and selection.
+	// Red stays free to mean an error.
+	tabAccents = []color.Color{
+		render.Cyan, lipgloss.Color("12"), render.Yellow, render.Magenta,
+		render.Green, lipgloss.Color("13"), lipgloss.Color("14"),
+	}
 )
+
+func tabAccent(i int) color.Color { return tabAccents[i%len(tabAccents)] }
+
+// tabLabel renders a tab: a filled accent block when active, otherwise its
+// number in the accent and its name dimmed. label is "N" or "N Title".
+func tabLabel(i int, label string, active bool) string {
+	if active {
+		st := lipgloss.NewStyle().Bold(true).Padding(0, 1)
+		if render.ColorDisabled() {
+			st = st.Reverse(true)
+		} else {
+			st = st.Background(tabAccent(i)).Foreground(lipgloss.Color("0"))
+		}
+		return st.Render(label)
+	}
+	num, name, _ := strings.Cut(label, " ")
+	s := lipgloss.NewStyle().Bold(true).Foreground(tabAccent(i)).Render(num)
+	if name != "" {
+		s += " " + render.Dim.Render(name)
+	}
+	return " " + s + " "
+}
 
 // App is the full-screen TUI with Containers / Images / Stats / Projects / Events / Volumes / Networks tabs.
 type App struct {
@@ -122,27 +150,27 @@ func (a *App) Init() tea.Cmd {
 	return tea.Batch(append(cmds, a.tabs[a.active].Focus())...)
 }
 
-func (a *App) bodyHeight() int { return max(a.height-4-extraRows(), 1) }
+func (a *App) bodyHeight() int { return max(a.height-5, 1) }
 
 func (a *App) resize(width, height int) {
 	a.width, a.height = width, height
 	for _, t := range a.tabs {
-		t.SetSize(a.bodyWidth(), a.bodyHeight())
+		t.SetSize(a.width, a.bodyHeight())
 	}
 	if a.logs != nil {
-		a.logs.SetSize(a.bodyWidth(), a.bodyHeight())
+		a.logs.SetSize(a.width, a.bodyHeight())
 	}
 	for _, v := range a.detailScreens() {
-		v.SetSize(a.bodyWidth(), a.bodyHeight())
+		v.SetSize(a.width, a.bodyHeight())
 	}
 	if a.projectAction != nil {
-		a.projectAction.SetSize(a.bodyWidth(), a.bodyHeight())
+		a.projectAction.SetSize(a.width, a.bodyHeight())
 	}
 	if a.composeUpdate != nil {
-		a.composeUpdate.SetSize(a.bodyWidth(), a.bodyHeight())
+		a.composeUpdate.SetSize(a.width, a.bodyHeight())
 	}
 	if a.prune != nil {
-		a.prune.SetSize(a.bodyWidth(), a.bodyHeight())
+		a.prune.SetSize(a.width, a.bodyHeight())
 	}
 	if a.shell != nil {
 		a.shell.input.SetWidth(max(width-38, 1))
@@ -380,7 +408,7 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	switch key {
 	case "X":
 		var cmd tea.Cmd
-		a.prune, cmd = newPruneView(a.ctx, a.client, pruneKindFor(a.tabs[a.active]), a.bodyWidth(), a.bodyHeight())
+		a.prune, cmd = newPruneView(a.ctx, a.client, pruneKindFor(a.tabs[a.active]), a.width, a.bodyHeight())
 		return cmd
 	case "u", "U":
 		return a.openComposeUpdate(key == "U")
@@ -418,13 +446,13 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		if projects, ok := a.tabs[a.active].(*ProjectsView); ok {
 			if p := projects.selectedProject(); p != nil {
 				var cmd tea.Cmd
-				a.logs, cmd = newProjectLogsView(a.ctx, a.client, p.name, p.containers, a.bodyWidth(), a.bodyHeight())
+				a.logs, cmd = newProjectLogsView(a.ctx, a.client, p.name, p.containers, a.width, a.bodyHeight())
 				return cmd
 			}
 		}
 		if id, name, ok := a.tabs[a.active].Selected(); ok {
 			var cmd tea.Cmd
-			a.logs, cmd = NewLogsView(a.ctx, a.client, id, name, a.bodyWidth(), a.bodyHeight())
+			a.logs, cmd = NewLogsView(a.ctx, a.client, id, name, a.width, a.bodyHeight())
 			return cmd
 		}
 	case "d":
@@ -491,7 +519,7 @@ func (a *App) View() tea.View {
 }
 
 func (a *App) render() string {
-	a.applyLook()
+	render.SetAccent(tabAccent(a.active))
 	var body, status string
 	details := a.detailScreens()
 	switch {
@@ -529,13 +557,7 @@ func (a *App) render() string {
 	if n := a.bodyHeight() - lipgloss.Height(body); n > 0 {
 		body += strings.Repeat("\n", n)
 	}
-	switch look {
-	case "2":
-		return strings.Join([]string{a.tabBar(), a.tabUnderline(), a.connectionBar(), body, render.Dim.Render(status), a.footer()}, "\n")
-	case "3":
-		return strings.Join([]string{a.tabBar(), a.connectionBar(), a.frame(a.tabs[a.active].Title(), body, render.Dim.Render(status)), a.footer()}, "\n")
-	}
-	return strings.Join([]string{a.tabBar(), a.connectionBar(), body, render.Dim.Render(status), a.footer()}, "\n")
+	return strings.Join([]string{a.tabBar(), a.tabRule(), a.connectionBar(), body, render.Dim.Render(status), a.footer()}, "\n")
 }
 
 func (a *App) tabBar() string {
@@ -546,18 +568,11 @@ func (a *App) tabBar() string {
 // tabBarParts returns the tab bar's space-separated parts and the tab each
 // shows (-1 for the logo), narrowing labels until the bar fits.
 func (a *App) tabBarParts() ([]string, []int) {
-	parts := []string{lookBrand()}
+	parts := []string{brand + " "}
 	owners := []int{-1}
 	for i, t := range a.tabs {
 		label := fmt.Sprintf("%d %s", i+1, t.Title())
-		switch {
-		case look != "":
-			parts = append(parts, lookTab(i, label, i == a.active))
-		case i == a.active:
-			parts = append(parts, tabActive.Render(label))
-		default:
-			parts = append(parts, tabInactive.Render(label))
-		}
+		parts = append(parts, tabLabel(i, label, i == a.active))
 		owners = append(owners, i)
 	}
 	fits := func() bool { return a.width <= 0 || lipgloss.Width(strings.Join(parts, " ")) <= a.width }
@@ -570,17 +585,30 @@ func (a *App) tabBarParts() ([]string, []int) {
 	}
 	for i := range parts {
 		if i != a.active {
-			if look != "" {
-				parts[i] = lookTab(i, fmt.Sprint(i+1), false)
-			} else {
-				parts[i] = tabInactive.Render(fmt.Sprint(i + 1))
-			}
+			parts[i] = tabLabel(i, fmt.Sprint(i+1), false)
 		}
 	}
 	if fits() {
 		return parts, owners
 	}
 	return parts[a.active : a.active+1], owners[a.active : a.active+1]
+}
+
+// tabRule underlines the active tab with a heavy accent line and the rest of
+// the row with a faint one.
+func (a *App) tabRule() string {
+	parts, owners := a.tabBarParts()
+	pos := 0
+	for i, p := range parts {
+		w := lipgloss.Width(p)
+		if owners[i] == a.active {
+			return render.Dim.Render(strings.Repeat("─", pos)) +
+				lipgloss.NewStyle().Foreground(tabAccent(a.active)).Render(strings.Repeat("━", w)) +
+				render.Dim.Render(strings.Repeat("─", max(a.width-pos-w, 0)))
+		}
+		pos += w + 1
+	}
+	return render.Dim.Render(strings.Repeat("─", a.width))
 }
 
 func (a *App) footer() string {

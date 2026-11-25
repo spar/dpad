@@ -147,12 +147,12 @@ func (t *PreparedTable) lines(selected, start, end int) []string {
 	}
 
 	out := make([]string, 0, end-start+1)
+	// Headers are styled here, not in Prepare, so they follow the current accent.
 	headers := make([]string, len(t.headers))
 	for i, h := range t.headers {
 		headers[i] = Header.Render(h)
 	}
 	out = append(out, line(headers, t.headerWidths))
-	selPre, _, _ := strings.Cut(Selected.Render("\uE000"), "\uE000")
 	for r := start; r < end; r++ {
 		if r != selected {
 			out = append(out, line(t.cells[r], t.cellWidths[r]))
@@ -172,9 +172,13 @@ func (t *PreparedTable) lines(selected, start, end int) []string {
 			l += strings.Repeat(" ", max(0, t.Width-width(l)))
 		}
 		l = Selected.Render(l)
-		// Reversed, a bar's filled blocks read as empty, so bars keep their colors.
+		// Reversed, a bar's filled blocks read as empty, so bars keep their colors
+		// over the row's background.
 		for bar, styled := range bars {
-			l = strings.ReplaceAll(l, bar, "\x1b[0m"+styled+selPre)
+			if barBg != "" {
+				styled = strings.ReplaceAll(styled, "\x1b[m", "\x1b[m"+barBg)
+			}
+			l = strings.ReplaceAll(l, bar, barOn+styled+barOff)
 		}
 		out = append(out, l)
 	}

@@ -164,3 +164,24 @@ func TestAppPauseKillRemoveAskFirst(t *testing.T) {
 		t.Errorf("remove prompt doesn't warn about running containers: %q", f)
 	}
 }
+
+func TestTabRuleMarksTheActiveTab(t *testing.T) {
+	a := newTestApp()
+	a.switchTab(2)
+	screen := strings.Split(ansi.Strip(a.render()), "\n")
+	if len(screen) != 30 {
+		t.Fatalf("screen has %d lines, want 30", len(screen))
+	}
+	bar, rule := []rune(screen[0]), []rune(screen[1])
+	if len(rule) != 120 {
+		t.Fatalf("rule is %d wide", len(rule))
+	}
+	start := len([]rune(screen[0][:strings.Index(screen[0], " 3 Stats ")]))
+	end := start + len(" 3 Stats ")
+	for i, r := range rule {
+		heavy := i >= start && i < end
+		if (r == '━') != heavy {
+			t.Fatalf("rule %q doesn't underline only %q", string(rule), string(bar[start:end]))
+		}
+	}
+}

@@ -33,8 +33,12 @@ func TestClickingATabSwitchesToIt(t *testing.T) {
 	if a.active != 2 {
 		t.Fatalf("active = %d after clicking Stats", a.active)
 	}
+	click(a, strings.Index(bar, "5 Events")+2, 1)
+	if a.active != 4 {
+		t.Fatalf("active = %d after clicking under Events", a.active)
+	}
 	click(a, 1, 0)
-	if a.active != 2 {
+	if a.active != 4 {
 		t.Fatal("clicking the logo should not switch tabs")
 	}
 	a.resize(40, 30)

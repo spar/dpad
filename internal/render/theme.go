@@ -32,6 +32,39 @@ var (
 	Accent   = lipgloss.NewStyle().Bold(true).Foreground(Cyan)
 )
 
+var (
+	defaultHeader   = Header
+	defaultSelected = Selected
+	// barOn and barOff wrap a usage bar inside the selected row so the bar
+	// keeps its own colors; barBg is laid under the bar's styled runs.
+	barOn, barOff, barBg = "\x1b[27m", "\x1b[7m", ""
+)
+
+// SetAccent tints table headers and the selected row with c, or restores the
+// defaults when c is nil. The selected row keeps reverse video when color is
+// off, since a background alone would vanish.
+func SetAccent(c color.Color) {
+	Header, Selected = defaultHeader, defaultSelected
+	barOn, barOff, barBg = "\x1b[27m", "\x1b[7m", ""
+	if c == nil {
+		return
+	}
+	Header = lipgloss.NewStyle().Bold(true).Foreground(c)
+	if colorDisabled {
+		return
+	}
+	Selected = lipgloss.NewStyle().Background(c).Foreground(lipgloss.Color("0"))
+	barBg = sgrPrefix(lipgloss.NewStyle().Background(c))
+	barOn, barOff = "\x1b[m"+barBg, sgrPrefix(Selected)
+}
+
+// sgrPrefix returns the escape sequence s opens a rendered string with.
+func sgrPrefix(s lipgloss.Style) string {
+	const mark = "\uE000"
+	pre, _, _ := strings.Cut(s.Render(mark), mark)
+	return pre
+}
+
 // Out is stdout for CLI output. Styles always render full ANSI; Out adapts
 // it to the terminal, downsampling colors and stripping all styling when
 // stdout isn't a terminal, so piped output stays plain.
