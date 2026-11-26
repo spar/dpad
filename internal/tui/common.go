@@ -78,6 +78,8 @@ type tab interface {
 	Selected() (id, name string, ok bool)
 	Status() string
 	SortKey() sortx.Key
+	// sortKeys names the keys that change the sort, for the footer.
+	sortKeys() string
 	Help() [][2]string
 	// clickRow selects the row drawn on a line of the last View.
 	clickRow(line int) bool

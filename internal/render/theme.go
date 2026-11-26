@@ -81,6 +81,15 @@ func SetAccent(c color.Color) {
 	barOn, barOff = "\x1b[m"+barBg, sgrPrefix(Selected)
 }
 
+// DimLine dims s and keeps it dim after any styled text inside it, whose
+// reset would otherwise switch the dimming off for the rest of the line.
+func DimLine(s string) string {
+	if pre := sgrPrefix(Dim); pre != "" {
+		s = strings.ReplaceAll(s, "\x1b[m", "\x1b[m"+pre)
+	}
+	return Dim.Render(s)
+}
+
 // OnAccent is text on a filled accent background, as in the active tab.
 func OnAccent(c color.Color) lipgloss.Style { return fg(active.UI.OnAccent.C()).Background(c) }
 

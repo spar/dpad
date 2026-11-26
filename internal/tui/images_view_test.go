@@ -160,3 +160,23 @@ func TestImageRemovalFailureKeepsDetailsAndRefreshes(t *testing.T) {
 		t.Fatal("escape did not return to Images")
 	}
 }
+
+func TestImagesReloadWhenTheTabOpens(t *testing.T) {
+	c := &fakeClient{images: []image.Summary{{ID: "a", RepoTags: []string{"web:1"}}}}
+	v := NewImagesView(t.Context(), c)
+	v.Update(v.Init()())
+	c.images = append(c.images, image.Summary{ID: "b", RepoTags: []string{"api:1"}})
+	cmd := v.Focus()
+	if cmd == nil {
+		t.Fatal("opening Images did not reload")
+	}
+	if v.Focus() != nil {
+		t.Fatal("a second load started while one was running")
+	}
+	if v.Update(refreshMsg{}); !v.pending {
+		t.Fatal("a refresh during a load was dropped")
+	}
+	if again := v.Update(cmd()); again == nil || len(v.items) != 2 {
+		t.Fatalf("items = %d, pending reload = %v", len(v.items), again != nil)
+	}
+}

@@ -55,7 +55,13 @@ overview, installation and screenshots, see the [README](../README.md).
 | `q` | quit |
 
 Keys you bind in the [config file](#custom-commands) appear in `?` help for the
-tabs they apply to.
+tabs they apply to. When help is taller than the window, `↑`/`↓` and
+`pgup`/`pgdn` scroll it and any other key closes it.
+
+The footer lists the keys for the selected row. On a narrow terminal it leaves
+out the general ones first (`tab`, `c`, `/`, sort) and always keeps `?` and `q`.
+Results such as "restart web: done" clear after a few seconds; errors stay until
+the next key.
 
 ## Mouse
 
@@ -266,7 +272,8 @@ Return to the same filtered Projects view after completion to see refreshed stat
 
 ## Images
 
-In Images, the usage column counts containers by image ID, including stopped
+The Images list loads at startup and reloads when the tab is opened or with
+`ctrl+r`. The usage column counts containers by image ID, including stopped
 containers. `unused` means none reference the image; a failed usage refresh shows
 `unknown`, not `unused`. Press `d` or `enter` for tags, digests, creation date,
 OS/architecture, size, configuration, labels, and the names/states of containers
