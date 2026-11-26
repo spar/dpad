@@ -81,6 +81,13 @@ Download the archive for your OS and CPU from
 (`.tar.gz` for macOS and Linux, `.zip` for Windows), check it against
 `SHA256SUMS` and put the `dpad` binary on your PATH.
 
+Releases also carry signed build provenance. With the GitHub CLI you can
+check that an archive was built by this repository's release workflow:
+
+```sh
+gh attestation verify dpad-linux-amd64.tar.gz --repo spar/dpad
+```
+
 ### From source
 
 To build from source with **Go 1.26.7+**, run:
