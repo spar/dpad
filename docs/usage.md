@@ -298,8 +298,15 @@ the original's permissions, so a failed write leaves the original as it was. No
 backup is kept; keep Compose files in version control. If the file changed on
 disk while you were editing, dpad refuses to overwrite it.
 
-Only files on this machine can be edited for now. For a project whose files are
-on an SSH host, `e` says so.
+Projects on an `ssh://` context whose files are on the SSH host are edited the
+same way, over the SSH connection the update uses: dpad reads the file with
+`cat`, you edit it in your local editor, the check runs Compose on the SSH host
+with the copy beside the original, and saving renames a temporary file over it
+there. The title says `SSH host` when this happens. It needs the same key or
+agent authentication as remote updates, `sha256sum` or `shasum`, and write
+access to the file's directory for the SSH user; dpad does not use `sudo`.
+`tcp://` and TLS contexts give no way to reach files, so their projects can only
+be edited when the files are on this machine.
 
 ## Images
 

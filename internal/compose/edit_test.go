@@ -34,10 +34,6 @@ func TestCheckUsesACandidateBesideTheOriginalAndLeavesItAlone(t *testing.T) {
 	if _, err := Check(t.Context(), os.Environ(), p, filepath.Join(dir, "other.yaml"), nil); err == nil {
 		t.Fatal("a file outside the project was accepted")
 	}
-	p.Remote = true
-	if _, err := ReadSource(p, file); err == nil {
-		t.Fatal("remote project accepted for local editing")
-	}
 }
 
 func TestReplaceKeepsPermissionsFollowsSymlinksAndRefusesConcurrentChanges(t *testing.T) {
@@ -51,10 +47,10 @@ func TestReplaceKeepsPermissionsFollowsSymlinksAndRefusesConcurrentChanges(t *te
 		t.Skip("symlinks unavailable")
 	}
 	p := Project{Directory: dir, Files: []string{link}, CLI: []string{"docker", "compose"}}
-	if err := Replace(p, link, []byte("someone else's"), []byte("new")); err == nil || !strings.Contains(err.Error(), "changed on disk") {
+	if err := Replace(t.Context(), nil, p, link, []byte("someone else's"), []byte("new")); err == nil || !strings.Contains(err.Error(), "changed on disk") {
 		t.Fatal("overwrote a file that changed during the edit", err)
 	}
-	if err := Replace(p, link, []byte("old"), []byte("new")); err != nil {
+	if err := Replace(t.Context(), nil, p, link, []byte("old"), []byte("new")); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(real)
@@ -118,5 +114,59 @@ func TestCheckWithInstalledCompose(t *testing.T) {
 	}
 	if got := Changes(p, edited); !slices.Equal(got, []string{"web: nginx:1.25 → nginx:1.27"}) {
 		t.Fatal(got)
+	}
+}
+
+func TestRemoteEditReadsChecksAndReplacesOverSSH(t *testing.T) {
+	dir, _, log := composeFixture(t)
+	t.Setenv("DOCKER_HOST", "ssh://me@server/run/user/1000/docker.sock")
+	real := filepath.Join(dir, "real.yaml")
+	file := filepath.Join(dir, "compose.yaml")
+	if err := os.Rename(file, real); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(real, 0o640); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(real, file); err != nil {
+		t.Skip("symlinks unavailable")
+	}
+	projects := Discover([]container.Summary{labeledProject("demo", dir)}, "")
+	projects[0].Location = "ssh"
+	p := Prepare(t.Context(), os.Environ(), projects, nil)[0]
+	if !p.Remote || p.Issue != "" {
+		t.Fatal(p)
+	}
+	original, err := ReadSource(t.Context(), os.Environ(), p, file)
+	if err != nil || string(original) != "fixture" {
+		t.Fatalf("read %q, %v", original, err)
+	}
+	if _, err := Check(t.Context(), os.Environ(), p, file, []byte("edited")); err != nil {
+		t.Fatal(err)
+	}
+	last := calls(t, log)
+	args := last[len(last)-1].Args
+	if candidate := args[slices.Index(args, "--file")+1]; filepath.Dir(candidate) != dir || candidate == file {
+		t.Fatal("remote check did not use a copy beside the file", args)
+	}
+	if err := Replace(t.Context(), os.Environ(), p, file, []byte("stale"), []byte("new")); err == nil || !strings.Contains(err.Error(), "changed on disk") {
+		t.Fatal("remote save overwrote a concurrent change", err)
+	}
+	if err := Replace(t.Context(), os.Environ(), p, file, original, []byte("new\n$(not run)\n")); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(real)
+	info, _ := os.Stat(real)
+	if string(b) != "new\n$(not run)\n" || info.Mode().Perm() != 0o640 {
+		t.Fatalf("remote save wrote %q with mode %v", b, info.Mode())
+	}
+	if l, err := os.Lstat(file); err != nil || l.Mode()&os.ModeSymlink == 0 {
+		t.Fatal("remote save replaced the symlink")
+	}
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if strings.Contains(e.Name(), ".dpad-") {
+			t.Fatal("temporary file left on the SSH host", e.Name())
+		}
 	}
 }
