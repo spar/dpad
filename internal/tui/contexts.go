@@ -51,8 +51,27 @@ func (a *App) openContextPicker() tea.Cmd {
 	}
 }
 
-func (a *App) updateContextPicker(msg tea.KeyPressMsg) tea.Cmd {
-	p := a.contextPicker
+func (p *contextPicker) Status() string {
+	return "Choose a Docker context for this session · switching clears resource data"
+}
+
+func (p *contextPicker) Footer() string {
+	if p.filtering {
+		return p.search.View() + " " + render.Dim.Render("enter keep filter · esc cancel filter")
+	}
+	return hints("↑↓/j/k", "move", "/", "filter", "enter", "switch context", "esc", "cancel")
+}
+
+func (p *contextPicker) Update(msg tea.Msg) tea.Cmd {
+	if !p.filtering {
+		return nil
+	}
+	var cmd tea.Cmd
+	p.search, cmd = p.search.Update(msg)
+	return cmd
+}
+
+func (p *contextPicker) handleKey(a *App, msg tea.KeyPressMsg) tea.Cmd {
 	key := msg.String()
 	if p.filtering {
 		switch key {

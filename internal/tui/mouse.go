@@ -74,8 +74,7 @@ func (a *App) typing() bool {
 
 // overlay reports whether a screen covers the tabs.
 func (a *App) overlay() bool {
-	return a.composeUpdate != nil || a.contextPicker != nil || a.themePicker != nil || a.projectAction != nil || a.prune != nil ||
-		a.logs != nil || a.activeDetails() != nil
+	return a.screen() != nil
 }
 
 // tabAt returns the tab drawn at column x of the tab bar, or -1.

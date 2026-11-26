@@ -159,3 +159,27 @@ func (v *NetworkDetailsView) Status() string {
 	}
 	return v.status("network: "+render.Accent.Render(v.name), fmt.Sprintf(" · %s snapshot · %d endpoints", mode, len(v.info.Containers)))
 }
+
+func (v *NetworkDetailsView) Footer() string {
+	if v.showEndpoints {
+		return hints("esc", "back", "tab", "metadata", detailHints, "move", "d/enter", "container details", "ctrl+r", "refresh")
+	}
+	return hints("esc", "back", "tab", "endpoints", detailHints, "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh")
+}
+
+func (v *NetworkDetailsView) handleKey(a *App, msg tea.KeyPressMsg) tea.Cmd {
+	switch key := msg.String(); {
+	case closeKey(key):
+		v.Close()
+		a.networkDetails = nil
+		return nil
+	case key == "enter" || key == "d":
+		if id, name, ok := v.SelectedEndpoint(); ok {
+			var cmd tea.Cmd
+			a.details, cmd = NewDetailsView(a.ctx, a.client, id, name, a.width, a.bodyHeight())
+			return cmd
+		}
+		return nil
+	}
+	return v.Update(msg)
+}

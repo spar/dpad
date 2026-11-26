@@ -317,3 +317,13 @@ func pruneKindFor(t tab) docker.PruneKind {
 	}
 	return docker.PruneContainers
 }
+
+func (v *pruneView) handleKey(a *App, msg tea.KeyPressMsg) tea.Cmd {
+	if cancelKey(msg.String()) {
+		if dismiss(v) {
+			a.prune = nil
+		}
+		return nil
+	}
+	return v.HandleKey(msg.String())
+}

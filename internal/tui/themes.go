@@ -18,7 +18,9 @@ import (
 // active when it opened.
 type themePicker struct {
 	list[themeItem]
-	original *theme.Theme
+	app        *App
+	original   *theme.Theme
+	bodyHeight int
 }
 
 type themeItem struct {
@@ -33,7 +35,7 @@ func (a *App) openThemePicker() {
 	for _, t := range theme.All(dir) {
 		items = append(items, themeItem{name: t.Name, theme: t.Theme, err: t.Err})
 	}
-	p := &themePicker{original: render.Theme()}
+	p := &themePicker{app: a, original: render.Theme()}
 	p.list = list[themeItem]{
 		columns: []render.Column{{Header: "THEME"}, {Header: "PREVIEW"}, {Header: "DESCRIPTION"}},
 		keys:    []sortx.Key{sortx.Name}, key: sortx.Name,
@@ -54,14 +56,24 @@ func (a *App) openThemePicker() {
 	p.setItems(items, nil)
 	p.cur.key = p.original.Name
 	a.themePicker = p
-	a.sizeThemePicker()
+	p.SetSize(a.width, a.bodyHeight())
 }
 
-func (a *App) sizeThemePicker() {
-	if p := a.themePicker; p != nil {
-		p.SetSize(a.width, min(len(p.items)+1, max(a.bodyHeight()/2, 3)))
-	}
+// SetSize gives the list at most half the body, leaving the rest to the preview.
+func (p *themePicker) SetSize(width, height int) {
+	p.bodyHeight = height
+	p.list.SetSize(width, min(len(p.items)+1, max(height/2, 3)))
 }
+
+func (p *themePicker) Status() string {
+	return "Choose a color theme · the screen previews the highlighted one"
+}
+
+func (p *themePicker) Footer() string {
+	return hints("↑↓/j/k", "preview", "enter", "use and save", "esc", "cancel")
+}
+
+func (p *themePicker) Update(tea.Msg) tea.Cmd { return nil }
 
 func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
 
@@ -70,8 +82,8 @@ func (p *themePicker) selected() themeItem {
 	return p.items[p.cur.index(keys)]
 }
 
-func (a *App) updateThemePicker(key string) tea.Cmd {
-	p := a.themePicker
+func (p *themePicker) handleKey(a *App, msg tea.KeyPressMsg) tea.Cmd {
+	key := msg.String()
 	switch key {
 	case "esc", "q":
 		render.ApplyTheme(p.original)
@@ -103,21 +115,21 @@ func (a *App) updateThemePicker(key string) tea.Cmd {
 	return nil
 }
 
-// themePickerView shows the themes above the active tab, which previews the
-// highlighted theme on real data.
-func (a *App) themePickerView() string {
-	p := a.themePicker
-	top := p.View()
-	rest := a.bodyHeight() - strings.Count(top, "\n") - 2
+// View shows the themes above the active tab, which previews the highlighted
+// theme on real data.
+func (p *themePicker) View() string {
+	top := p.list.View()
+	rest := p.bodyHeight - strings.Count(top, "\n") - 2
 	if rest < 1 {
 		return top
 	}
-	label := " preview: " + a.tabs[a.active].Title() + " "
-	rule := render.Dim.Render("──" + label + strings.Repeat("─", max(a.width-len(label)-2, 0)))
-	lines := strings.Split(a.tabs[a.active].View(), "\n")
+	tab := p.app.tabs[p.app.active]
+	label := " preview: " + tab.Title() + " "
+	rule := render.Dim.Render("──" + label + strings.Repeat("─", max(p.width-len(label)-2, 0)))
+	lines := strings.Split(tab.View(), "\n")
 	lines = lines[:min(len(lines), rest)]
 	for i, l := range lines {
-		lines[i] = ansi.Truncate(l, a.width, "")
+		lines[i] = ansi.Truncate(l, p.width, "")
 	}
 	return top + "\n" + rule + "\n" + strings.Join(lines, "\n")
 }

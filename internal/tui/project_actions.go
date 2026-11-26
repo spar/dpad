@@ -190,3 +190,13 @@ func (v *projectActionView) Footer() string {
 	}
 	return hints("esc", "back", "↑↓/pgup/pgdn", "results")
 }
+
+func (v *projectActionView) handleKey(a *App, msg tea.KeyPressMsg) tea.Cmd {
+	if cancelKey(msg.String()) {
+		if dismiss(v) {
+			a.projectAction = nil
+		}
+		return nil
+	}
+	return v.HandleKey(msg.String())
+}

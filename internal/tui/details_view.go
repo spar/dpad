@@ -172,3 +172,44 @@ func (v *detailView) status(label, suffix string) string {
 	}
 	return label + suffix
 }
+
+const detailHints = "↑↓/pgup/pgdn"
+
+func (v *DetailsView) Footer() string {
+	return hints("esc", "back", detailHints, "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "enter", "logs", "e", "shell")
+}
+
+func (v *DetailsView) handleKey(a *App, msg tea.KeyPressMsg) tea.Cmd {
+	switch key := msg.String(); {
+	case closeKey(key):
+		v.Close()
+		a.details = nil
+		return nil
+	case key == "e":
+		return a.openShell(v.id, v.name)
+	case key == "enter":
+		var cmd tea.Cmd
+		a.logs, cmd = NewLogsView(a.ctx, a.client, v.id, v.name, a.width, a.bodyHeight())
+		return cmd
+	}
+	return v.Update(msg)
+}
+
+func (v *ImageDetailsView) Footer() string {
+	return hints("esc", "back", detailHints, "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "x", "remove tag/image")
+}
+
+func (v *ImageDetailsView) handleKey(a *App, msg tea.KeyPressMsg) tea.Cmd {
+	switch key := msg.String(); {
+	case closeKey(key):
+		v.Close()
+		a.imageDetails = nil
+		return nil
+	case key == "x":
+		if !v.loading && v.err == nil {
+			a.askImageRemoval(v.removal)
+		}
+		return nil
+	}
+	return v.Update(msg)
+}

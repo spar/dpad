@@ -77,3 +77,16 @@ func (v *VolumeDetailsView) Update(msg tea.Msg) tea.Cmd {
 func (v *VolumeDetailsView) Status() string {
 	return v.status("volume: "+render.Accent.Render(v.name), " · "+render.VolumeUsage(v.source.usage[v.name], v.source.usageKnown()))
 }
+
+func (v *VolumeDetailsView) Footer() string {
+	return hints("esc", "back", detailHints, "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh")
+}
+
+func (v *VolumeDetailsView) handleKey(a *App, msg tea.KeyPressMsg) tea.Cmd {
+	if closeKey(msg.String()) {
+		v.Close()
+		a.volumeDetails = nil
+		return nil
+	}
+	return v.Update(msg)
+}
