@@ -66,6 +66,8 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     outputs:
       tag: ${{ steps.version.outputs.result }}
     concurrency:
@@ -95,6 +97,19 @@ jobs:
           assets=$(mktemp -d)
           echo "RELEASE_ASSETS=$assets" >> "$GITHUB_ENV"
           scripts/release/build.sh "$TAG" "$assets/dist"
+      - name: Attest build provenance
+        if: steps.version.outputs.result != ''
+        id: attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ env.RELEASE_ASSETS }}/dist/*
+      # Shipping the signed bundle as an asset lets users verify offline and is
+      # what Scorecard's Signed-Releases check looks for.
+      - name: Add provenance bundle to release assets
+        if: steps.version.outputs.result != ''
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: cp -- "$BUNDLE" "$RELEASE_ASSETS/dist/dpad.sigstore.json"
       - name: Publish GitHub release
         if: steps.version.outputs.result != ''
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
