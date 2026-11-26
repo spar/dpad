@@ -31,8 +31,8 @@ func TestCustomCommandRunsWithTheSelectedContainer(t *testing.T) {
 		t.Skip("uses sh")
 	}
 	a := commandApp(t, `customCommands:
-  - {name: show, key: o, command: "echo {{.Name}} {{.Image}} {{.Project}}/{{.Service}}"}`)
-	_, cmd := a.Update(key("o"))
+  - {name: show, key: O, command: "echo {{.Name}} {{.Image}} {{.Project}}/{{.Service}}"}`)
+	_, cmd := a.Update(key("O"))
 	if cmd == nil || a.actionsInFlight != 1 {
 		t.Fatal("o should start the command")
 	}
@@ -47,8 +47,8 @@ func TestCustomCommandConfirmsAndReportsFailures(t *testing.T) {
 		t.Skip("uses sh")
 	}
 	a := commandApp(t, `customCommands:
-  - {name: fail, key: o, confirm: true, command: "echo nope >&2; exit 3"}`)
-	a.Update(key("o"))
+  - {name: fail, key: O, confirm: true, command: "echo nope >&2; exit 3"}`)
+	a.Update(key("O"))
 	if a.confirm == nil || !strings.Contains(a.footer(), "Run fail on web?") {
 		t.Fatal("confirm: true should ask first")
 	}
@@ -62,9 +62,9 @@ func TestCustomCommandConfirmsAndReportsFailures(t *testing.T) {
 
 func TestProjectCommandsApplyOnlyToProjectRows(t *testing.T) {
 	a := commandApp(t, `customCommands:
-  - {name: compose ps, key: o, scope: project, command: "docker compose -p {{.Project}} ps"}`)
-	_, cmd := a.Update(key("o"))
-	if cmd != nil || !strings.Contains(a.flash, "no custom command for o applies") {
+  - {name: compose ps, key: O, scope: project, command: "docker compose -p {{.Project}} ps"}`)
+	_, cmd := a.Update(key("O"))
+	if cmd != nil || !strings.Contains(a.flash, "no custom command for O applies") {
 		t.Fatalf("project command ran on a container row, flash %q", a.flash)
 	}
 	press(a, "4")

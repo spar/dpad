@@ -15,9 +15,10 @@ can write your own in a few lines of YAML.
 
 ## Choosing a theme
 
-Press `C` in the TUI to open the theme picker. Moving through the list
-previews each theme on the whole screen; `enter` keeps it and saves it as
-`theme:` in your `config.yaml`, and `esc` goes back to the theme you had.
+Press `C` in the TUI, or choose Theme in the settings screen (`o`), to open
+the theme picker. Moving through the list previews each theme on the whole
+screen; `enter` keeps it and saves it as `theme:` in your `config.yaml`, and
+`esc` goes back to the theme you had.
 
 <img src="images/themes/picker.svg" alt="The theme picker listing the built-in themes with color swatches, previewing amber on the Containers tab" width="100%">
 

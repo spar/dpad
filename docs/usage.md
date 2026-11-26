@@ -51,6 +51,7 @@ overview, installation and screenshots, see the [README](../README.md).
 | `ctrl+r` | refresh |
 | `c` (list tabs) | choose a Docker context for this session |
 | `C` | choose a color theme; the screen previews each one (`enter` keeps it and saves it to `config.yaml`, `esc` cancels) |
+| `o` | settings: shows the theme, Docker context, mouse setting and config file location; `enter` on a row opens its picker |
 | `?` | help |
 | `q` | quit |
 
@@ -507,7 +508,7 @@ customCommands:
     attach: true
     command: docker exec -it {{.ID}} bash
   - name: compose down
-    key: o
+    key: O
     scope: project
     confirm: true
     command: docker compose -p {{.Project}} down

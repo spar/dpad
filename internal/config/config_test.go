@@ -28,7 +28,7 @@ customCommands:
     key: b
     command: echo
   - name: typo
-    key: o
+    key: O
     command: echo {{.Bogus}}
   - name: wrong scope
     key: w
@@ -78,7 +78,7 @@ func TestRenderQuotesValuesSoTheyStayOneWord(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("uses sh")
 	}
-	cfg, err := Parse([]byte("customCommands:\n  - {name: echo, key: o, command: 'printf %s {{.Service}}'}\n"))
+	cfg, err := Parse([]byte("customCommands:\n  - {name: echo, key: O, command: 'printf %s {{.Service}}'}\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
