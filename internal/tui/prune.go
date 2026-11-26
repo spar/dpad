@@ -2,19 +2,14 @@ package tui
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
-	"strings"
-	"sync"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/charmbracelet/x/ansi"
 
 	"dpad/internal/docker"
 	"dpad/internal/render"
-	"dpad/internal/sortx"
 )
 
 type prunePlanMsg struct {
@@ -30,54 +25,41 @@ type pruneResultsMsg struct {
 	results []projectResult
 	done    bool
 }
-type pruneRow struct {
-	target         docker.PruneTarget
-	status, detail string
-}
 
 // pruneView previews what a prune removes, rechecks it on confirmation and
 // removes exactly those resources, reporting each result.
 type pruneView struct {
-	list[pruneRow]
-	ctx             context.Context
-	cancel          context.CancelFunc
-	operationCancel context.CancelFunc
-	client          dockerClient
-	kind            docker.PruneKind
-	all             bool
-	stage, note     string
-	targets         []docker.PruneTarget
-	results         <-chan projectResult
+	operation[docker.PruneTarget]
+	kind docker.PruneKind
+	all  bool
 }
 
 func newPruneView(ctx context.Context, c dockerClient, kind docker.PruneKind, width, height int) (*pruneView, tea.Cmd) {
-	ctx, cancel := context.WithCancel(ctx)
-	v := &pruneView{ctx: ctx, cancel: cancel, client: c, kind: kind, stage: "loading"}
-	v.list = list[pruneRow]{
-		sort: func([]pruneRow, sortx.Key, bool) {},
-		rows: func(r pruneRow) []row {
-			size := ""
-			if r.target.Size >= 0 {
-				size = render.Size(r.target.Size)
-			}
-			status := r.status
-			switch status {
-			case "removed":
-				status = render.Accent.Render(status)
-			case "failed", "unknown":
-				status = render.Error.Render(status)
-			}
-			cells := []string{r.target.Name, r.target.Detail, size, status}
-			if len(v.columns) == 3 {
-				cells = slices.Delete(cells, 2, 3)
-			}
-			return []row{{key: r.target.ID, cells: cells}}
-		},
-		empty: "nothing to prune", loaded: true,
+	v := &pruneView{operation: newOperation(ctx, c, pruneTargetID), kind: kind}
+	v.rows = func(r opRow[docker.PruneTarget]) []row {
+		size := ""
+		if r.target.Size >= 0 {
+			size = render.Size(r.target.Size)
+		}
+		status := r.status
+		switch status {
+		case "removed":
+			status = render.Accent.Render(status)
+		case "failed", "unknown":
+			status = render.Error.Render(status)
+		}
+		cells := []string{r.target.Name, r.target.Detail, size, status}
+		if len(v.columns) == 3 {
+			cells = slices.Delete(cells, 2, 3)
+		}
+		return []row{{key: r.target.ID, cells: cells}}
 	}
+	v.empty = "nothing to prune"
 	v.SetSize(width, height)
 	return v, v.plan(false)
 }
+
+func pruneTargetID(t docker.PruneTarget) string { return t.ID }
 
 // allLabel names what the "a" toggle adds, for kinds that have one.
 func (v *pruneView) allLabel() string {
@@ -107,71 +89,62 @@ func (v *pruneView) Update(msg tea.Msg) tea.Cmd {
 			return nil
 		}
 		if msg.err != nil {
-			v.stage, v.note = "error", msg.err.Error()
+			v.stage, v.note = stageError, msg.err.Error()
 			return nil
 		}
 		same := slices.EqualFunc(v.targets, msg.targets, func(a, b docker.PruneTarget) bool {
 			return a.ID == b.ID && slices.Equal(a.Tags, b.Tags)
 		})
-		v.targets = msg.targets
 		v.columns = []render.Column{{Header: "NAME", Max: 40}, {Header: "DETAILS", Max: 60}, {Header: "RESULT"}}
 		if slices.ContainsFunc(msg.targets, func(t docker.PruneTarget) bool { return t.Size >= 0 }) {
 			v.columns = slices.Insert(v.columns, 2, render.Column{Header: "SIZE", Align: render.Right})
 		}
-		rows := make([]pruneRow, len(msg.targets))
-		for i, t := range msg.targets {
-			rows[i] = pruneRow{target: t, status: "pending"}
-		}
-		v.setItems(rows, nil)
+		v.showTargets(msg.targets)
 		if !msg.checking || !same {
-			v.stage = "preview"
+			v.stage = stagePreview
 			if msg.checking {
 				v.note = "What would be removed changed. Review this updated preview and confirm again."
 			}
 			return nil
 		}
-		v.stage = "running"
-		ctx, cancel := context.WithCancel(v.ctx)
-		v.operationCancel = cancel
-		v.results = runPrune(ctx, v.ctx, v.client, v.kind, slices.Clone(v.targets))
-		return v.waitResults()
+		v.start(func(ctx context.Context) <-chan projectResult {
+			return runPrune(ctx, v.ctx, v.client, v.kind, slices.Clone(v.targets))
+		})
+		return v.wait()
 	case pruneResultsMsg:
 		if msg.view != v || v.ctx.Err() != nil {
 			return nil
 		}
-		for _, result := range msg.results {
-			if result.id == "" {
-				v.note = result.detail
-				continue
-			}
-			for i := range v.items {
-				if v.items[i].target.ID == result.id {
-					v.items[i].status, v.items[i].detail = result.status, result.detail
-					break
-				}
-			}
-		}
-		v.rowCache = nil
+		v.applyResults(msg.results, msg.done)
 		if msg.done {
-			v.stage = "done"
-			v.operationCancel()
 			return func() tea.Msg { return refreshMsg{} }
 		}
-		return v.waitResults()
+		return v.wait()
 	}
 	return nil
 }
 
-func (v *pruneView) waitResults() tea.Cmd {
-	return waitActionBatch(v.ctx, v.results, func(batch []projectResult, done bool) tea.Msg {
+func (v *pruneView) wait() tea.Cmd {
+	return v.waitResults(func(batch []projectResult, done bool) tea.Msg {
 		return pruneResultsMsg{view: v, results: batch, done: done}
 	})
 }
+
+const pruneUnknownHint = "it may have been removed, refresh to check"
 
 // runPrune removes targets one at a time for images, so children go before
 // their parents, and four at a time otherwise. Build cache is pruned in one
 // request; an empty-ID result carries a note for the view.
 func runPrune(ctx, viewCtx context.Context, c dockerClient, kind docker.PruneKind, targets []docker.PruneTarget) <-chan projectResult {
+	if kind != docker.PruneBuildCache {
+		workers := projectWorkers
+		if kind == docker.PruneImages {
+			workers = 1
+		}
+		return runTargets(ctx, viewCtx, targets, workers, pruneTargetID,
+			func(ctx context.Context, t docker.PruneTarget) error { return c.PruneOne(ctx, kind, t) },
+			"removed", pruneUnknownHint, "Finished. Return to the list to see what remains, or press tab to prune something else.")
+	}
 	out := make(chan projectResult, 64)
 	send := func(r projectResult) {
 		select {
@@ -179,99 +152,48 @@ func runPrune(ctx, viewCtx context.Context, c dockerClient, kind docker.PruneKin
 		case <-viewCtx.Done():
 		}
 	}
-	failure := func(id string, err error) projectResult {
-		result := projectResult{id: id, status: "failed", detail: err.Error()}
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			result.status = "unknown"
-			result.detail += "; it may have been removed, refresh to check"
-		}
-		return result
-	}
-	if kind == docker.PruneBuildCache {
-		go func() {
-			defer close(out)
-			for _, t := range targets {
-				send(projectResult{t.ID, "running", ""})
-			}
-			pruneCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-			deleted, space, err := c.PruneBuildCache(pruneCtx)
-			cancel()
-			if err != nil {
-				for _, t := range targets {
-					send(failure(t.ID, err))
-				}
-				return
-			}
-			extra := 0
-			for _, id := range deleted {
-				if !slices.ContainsFunc(targets, func(t docker.PruneTarget) bool { return t.ID == id }) {
-					extra++
-				}
-			}
-			for _, t := range targets {
-				if slices.Contains(deleted, t.ID) {
-					send(projectResult{t.ID, "removed", ""})
-				} else {
-					send(projectResult{t.ID, "kept", "The daemon kept this record; it may have become used."})
-				}
-			}
-			note := fmt.Sprintf("Finished. Reclaimed %s.", render.Size(int64(space)))
-			if extra > 0 {
-				note += fmt.Sprintf(" %d records created after the preview were also removed.", extra)
-			}
-			send(projectResult{"", "", note})
-		}()
-		return out
-	}
-	workers := projectWorkers
-	if kind == docker.PruneImages {
-		workers = 1
-	}
 	go func() {
 		defer close(out)
-		jobs := make(chan docker.PruneTarget)
-		var wg sync.WaitGroup
-		for range min(workers, len(targets)) {
-			wg.Go(func() {
-				for t := range jobs {
-					if ctx.Err() != nil {
-						send(projectResult{t.ID, "cancelled", "Not started"})
-						continue
-					}
-					send(projectResult{t.ID, "running", ""})
-					removeCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
-					err := c.PruneOne(removeCtx, kind, t)
-					cancel()
-					if err != nil {
-						send(failure(t.ID, err))
-					} else {
-						send(projectResult{t.ID, "removed", ""})
-					}
-				}
-			})
-		}
 		for _, t := range targets {
-			select {
-			case jobs <- t:
-			case <-viewCtx.Done():
-				close(jobs)
-				wg.Wait()
-				return
+			send(projectResult{t.ID, "running", ""})
+		}
+		pruneCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+		deleted, space, err := c.PruneBuildCache(pruneCtx)
+		cancel()
+		if err != nil {
+			for _, t := range targets {
+				send(opFailure(t.ID, err, pruneUnknownHint))
+			}
+			return
+		}
+		extra := 0
+		for _, id := range deleted {
+			if !slices.ContainsFunc(targets, func(t docker.PruneTarget) bool { return t.ID == id }) {
+				extra++
 			}
 		}
-		close(jobs)
-		wg.Wait()
-		send(projectResult{"", "", "Finished. Return to the list to see what remains, or press tab to prune something else."})
+		for _, t := range targets {
+			if slices.Contains(deleted, t.ID) {
+				send(projectResult{t.ID, "removed", ""})
+			} else {
+				send(projectResult{t.ID, "kept", "The daemon kept this record; it may have become used."})
+			}
+		}
+		note := fmt.Sprintf("Finished. Reclaimed %s.", render.Size(int64(space)))
+		if extra > 0 {
+			note += fmt.Sprintf(" %d records created after the preview were also removed.", extra)
+		}
+		send(projectResult{"", "", note})
 	}()
 	return out
 }
 
 func (v *pruneView) HandleKey(key string) tea.Cmd {
-	idle := v.stage == "preview" || v.stage == "error" || v.stage == "done"
+	idle := v.stage == stagePreview || v.stage == stageError || v.stage == stageDone
 	switch key {
 	case "y", "Y":
-		if v.stage == "preview" && len(v.targets) > 0 {
-			v.stage, v.note = "checking", ""
+		if v.stage == stagePreview && len(v.targets) > 0 {
+			v.stage, v.note = stageChecking, ""
 			return v.plan(true)
 		}
 		return nil
@@ -298,30 +220,14 @@ func (v *pruneView) HandleKey(key string) tea.Cmd {
 		}
 		return nil
 	}
-	_, keys := v.visible()
-	v.cur.navKey(keys, key, v.page)
+	v.navigate(key)
 	return nil
 }
 
 func (v *pruneView) reload() tea.Cmd {
-	v.stage, v.note = "loading", ""
-	v.targets = nil
-	v.setItems(nil, nil)
+	v.stage, v.note = stageLoading, ""
+	v.showTargets(nil)
 	return v.plan(false)
-}
-
-func (v *pruneView) busy() bool { return v.stage == "running" || v.stage == "cancelling" }
-
-func (v *pruneView) SetSize(width, height int) {
-	v.list.SetSize(width, height)
-	v.page = max(height-4, 1)
-}
-
-func (v *pruneView) Close() {
-	v.cancel()
-	if v.operationCancel != nil {
-		v.operationCancel()
-	}
 }
 
 func (v *pruneView) View() string {
@@ -339,13 +245,13 @@ func (v *pruneView) View() string {
 	}
 	note := v.note
 	switch v.stage {
-	case "loading":
+	case stageLoading:
 		note = "Looking for unused " + string(v.kind) + "…"
-	case "checking":
+	case stageChecking:
 		note = "Checking the list again before removing…"
-	case "running":
+	case stageRunning:
 		note = "Removing…"
-	case "cancelling":
+	case stageCancelling:
 		note = "Cancelling remaining work; waiting for in-flight requests…"
 	}
 	if note == "" {
@@ -363,33 +269,16 @@ func (v *pruneView) View() string {
 			}[v.kind]
 		}
 	}
-	_, keys := v.visible()
-	if len(keys) > 0 {
-		selected := keys[v.cur.index(keys)]
-		for _, r := range v.items {
-			if r.target.ID == selected && r.detail != "" {
-				note = r.detail
-				break
-			}
+	return v.frame(title, note, func(height int) string {
+		if v.stage == stageLoading || v.stage == stageError {
+			return render.Dim.Render("loading…")
 		}
-	}
-	note = strings.NewReplacer("\r", " ", "\n", " ").Replace(note)
-	lines := []string{ansi.Truncate(render.Bold.Render(title), v.width, ""), ansi.Truncate(render.Dim.Render(note), v.width, "")}
-	if v.height > 2 {
-		body := render.Dim.Render("loading…")
-		if v.stage != "loading" && v.stage != "error" {
-			body = v.view(max(v.height-2, 1))
-		}
-		lines = append(lines, strings.Split(body, "\n")...)
-	}
-	return strings.Join(lines[:min(len(lines), max(v.height, 1))], "\n")
+		return v.view(height)
+	})
 }
 
 func (v *pruneView) Status() string {
-	counts := map[string]int{}
-	for _, r := range v.items {
-		counts[r.status]++
-	}
+	counts := v.counts()
 	status := fmt.Sprintf("%s · %d removed · %d failed · %d unknown · %d cancelled", v.stage, counts["removed"], counts["failed"], counts["unknown"], counts["cancelled"])
 	if counts["kept"] > 0 {
 		status += fmt.Sprintf(" · %d kept", counts["kept"])
@@ -402,7 +291,7 @@ func (v *pruneView) Footer() string {
 		return hints("esc", "cancel remaining", "↑↓/pgup/pgdn", "results")
 	}
 	keys := []string{}
-	if v.stage == "preview" && len(v.targets) > 0 {
+	if v.stage == stagePreview && len(v.targets) > 0 {
 		keys = append(keys, "y", "remove "+fmt.Sprint(len(v.targets)))
 	}
 	keys = append(keys, "esc", "back", "tab", "next kind")

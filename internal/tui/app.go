@@ -331,14 +331,11 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case a.composeUpdate != nil:
 		v := a.composeUpdate
 		if (!v.showOutput || v.progressMode()) && (key == "esc" || key == "q" || key == "n") {
-			if v.busy() {
-				v.operationCancel()
-				v.stage = "cancelling"
-			} else {
-				if v.stage == "done" {
+			done := v.stage == stageDone
+			if dismiss(v) {
+				if done {
 					a.flash, a.flashErr = v.summary()
 				}
-				v.Close()
 				a.composeUpdate = nil
 			}
 			return nil
@@ -351,11 +348,7 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case a.projectAction != nil:
 		v := a.projectAction
 		if key == "esc" || key == "q" || key == "n" {
-			if v.busy() {
-				v.operationCancel()
-				v.stage = "cancelling"
-			} else {
-				v.Close()
+			if dismiss(v) {
 				a.projectAction = nil
 			}
 			return nil
@@ -364,11 +357,7 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case a.prune != nil:
 		v := a.prune
 		if key == "esc" || key == "q" || key == "n" {
-			if v.busy() {
-				v.operationCancel()
-				v.stage = "cancelling"
-			} else {
-				v.Close()
+			if dismiss(v) {
 				a.prune = nil
 			}
 			return nil

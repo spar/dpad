@@ -57,7 +57,8 @@ type composeUpdateView struct {
 	cancel, operationCancel context.CancelFunc
 	client                  dockerClient
 	env                     []string
-	selected, stage, note   string
+	selected, note          string
+	stage                   opStage
 	gen                     int
 	projects                []compose.Project
 	events                  <-chan compose.Event
@@ -76,7 +77,7 @@ type composeUpdateView struct {
 
 func newComposeUpdate(ctx context.Context, c dockerClient, selected string, width, height int) (*composeUpdateView, tea.Cmd) {
 	ctx, cancel := context.WithCancel(ctx)
-	v := &composeUpdateView{ctx: ctx, cancel: cancel, client: c, env: c.CLIEnvironment(), selected: selected, stage: "loading", vp: viewport.New(), locations: map[string]string{}, now: time.Now}
+	v := &composeUpdateView{ctx: ctx, cancel: cancel, client: c, env: c.CLIEnvironment(), selected: selected, stage: stageLoading, vp: viewport.New(), locations: map[string]string{}, now: time.Now}
 	v.vp.SoftWrap = true
 	v.list = list[composeUpdateRow]{
 		columns: []render.Column{{Header: "PROJECT", Max: 35}, {Header: "RUN ON"}, {Header: "SERVICES"}, {Header: "RESULT", Max: 80}},
@@ -204,7 +205,7 @@ func (v *composeUpdateView) Update(msg tea.Msg) tea.Cmd {
 			return nil
 		}
 		v.ticking = false
-		if v.stage != "reading" && !v.busy() {
+		if v.stage != stageReading && !v.busy() {
 			return nil
 		}
 		v.rowCache = nil
@@ -214,7 +215,7 @@ func (v *composeUpdateView) Update(msg tea.Msg) tea.Cmd {
 			return nil
 		}
 		if msg.err != nil {
-			v.stage, v.note = "error", connectionError(msg.err)
+			v.stage, v.note = stageError, connectionError(msg.err)
 			return nil
 		}
 		v.projects = nil
@@ -224,10 +225,10 @@ func (v *composeUpdateView) Update(msg tea.Msg) tea.Cmd {
 		}
 		v.setItems(rows, nil)
 		if len(rows) == 0 {
-			v.stage = "preview"
+			v.stage = stagePreview
 			return nil
 		}
-		v.stage, v.started = "reading", v.now()
+		v.stage, v.started = stageReading, v.now()
 		return tea.Batch(v.prepare(msg.projects, msg.containers), v.tick())
 	case composePlanMsg:
 		if msg.view != v || msg.gen != v.gen || v.ctx.Err() != nil {
@@ -243,7 +244,7 @@ func (v *composeUpdateView) Update(msg tea.Msg) tea.Cmd {
 			rows[i] = composeUpdateRow{project: p, state: state, output: p.Issue}
 		}
 		v.setItems(rows, nil)
-		v.stage = "preview"
+		v.stage = stagePreview
 		return nil
 	case composeEventsMsg:
 		if msg.view != v || v.ctx.Err() != nil {
@@ -280,7 +281,7 @@ func (v *composeUpdateView) Update(msg tea.Msg) tea.Cmd {
 			v.cur.key, changedProject = v.activeProject, true
 		}
 		if msg.done {
-			v.stage, v.finished = "done", v.now()
+			v.stage, v.finished = stageDone, v.now()
 			v.operationCancel()
 			v.SetSize(v.width, v.height)
 			if len(v.items) > 1 {
@@ -315,7 +316,7 @@ func finalComposeState(state string) bool {
 }
 
 func (v *composeUpdateView) start() tea.Cmd {
-	v.stage, v.note, v.started = "running", "", v.now()
+	v.stage, v.note, v.started = stageRunning, "", v.now()
 	v.showOutput, v.followActive = true, true
 	for _, p := range v.projects {
 		if p.Issue == "" {
@@ -359,7 +360,7 @@ func (v *composeUpdateView) selectedRow() *composeUpdateRow {
 	return nil
 }
 
-func (v *composeUpdateView) canStart() bool { return v.stage == "preview" && v.ready() > 0 }
+func (v *composeUpdateView) canStart() bool { return v.stage == stagePreview && v.ready() > 0 }
 
 func (v *composeUpdateView) HandleKey(msg tea.KeyPressMsg) tea.Cmd {
 	key := msg.String()
@@ -426,19 +427,19 @@ func (v *composeUpdateView) HandleKey(msg tea.KeyPressMsg) tea.Cmd {
 			v.updateOutput(false)
 		}
 	case "h":
-		if v.stage == "preview" && v.hasSSH() {
+		if v.stage == stagePreview && v.hasSSH() {
 			if r := v.selectedRow(); r != nil {
 				where := "ssh"
 				if r.project.Remote {
 					where = "local"
 				}
 				v.locations[r.project.Name] = where
-				v.stage, v.note = "loading", ""
+				v.stage, v.note = stageLoading, ""
 				return v.plan()
 			}
 		}
 	case "enter":
-		if v.selectedRow() != nil && v.stage != "loading" && v.stage != "reading" {
+		if v.selectedRow() != nil && v.stage != stageLoading && v.stage != stageReading {
 			v.showOutput = true
 			v.SetSize(v.width, v.height)
 			if v.progressMode() {
@@ -447,8 +448,8 @@ func (v *composeUpdateView) HandleKey(msg tea.KeyPressMsg) tea.Cmd {
 			v.updateOutput(true)
 		}
 	case "ctrl+r":
-		if v.stage == "preview" || v.stage == "error" {
-			v.stage, v.note = "loading", ""
+		if v.stage == stagePreview || v.stage == stageError {
+			v.stage, v.note = stageLoading, ""
 			return v.plan()
 		}
 	default:
@@ -517,8 +518,12 @@ func (v *composeUpdateView) updateOutput(top bool) {
 	}
 }
 
-func (v *composeUpdateView) busy() bool         { return v.stage == "running" || v.stage == "cancelling" }
-func (v *composeUpdateView) progressMode() bool { return v.busy() || v.stage == "done" }
+func (v *composeUpdateView) requestCancel() {
+	v.operationCancel()
+	v.stage = stageCancelling
+}
+func (v *composeUpdateView) busy() bool         { return v.stage == stageRunning || v.stage == stageCancelling }
+func (v *composeUpdateView) progressMode() bool { return v.busy() || v.stage == stageDone }
 func (v *composeUpdateView) Close() {
 	v.cancel()
 	if v.operationCancel != nil {
@@ -557,15 +562,15 @@ func (v *composeUpdateView) title() string {
 	scope := v.selected
 	if scope == "" {
 		scope = "all projects"
-		if v.stage != "loading" {
+		if v.stage != stageLoading {
 			scope = fmt.Sprintf("all %d projects", len(v.items))
 		}
 	}
 	action := "Update "
 	switch v.stage {
-	case "running", "cancelling":
+	case stageRunning, stageCancelling:
 		action = "Updating "
-	case "done":
+	case stageDone:
 		action = "Finished updating "
 	}
 	return ansi.Truncate(render.Bold.Render(action+scope+" · docker compose pull, then up -d"), v.width, "…")
@@ -589,13 +594,13 @@ func (v *composeUpdateView) View() string {
 	note := v.note
 	if note == "" {
 		switch v.stage {
-		case "loading":
+		case stageLoading:
 			note = "Looking for Compose projects…"
-		case "reading":
+		case stageReading:
 			note = fmt.Sprintf("Reading Compose files for %d projects… %s", len(v.items), clock(v.now().Sub(v.started)))
-		case "running", "cancelling", "done":
+		case stageRunning, stageCancelling, stageDone:
 			note = v.overall()
-		case "preview":
+		case stagePreview:
 			switch {
 			case len(v.items) == 0:
 			case v.ready() == 0:
@@ -622,7 +627,7 @@ func (v *composeUpdateView) View() string {
 		case r.project.Issue != "":
 			detail += " · " + r.project.Issue
 		}
-		if v.stage != "loading" && v.stage != "reading" {
+		if v.stage != stageLoading && v.stage != stageReading {
 			detail += " · enter for details"
 		}
 		lines = append(lines, ansi.Truncate(strings.Join(strings.Fields(ansi.Strip(detail)), " "), v.width, "…"))
@@ -727,9 +732,9 @@ func (v *composeUpdateView) overall() string {
 	}
 	var parts []string
 	switch v.stage {
-	case "done":
+	case stageDone:
 		parts = append(parts, "Finished in "+clock(end.Sub(v.started)))
-	case "cancelling":
+	case stageCancelling:
 		parts = append(parts, "Cancelling after the current step")
 	default:
 		parts = append(parts, fmt.Sprintf("%d of %d projects done", done, total), clock(end.Sub(v.started))+" elapsed")
@@ -742,7 +747,7 @@ func (v *composeUpdateView) overall() string {
 			parts = append(parts, fmt.Sprintf("%d %s", counts[c.state], c.label))
 		}
 	}
-	if v.stage == "done" && total > 1 {
+	if v.stage == stageDone && total > 1 {
 		parts = append(parts, "enter shows a project's output")
 	}
 	return strings.Join(parts, " · ")
@@ -766,7 +771,7 @@ func (v *composeUpdateView) summary() (string, bool) {
 
 func (v *composeUpdateView) Status() string {
 	counts := v.counts()
-	parts := []string{v.stage, fmt.Sprintf("%d projects", len(v.items))}
+	parts := []string{string(v.stage), fmt.Sprintf("%d projects", len(v.items))}
 	if len(v.items) == 1 {
 		parts[1] = "1 project"
 	}
@@ -830,7 +835,7 @@ func (v *composeUpdateView) Footer() string {
 	if v.busy() {
 		return hints("esc", "cancel remaining", "enter", "live output", "↑↓", "projects")
 	}
-	if v.stage == "done" {
+	if v.stage == stageDone {
 		return hints("esc", "back to Projects", "enter", "project output", "↑↓", "projects")
 	}
 	if v.canStart() {
@@ -841,7 +846,7 @@ func (v *composeUpdateView) Footer() string {
 		return hints(keys...)
 	}
 	keys := []string{"esc", "back", "enter", "details", "↑↓", "projects", "ctrl+r", "refresh"}
-	if v.stage == "preview" && v.hasSSH() {
+	if v.stage == stagePreview && v.hasSSH() {
 		keys = append(keys, "h", "local/SSH host")
 	}
 	return hints(keys...)
