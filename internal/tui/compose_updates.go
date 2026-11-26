@@ -896,3 +896,17 @@ func (a *App) openComposeUpdate(all bool) tea.Cmd {
 	a.composeUpdate.projectConfig = a.composeProjects
 	return cmd
 }
+
+func (v *composeUpdateView) handleKey(a *App, msg tea.KeyPressMsg) tea.Cmd {
+	if (!v.showOutput || v.progressMode()) && cancelKey(msg.String()) {
+		done := v.stage == stageDone
+		if dismiss(v) {
+			if done {
+				a.flash, a.flashErr = v.summary()
+			}
+			a.composeUpdate = nil
+		}
+		return nil
+	}
+	return v.HandleKey(msg)
+}

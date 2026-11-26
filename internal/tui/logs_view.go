@@ -486,3 +486,25 @@ func (v *LogsView) Status() string {
 	}
 	return s
 }
+
+func (v *LogsView) Footer() string {
+	if v.searching {
+		return v.search.View() + " " + render.Dim.Render(logSearchHints)
+	}
+	return fitHints(v.vp.width, []string{"esc", "back", "/", "regex filter", "w", "wrap", "t", "timestamps", "←→", "pan", "g/G", "top/follow", "?", "help"}, nil, 1)
+}
+
+func (v *LogsView) handleKey(a *App, msg tea.KeyPressMsg) tea.Cmd {
+	if !v.searching {
+		switch key := msg.String(); {
+		case closeKey(key):
+			v.Close()
+			a.logs = nil
+			return nil
+		case key == "?":
+			a.help = true
+			return nil
+		}
+	}
+	return v.Update(msg)
+}

@@ -163,28 +163,12 @@ func (a *App) resize(width, height int) {
 	for _, t := range a.tabs {
 		t.SetSize(a.width, a.bodyHeight())
 	}
-	if a.logs != nil {
-		a.logs.SetSize(a.width, a.bodyHeight())
-	}
-	for _, v := range a.detailScreens() {
-		v.SetSize(a.width, a.bodyHeight())
-	}
-	if a.projectAction != nil {
-		a.projectAction.SetSize(a.width, a.bodyHeight())
-	}
-	if a.composeUpdate != nil {
-		a.composeUpdate.SetSize(a.width, a.bodyHeight())
-	}
-	if a.prune != nil {
-		a.prune.SetSize(a.width, a.bodyHeight())
+	for _, s := range a.screens() {
+		s.SetSize(a.width, a.bodyHeight())
 	}
 	if a.shell != nil {
 		a.shell.input.SetWidth(max(width-38, 1))
 	}
-	if a.contextPicker != nil {
-		a.contextPicker.SetSize(width, a.bodyHeight())
-	}
-	a.sizeThemePicker()
 }
 
 // setFilter sets the active tab's filter and the input showing it.
@@ -289,11 +273,6 @@ func (a *App) update(msg tea.Msg) tea.Cmd {
 	}
 
 	var cmds []tea.Cmd
-	if a.contextPicker != nil && a.contextPicker.filtering {
-		var cmd tea.Cmd
-		a.contextPicker.search, cmd = a.contextPicker.search.Update(msg)
-		cmds = append(cmds, cmd)
-	}
 	if a.shell != nil && !a.shell.launching {
 		var cmd tea.Cmd
 		a.shell.input, cmd = a.shell.input.Update(msg)
@@ -302,20 +281,8 @@ func (a *App) update(msg tea.Msg) tea.Cmd {
 	for _, t := range a.tabs {
 		cmds = append(cmds, t.Update(msg))
 	}
-	if a.logs != nil {
-		cmds = append(cmds, a.logs.Update(msg))
-	}
-	for _, v := range a.detailScreens() {
-		cmds = append(cmds, v.Update(msg))
-	}
-	if a.projectAction != nil {
-		cmds = append(cmds, a.projectAction.Update(msg))
-	}
-	if a.composeUpdate != nil {
-		cmds = append(cmds, a.composeUpdate.Update(msg))
-	}
-	if a.prune != nil {
-		cmds = append(cmds, a.prune.Update(msg))
+	for _, s := range a.screens() {
+		cmds = append(cmds, s.Update(msg))
 	}
 	return tea.Batch(cmds...)
 }
@@ -328,41 +295,6 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	a.flash = ""
 
 	switch {
-	case a.composeUpdate != nil:
-		v := a.composeUpdate
-		if (!v.showOutput || v.progressMode()) && (key == "esc" || key == "q" || key == "n") {
-			done := v.stage == stageDone
-			if dismiss(v) {
-				if done {
-					a.flash, a.flashErr = v.summary()
-				}
-				a.composeUpdate = nil
-			}
-			return nil
-		}
-		return v.HandleKey(msg)
-	case a.contextPicker != nil:
-		return a.updateContextPicker(msg)
-	case a.themePicker != nil:
-		return a.updateThemePicker(key)
-	case a.projectAction != nil:
-		v := a.projectAction
-		if key == "esc" || key == "q" || key == "n" {
-			if dismiss(v) {
-				a.projectAction = nil
-			}
-			return nil
-		}
-		return v.HandleKey(key)
-	case a.prune != nil:
-		v := a.prune
-		if key == "esc" || key == "q" || key == "n" {
-			if dismiss(v) {
-				a.prune = nil
-			}
-			return nil
-		}
-		return v.HandleKey(key)
 	case a.shell != nil:
 		return a.updateShell(msg)
 	case a.confirm != nil:
@@ -415,22 +347,11 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		}
 		a.help, a.helpTop = false, 0
 		return nil
-	case a.logs != nil:
-		if a.logs.searching {
-			return a.logs.Update(msg)
-		}
-		switch key {
-		case "esc", "q":
-			a.logs.Close()
-			a.logs = nil
-			return nil
-		case "?":
-			a.help = true
-			return nil
-		}
-		return a.logs.Update(msg)
-	case a.activeDetails() != nil:
-		return a.handleDetailsKey(msg)
+	}
+	// Prompts above only open from the tabs or a pane, never over an operation
+	// or picker, so they are safe to check before the top screen.
+	if s := a.screen(); s != nil {
+		return s.handleKey(a, msg)
 	}
 
 	if _, ok := a.tabs[a.active].(*EventsView); ok {
@@ -569,26 +490,11 @@ func (a *App) View() tea.View {
 func (a *App) render() string {
 	render.SetAccent(tabAccent(a.active))
 	var body, status string
-	details := a.detailScreens()
-	switch {
-	case a.composeUpdate != nil:
-		body, status = a.composeUpdate.View(), a.composeUpdate.Status()
-	case a.contextPicker != nil:
-		body = a.contextPicker.View()
-		status = "Choose a Docker context for this session · switching clears resource data"
-	case a.themePicker != nil:
-		body = a.themePickerView()
-		status = "Choose a color theme · the screen previews the highlighted one"
-	case a.projectAction != nil:
-		body, status = a.projectAction.View(), a.projectAction.Status()
-	case a.prune != nil:
-		body, status = a.prune.View(), a.prune.Status()
+	switch s := a.screen(); {
 	case a.help:
 		body = a.helpView()
-	case a.logs != nil:
-		body, status = a.logs.View(), a.logs.Status()
-	case len(details) > 0:
-		body, status = details[0].View(), details[0].Status()
+	case s != nil:
+		body, status = s.View(), s.Status()
 	default:
 		t := a.tabs[a.active]
 		body, status = t.View(), t.Status()
@@ -664,19 +570,6 @@ func (a *App) tabRule() string {
 
 func (a *App) footer() string {
 	switch {
-	case a.composeUpdate != nil:
-		return a.composeUpdate.Footer()
-	case a.contextPicker != nil:
-		if a.contextPicker.filtering {
-			return a.contextPicker.search.View() + " " + render.Dim.Render("enter keep filter · esc cancel filter")
-		}
-		return hints("↑↓/j/k", "move", "/", "filter", "enter", "switch context", "esc", "cancel")
-	case a.themePicker != nil:
-		return hints("↑↓/j/k", "preview", "enter", "use and save", "esc", "cancel")
-	case a.projectAction != nil:
-		return a.projectAction.Footer()
-	case a.prune != nil:
-		return a.prune.Footer()
 	case a.shell != nil:
 		if a.shell.launching {
 			return render.Dim.Render("checking container… · esc cancel")
@@ -689,24 +582,9 @@ func (a *App) footer() string {
 		return render.Warn.Render(fmt.Sprintf("%s container %s? (y/N)", a.confirm.verb, a.confirm.name))
 	case a.filtering:
 		return a.filter.View()
-	case a.logs != nil:
-		if a.logs.searching {
-			return a.logs.search.View() + " " + render.Dim.Render(logSearchHints)
-		}
-		return fitHints(a.width, []string{"esc", "back", "/", "regex filter", "w", "wrap", "t", "timestamps", "←→", "pan", "g/G", "top/follow", "?", "help"}, nil, 1)
-	case a.details != nil:
-		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "enter", "logs", "e", "shell")
-	case a.networkDetails != nil:
-		if a.networkDetails.showEndpoints {
-			return hints("esc", "back", "tab", "metadata", "↑↓/pgup/pgdn", "move", "d/enter", "container details", "ctrl+r", "refresh")
-		}
-		return hints("esc", "back", "tab", "endpoints", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh")
-
-	case a.volumeDetails != nil:
-		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh")
-
-	case a.imageDetails != nil:
-		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "x", "remove tag/image")
+	}
+	if s := a.screen(); s != nil {
+		return s.Footer()
 	}
 	if _, ok := a.tabs[a.active].(*EventsView); ok {
 		return fitHints(a.width, []string{"tab", "switch", "c", "context", "/", "filter", "r", "reverse time", "g", "top/follow", "d/enter", "container details", "?", "help", "q", "quit"}, generalHints, 2)
