@@ -47,6 +47,7 @@ overview, installation and screenshots, see the [README](../README.md).
 | `S` / `x` / `R` | start (or unpause) / stop / restart (asks y/N) |
 | `P` / `K` / `D` | pause / kill (SIGKILL) / remove, killing a running container first (asks y/N) |
 | `e` (Projects, on a project row) | edit one of the project's Compose files in your editor, then review, save and update |
+| `D` (Projects, on a project row) | preview `docker compose down` for the project; `v` also deletes its volumes |
 | `u` / `U` (Projects) | preview image updates for the selected project / all discovered projects |
 | `X` | preview a prune of stopped containers or unused images, volumes, networks or build cache (asks y) |
 | `ctrl+r` | refresh |
@@ -153,6 +154,26 @@ when none run. Containers without Compose project labels remain in Containers.
 Project lists update with Docker events and the regular container refresh.
 Filtering by a project, service, container name/ID, image, or state keeps the full
 matching project visible so its counts and log targets stay consistent.
+
+A strip under the list shows where the highlighted project's Compose files are,
+read from the labels Compose puts on its containers: the first file with the
+names of any others, the working directory, env files and when the oldest
+container was created. On a local daemon, files that no longer exist are marked
+`✗ not found`. On an SSH daemon the strip names the host instead, since the
+paths are on that machine.
+
+### Take a project down
+
+`D` on a project row previews `docker compose down`: the project's containers
+and networks that will be removed, and its volumes, which are kept unless you
+press `v`. Press `y` to run it. dpad runs
+`docker compose --project-name NAME down` (with `--volumes` after `v`) on this
+machine against the current daemon, from an empty folder, so it needs no
+Compose files. That makes it the way to clear out a project whose folder you
+moved or deleted. On an SSH daemon Compose reaches the host through
+`DOCKER_HOST`; no shell on the server is needed. Afterwards each row says
+whether the resource is gone, kept, or still there. Compose files are never
+touched. `D` on a container row still removes just that container.
 
 ### Project logs
 
