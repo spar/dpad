@@ -81,6 +81,9 @@ dp logs dp-demo-flaky-1                                   # FATAL in red on ever
 dp
 ```
 1. Press `/`, type `dp-demo`, then `enter` to keep only demo containers.
+   The CPU column graphs `cpu-hog` near the top of the scale and the loggers
+   near idle. Press `o`, move to **CPU graph** and press `enter` to try bars, meter and
+   off styles; `esc` closes settings.
 2. Press `s` a few times to cycle the sort between name, created, and status.
 3. Select `dp-demo-logger-json-1` and press `enter` to follow its logs. Press `esc` to go back.
    Press `d` to inspect its configuration, networks, and mounts. Use `ctrl+r` to
@@ -107,7 +110,9 @@ dp
    terminal: new sources join automatically. Try `restart logger-text` or
    `up -d --force-recreate logger-text` with the same Compose file; the viewer
    follows replacement sources and retains its filter and buffer. Scale back to
-   one when finished.
+   one when finished. On the project row, `e` opens `testenv/compose.yaml` in
+   your editor; change an image tag and close the editor to see the check, the
+   summary of changes and the diff. `esc` twice discards the edit.
 9. Select a running container such as `dp-demo-web-1` and press `e`, then `enter`
    to open `/bin/sh`. Run `pwd`, then `exit` to return to the dashboard. Try a
    stopped or paused container to see the preflight error; `esc` cancels the prompt.
