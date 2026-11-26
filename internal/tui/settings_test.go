@@ -17,6 +17,7 @@ func TestSettingsShowsValuesAndOpensPickers(t *testing.T) {
 	t.Cleanup(func() { render.ApplyTheme(theme.Default()) })
 
 	a := newTestApp()
+	a.resize(400, 30) // room for a long temp path, as on macOS
 	a.daemon.label = "remote @ ssh://box"
 	press(a, "o")
 	if a.settings == nil {
