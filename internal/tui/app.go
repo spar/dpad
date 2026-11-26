@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"image/color"
+	"net/url"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -64,6 +66,7 @@ type App struct {
 	volumeDetails   *VolumeDetailsView
 	networkDetails  *NetworkDetailsView
 	projectAction   *projectActionView
+	composeDown     *composeDownView
 	prune           *pruneView
 	composeUpdate   *composeUpdateView
 	composeEdit     *composeEditView
@@ -111,11 +114,14 @@ func newApp(ctx context.Context, c dockerClient) *App {
 	stats.SetGrouped(true)
 	containers := NewContainersView(ctx, c)
 	containers.usage = stats
+	projects := NewProjectsView()
+	projects.sshHost, projects.localFiles = daemonHost(c.CLIEnvironment())
+	projects.home, _ = os.UserHomeDir()
 	tabs := []tab{
 		containers,
 		NewImagesView(ctx, c),
 		stats,
-		NewProjectsView(),
+		projects,
 		NewEventsView(ctx, c),
 		NewVolumesView(ctx, c),
 		NewNetworksView(ctx, c),
@@ -123,6 +129,28 @@ func newApp(ctx context.Context, c dockerClient) *App {
 	app := &App{ctx: ctx, client: c, tabs: tabs, filter: fi, daemon: daemonConnection{label: c.ConnectionLabel()}, mouse: true}
 	app.resize(120, 30)
 	return app
+}
+
+// daemonHost reports the SSH host a CLI environment's daemon runs on, or
+// whether it runs on this machine, from its DOCKER_HOST.
+func daemonHost(env []string) (sshHost string, local bool) {
+	host := ""
+	for _, entry := range env {
+		if key, value, _ := strings.Cut(entry, "="); strings.EqualFold(key, "DOCKER_HOST") {
+			host = value
+		}
+	}
+	u, err := url.Parse(host)
+	if err != nil {
+		return "", false
+	}
+	switch u.Scheme {
+	case "ssh":
+		return u.Hostname(), false
+	case "", "unix", "npipe":
+		return "", true
+	}
+	return "", false
 }
 
 // Each daemon gets its own program queue as well as its own request context.
@@ -462,6 +490,13 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "K":
 		a.ask("kill", a.client.Kill)
 	case "D":
+		if projects, ok := a.tabs[a.active].(*ProjectsView); ok {
+			if p := projects.selectedProject(); p != nil {
+				var cmd tea.Cmd
+				a.composeDown, cmd = newComposeDown(a.ctx, a.client, p.name, a.width, a.bodyHeight())
+				return cmd
+			}
+		}
 		a.ask("remove", a.client.Remove)
 		if a.confirm != nil {
 			a.confirm.question = fmt.Sprintf("Remove container %s? It is killed first if running.", a.confirm.name)
@@ -617,7 +652,7 @@ func (a *App) footer() string {
 	keys := []string{"tab", "switch"}
 	if projects, ok := a.tabs[a.active].(*ProjectsView); ok {
 		if projects.selectedProject() != nil {
-			keys = append(keys, "e", "edit compose", "u", "update (pull + up)")
+			keys = append(keys, "e", "edit compose", "D", "down", "u", "update (pull + up)")
 		} else {
 			keys = append(keys, "u", "update project (pull + up)")
 		}

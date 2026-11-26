@@ -41,6 +41,9 @@ func (a *App) screens() []screen {
 	if a.projectAction != nil {
 		open = append(open, a.projectAction)
 	}
+	if a.composeDown != nil {
+		open = append(open, a.composeDown)
+	}
 	if a.prune != nil {
 		open = append(open, a.prune)
 	}

@@ -293,6 +293,7 @@ would type `docker`:
 | `S` / `x` / `R` | start / stop / restart, after a `y/N` confirmation |
 | `P` / `K` / `D` | pause / kill / remove (`S` resumes a paused container) |
 | `e` on a project | edit its Compose file in your editor, check it, then save and update (Projects tab) |
+| `D` on a project | preview and run `docker compose down`, keeping volumes unless you press `v` (Projects tab) |
 | `u` / `U` | update the selected / all Compose projects: `pull`, then `up -d`, with live progress (Projects tab) |
 | `c` | choose a Docker context |
 | `C` | choose a color theme, previewed live |

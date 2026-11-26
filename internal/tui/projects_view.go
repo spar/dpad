@@ -3,9 +3,15 @@ package tui
 import (
 	"cmp"
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
 	"slices"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 
 	"dpad/internal/docker"
@@ -22,6 +28,10 @@ type composeProject struct {
 	name               string
 	containers         []container.Summary
 	running, unhealthy int
+	dir                string
+	files, envFiles    []string
+	created            int64    // the oldest container's creation time
+	missing            []string // Compose files gone from this machine
 }
 
 func (p composeProject) state() string {
@@ -39,6 +49,12 @@ type ProjectsView struct {
 	list[composeProject]
 	collapsed map[string]bool
 	snapshot  []projectContainerSnapshot
+	// sshHost names the SSH host the daemon runs on; Compose paths are there.
+	sshHost string
+	// localFiles is set when the daemon shares this machine's files, so a
+	// missing Compose file can be reported.
+	localFiles bool
+	home       string
 }
 
 type projectContainerSnapshot struct {
@@ -152,8 +168,19 @@ func (v *ProjectsView) Update(msg tea.Msg) tea.Cmd {
 			}
 			p := projects[name]
 			if p == nil {
-				p = &composeProject{name: name}
+				p = &composeProject{name: name, dir: c.Labels[docker.ComposeWorkingDirLabel], created: c.Created,
+					files: splitLabel(c.Labels[docker.ComposeConfigLabel]), envFiles: splitLabel(c.Labels[composeProjectLabel+".environment_file"])}
+				for _, f := range p.files {
+					if v.localFiles {
+						if _, err := os.Stat(f); err != nil {
+							p.missing = append(p.missing, f)
+						}
+					}
+				}
 				projects[name] = p
+			}
+			if c.Created < p.created {
+				p.created = c.Created
 			}
 			p.containers = append(p.containers, c)
 			if c.State == container.StateRunning {
@@ -194,6 +221,109 @@ func (v *ProjectsView) selectedProject() *composeProject {
 	return nil
 }
 
+// cursorProject is the project of the highlighted row, a header or a container.
+func (v *ProjectsView) cursorProject() *composeProject {
+	if !v.loaded || v.err != nil {
+		return nil
+	}
+	rows, keys := v.visible()
+	if len(rows) == 0 {
+		return nil
+	}
+	key := rows[v.cur.index(keys)].key
+	for i, p := range v.items {
+		if key == "project:"+p.name || slices.ContainsFunc(p.containers, func(c container.Summary) bool { return c.ID == key }) {
+			return &v.items[i]
+		}
+	}
+	return nil
+}
+
+// infoLines is the height of the strip under the list.
+const infoLines = 3
+
+func (v *ProjectsView) SetSize(width, height int) {
+	v.list.SetSize(width, height)
+	v.page = max(height-2-infoLines, 1)
+}
+
+// View adds a strip under the list that says where the highlighted project's
+// Compose files are, since nothing else in the list does.
+func (v *ProjectsView) View() string {
+	p := v.cursorProject()
+	if p == nil || v.height < 4*infoLines {
+		return v.list.View()
+	}
+	body := v.view(v.height - infoLines)
+	if pad := v.height - infoLines - lipgloss.Height(body); pad > 0 {
+		body += strings.Repeat("\n", pad)
+	}
+	return body + "\n" + v.infoStrip(*p)
+}
+
+func (v *ProjectsView) infoStrip(p composeProject) string {
+	title := render.Header.Render(" " + p.name + " ")
+	rule := render.Dim.Render("──") + title + render.Dim.Render(strings.Repeat("─", max(v.width-2-lipgloss.Width(title), 0)))
+	label := func(s string) string { return render.Bold.Render(fmt.Sprintf(" %-5s ", s)) }
+
+	file := label("file") + render.Dim.Render("unknown: the containers have no Compose file labels")
+	for i, f := range p.files {
+		name, style := v.showPath(f), render.Dim
+		if i == 0 {
+			file, style = label("file"), lipgloss.NewStyle()
+		} else {
+			name = path.Base(filepath.ToSlash(f))
+			file += render.Dim.Render(" + ")
+		}
+		if slices.Contains(p.missing, f) {
+			style = render.Warn
+		}
+		file += style.Render(name)
+	}
+	if len(p.missing) > 0 {
+		file += render.Warn.Render("  ✗ not found")
+	}
+
+	facts := []string{}
+	if len(p.envFiles) > 0 {
+		names := make([]string, len(p.envFiles))
+		for i, f := range p.envFiles {
+			names[i] = path.Base(filepath.ToSlash(f))
+		}
+		facts = append(facts, "env "+strings.Join(names, ", "))
+	}
+	if p.created > 0 {
+		facts = append(facts, "created "+render.Ago(p.created))
+	}
+	where := label("dir") + v.showPath(p.dir)
+	if v.sshHost != "" {
+		where = label("host") + render.Accent.Render(v.sshHost) + render.Dim.Render(" (paths are on this host)")
+	}
+	if len(p.missing) > 0 {
+		where = label("note") + render.Dim.Render("files are gone; ") + render.Bold.Render("D") + render.Dim.Render(" down still works by project name")
+		facts = facts[len(facts)-min(len(facts), 1):]
+	}
+	if len(facts) > 0 {
+		where += render.Dim.Render(" · " + strings.Join(facts, " · "))
+	}
+	return strings.Join([]string{rule, ansi.Truncate(file, v.width, "…"), ansi.Truncate(where, v.width, "…")}, "\n")
+}
+
+// showPath shortens the home folder to ~ for paths on this machine.
+func (v *ProjectsView) showPath(p string) string {
+	if v.localFiles && v.home != "" && (p == v.home || strings.HasPrefix(p, v.home+string(filepath.Separator))) {
+		return "~" + strings.TrimPrefix(p, v.home)
+	}
+	return p
+}
+
+func splitLabel(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+	return strings.Split(raw, ",")
+}
+
 func (v *ProjectsView) HandleKey(key string) tea.Cmd {
 	if key == "space" {
 		if p := v.selectedProject(); p != nil {
@@ -216,5 +346,5 @@ func (v *ProjectsView) Status() string {
 }
 
 func (v *ProjectsView) Help() [][2]string {
-	return append(v.list.Help(), [2]string{"space", "expand/collapse selected project"}, [2]string{"enter", "follow selected project's or container's logs"}, [2]string{"e on project", "edit a Compose file in your editor (set in o), check it, then save and update"}, [2]string{"S/x/R on project", "preview start/stop/restart of existing project containers"}, [2]string{"u / U", "update the selected / all projects: docker compose pull, then up -d"})
+	return append(v.list.Help(), [2]string{"space", "expand/collapse selected project"}, [2]string{"enter", "follow selected project's or container's logs"}, [2]string{"e on project", "edit a Compose file in your editor (set in o), check it, then save and update"}, [2]string{"S/x/R/D on project", "preview start/stop/restart of its containers, or D docker compose down"}, [2]string{"u / U", "update the selected / all projects: docker compose pull, then up -d"})
 }
