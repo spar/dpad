@@ -223,7 +223,7 @@ func TestContainerRefreshCoalescesDuringEventStorm(t *testing.T) {
 	if followup == nil {
 		t.Fatal("pending change lost")
 	}
-	if v.Update(followup()) != nil || v.loading || v.pending {
+	if v.Update(followup()) != nil || v.inFlight || v.pending {
 		t.Fatal("refresh loop did not settle")
 	}
 }

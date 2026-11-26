@@ -83,7 +83,7 @@ func TestVolumesRefreshCoalescesAndPreservesSelection(t *testing.T) {
 	if next == nil {
 		t.Fatal("pending refresh lost")
 	}
-	if v.Update(next()) != nil || v.loading {
+	if v.Update(next()) != nil || v.inFlight {
 		t.Fatal("refresh did not settle")
 	}
 	if name, ok := v.SelectedVolume(); !ok || name != "empty" || v.filter != "local" || !v.reverse {
