@@ -15,6 +15,7 @@ and a full-screen terminal UI. Anything it doesn't enhance goes straight to `doc
 ![macOS, Linux and Windows](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-informational)
 [![MIT license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Built with Bubble Tea](https://img.shields.io/badge/built%20with-Bubble%20Tea-ff5f87)](https://github.com/charmbracelet/bubbletea)
+[![Sponsor](https://img.shields.io/github/sponsors/spar?label=sponsor&logo=githubsponsors&color=ea4aaa)](https://github.com/sponsors/spar)
 
 ```sh
 brew install spar/tap/dpad
@@ -374,6 +375,11 @@ describes the code layout and conventions in more detail.
 | `internal/tui/` | the Bubble Tea app and its views |
 | `testenv/` | demo Compose environment |
 | `scripts/screenshots/` | regenerates the README images from the demo environment |
+
+## Sponsoring
+
+If dpad saves you time, you can support its development through
+[GitHub Sponsors](https://github.com/sponsors/spar).
 
 ## Acknowledgements
 
