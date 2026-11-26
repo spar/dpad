@@ -440,13 +440,6 @@ func command(ctx context.Context, env []string, p Project, args ...string) (*exe
 	if socket == "" {
 		socket = "/var/run/docker.sock"
 	}
-	sshArgs := []string{"-n", "-T", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=3"}
-	if u.User != nil {
-		sshArgs = append(sshArgs, "-l", u.User.Username())
-	}
-	if u.Port() != "" {
-		sshArgs = append(sshArgs, "-p", u.Port())
-	}
 	remote := []string{"env", "DOCKER_HOST=unix://" + socket, "DOCKER_CONTEXT=", "DOCKER_TLS=", "DOCKER_TLS_VERIFY=", "DOCKER_CERT_PATH="}
 	remote = append(remote, p.Env...)
 	remote = append(remote, p.CLI...)
@@ -454,7 +447,26 @@ func command(ctx context.Context, env []string, p Project, args ...string) (*exe
 	for i := range remote {
 		remote[i] = quote(remote[i])
 	}
-	script := "cd " + quote(p.Directory) + " && exec " + strings.Join(remote, " ")
+	return sshScript(ctx, env, "cd "+quote(p.Directory)+" && exec "+strings.Join(remote, " "), false)
+}
+
+// sshScript runs a shell script on the SSH host of the bound endpoint. Only
+// a script that reads stdin gets the caller's stdin; others get none.
+func sshScript(ctx context.Context, env []string, script string, stdin bool) (*exec.Cmd, error) {
+	u, err := url.Parse(envValue(env, "DOCKER_HOST"))
+	if err != nil || u.Scheme != "ssh" || u.Hostname() == "" {
+		return nil, errors.New("remote Compose execution requires the bound SSH endpoint")
+	}
+	sshArgs := []string{"-T", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=3"}
+	if !stdin {
+		sshArgs = append([]string{"-n"}, sshArgs...)
+	}
+	if u.User != nil {
+		sshArgs = append(sshArgs, "-l", u.User.Username())
+	}
+	if u.Port() != "" {
+		sshArgs = append(sshArgs, "-p", u.Port())
+	}
 	executable, err := exec.LookPath("ssh")
 	if err != nil {
 		return nil, err

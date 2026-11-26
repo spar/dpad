@@ -3,6 +3,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -63,8 +64,11 @@ func TestComposeHelper(t *testing.T) {
 			script = strings.Replace(script, "cd '/srv/dp-project'", "cd "+quote(real), 1)
 		}
 		cmd := exec.Command("/bin/sh", "-c", script)
-		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 		if err := cmd.Run(); err != nil {
+			if exit, ok := errors.AsType[*exec.ExitError](err); ok {
+				os.Exit(exit.ExitCode())
+			}
 			os.Exit(1)
 		}
 		os.Exit(0)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -200,7 +201,9 @@ func (v *composeEditView) Update(msg tea.Msg) tea.Cmd {
 func (v *composeEditView) choose(file string) tea.Cmd {
 	v.file, v.stage = file, editReading
 	return func() tea.Msg {
-		original, err := compose.ReadSource(v.project, file)
+		ctx, cancel := context.WithTimeout(v.ctx, 30*time.Second)
+		defer cancel()
+		original, err := compose.ReadSource(ctx, v.env, v.project, file)
 		if err != nil {
 			return composeEditCopiedMsg{view: v, err: err}
 		}
@@ -208,7 +211,7 @@ func (v *composeEditView) choose(file string) tea.Cmd {
 		if err != nil {
 			return composeEditCopiedMsg{view: v, err: err}
 		}
-		copyPath := filepath.Join(dir, filepath.Base(file))
+		copyPath := filepath.Join(dir, path.Base(filepath.ToSlash(file)))
 		if err := os.WriteFile(copyPath, original, 0o600); err != nil {
 			_ = os.RemoveAll(dir)
 			return composeEditCopiedMsg{view: v, err: err}
@@ -252,9 +255,11 @@ func (v *composeEditView) afterEdit(err error) tea.Cmd {
 
 func (v *composeEditView) save(update bool) tea.Cmd {
 	v.stage, v.note = editSaving, ""
-	project, file, original, edited := v.project, v.file, v.original, v.edited
+	project, file, original, edited, env := v.project, v.file, v.original, v.edited, v.env
 	return func() tea.Msg {
-		return composeEditSavedMsg{view: v, update: update, err: compose.Replace(project, file, original, edited)}
+		ctx, cancel := context.WithTimeout(v.ctx, 30*time.Second)
+		defer cancel()
+		return composeEditSavedMsg{view: v, update: update, err: compose.Replace(ctx, env, project, file, original, edited)}
 	}
 }
 

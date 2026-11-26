@@ -3,21 +3,36 @@ package compose
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"path"
 	"path/filepath"
 	"slices"
+	"strings"
+	"time"
 )
 
-var errRemoteEdit = errors.New("this project's Compose files are on the SSH host; dpad can only edit local Compose files for now")
+// maxSource bounds a Compose file read for editing.
+const maxSource = 4 << 20
 
-// ReadSource reads one of p's Compose files for editing.
-func ReadSource(p Project, file string) ([]byte, error) {
+// ReadSource reads one of p's Compose files for editing, over SSH when the
+// project runs on the SSH host.
+func ReadSource(ctx context.Context, env []string, p Project, file string) ([]byte, error) {
 	if err := editable(p, file); err != nil {
 		return nil, err
 	}
-	return os.ReadFile(file)
+	if !p.Remote {
+		return os.ReadFile(file)
+	}
+	out, err := runScript(ctx, env, "cat -- "+quote(file), nil)
+	if err != nil {
+		return nil, fmt.Errorf("read %s on the SSH host: %w", file, err)
+	}
+	return out, nil
 }
 
 // Check resolves p's configuration with data standing in for file, without
@@ -26,11 +41,11 @@ func Check(ctx context.Context, env []string, p Project, file string, data []byt
 	if err := editable(p, file); err != nil {
 		return Project{}, err
 	}
-	candidate, err := writeTemp(file, data, 0o600)
+	candidate, remove, err := writeCandidate(ctx, env, p, file, data)
 	if err != nil {
 		return Project{}, err
 	}
-	defer os.Remove(candidate)
+	defer remove()
 	edited := p
 	edited.Issue = ""
 	edited.Files = slices.Clone(p.Files)
@@ -45,9 +60,12 @@ func Check(ctx context.Context, env []string, p Project, file string, data []byt
 // Replace writes data over file through a temporary file in the same
 // directory, so a failed write leaves the original as it was. It refuses when
 // file no longer holds original, which means someone else changed it.
-func Replace(p Project, file string, original, data []byte) error {
+func Replace(ctx context.Context, env []string, p Project, file string, original, data []byte) error {
 	if err := editable(p, file); err != nil {
 		return err
+	}
+	if p.Remote {
+		return replaceRemote(ctx, env, file, original, data)
 	}
 	target, err := filepath.EvalSymlinks(file)
 	if err != nil {
@@ -58,7 +76,7 @@ func Replace(p Project, file string, original, data []byte) error {
 		return err
 	}
 	if !bytes.Equal(current, original) {
-		return fmt.Errorf("%s changed on disk while you were editing it; edit again to start from the new version", filepath.Base(file))
+		return changedError(file)
 	}
 	info, err := os.Stat(target)
 	if err != nil {
@@ -75,12 +93,91 @@ func Replace(p Project, file string, original, data []byte) error {
 	return nil
 }
 
+func changedError(file string) error {
+	return fmt.Errorf("%s changed on disk while you were editing it; edit again to start from the new version", path.Base(filepath.ToSlash(file)))
+}
+
+// replaceStatus is the exit status of replaceScript when the file changed.
+const replaceStatus = 3
+
+// replaceScript follows a symlinked file, checks its hash, and renames a
+// temporary file holding stdin over it with the original's mode. It sticks
+// to tools GNU, BusyBox and BSD systems all have.
+const replaceScript = `set -e
+r=$(readlink -f -- "$f" 2>/dev/null) || r=$f
+[ -n "$r" ] || r=$f
+h=$(sha256sum -- "$r" 2>/dev/null || shasum -a 256 -- "$r")
+if [ "${h%% *}" != "$want" ]; then exit 3; fi
+m=$(stat -c %a -- "$r" 2>/dev/null || stat -f %Lp -- "$r")
+t=$(mktemp "$(dirname -- "$r")/.$(basename -- "$r").dpad-XXXXXX")
+trap 'rm -f -- "$t"' EXIT
+cat > "$t"
+chmod "$m" "$t"
+mv -f -- "$t" "$r"
+trap - EXIT`
+
+func replaceRemote(ctx context.Context, env []string, file string, original, data []byte) error {
+	sum := sha256.Sum256(original)
+	script := "f=" + quote(file) + " want=" + hex.EncodeToString(sum[:]) + "\n" + replaceScript
+	_, err := runScript(ctx, env, script, data)
+	if exit, ok := errors.AsType[*exec.ExitError](err); ok && exit.ExitCode() == replaceStatus {
+		return changedError(file)
+	}
+	if err != nil {
+		return fmt.Errorf("save %s on the SSH host: %w", file, err)
+	}
+	return nil
+}
+
+// writeCandidate puts data in a hidden file beside file, so relative paths
+// and includes in it resolve as they do from file. remove deletes it.
+func writeCandidate(ctx context.Context, env []string, p Project, file string, data []byte) (string, func(), error) {
+	if !p.Remote {
+		name, err := writeTemp(file, data, 0o600)
+		return name, func() { _ = os.Remove(name) }, err
+	}
+	template := path.Dir(file) + "/." + path.Base(file) + ".dpad-XXXXXX"
+	out, err := runScript(ctx, env, "umask 077 && t=$(mktemp "+quote(template)+") && cat > \"$t\" && printf %s \"$t\"", data)
+	if err != nil {
+		return "", nil, fmt.Errorf("write a copy beside %s on the SSH host: %w", file, err)
+	}
+	name := string(out)
+	return name, func() {
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+		defer cancel()
+		_, _ = runScript(ctx, env, "rm -f -- "+quote(name), nil)
+	}, nil
+}
+
+// runScript runs script on the SSH host with stdin as its input, returning
+// its output, or its error output as the error.
+func runScript(ctx context.Context, env []string, script string, stdin []byte) ([]byte, error) {
+	cmd, err := sshScript(ctx, env, script, stdin != nil)
+	if err != nil {
+		return nil, err
+	}
+	var stdout, stderr limitedOutput
+	stdout.limit, stderr.limit = maxSource, 8192
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	if stdin != nil {
+		cmd.Stdin = bytes.NewReader(stdin)
+	}
+	if err := cmd.Run(); err != nil {
+		if message := strings.TrimSpace(stderr.String()); message != "" {
+			return nil, fmt.Errorf("%s: %w", message, err)
+		}
+		return nil, err
+	}
+	if stdout.overflow {
+		return nil, errors.New("file is larger than 4 MiB")
+	}
+	return stdout.data, nil
+}
+
 // Editable reports why p's Compose files cannot be edited, if they cannot. A
 // project whose configuration is invalid can still be edited, to fix it.
 func Editable(p Project) error {
 	switch {
-	case p.Remote:
-		return errRemoteEdit
 	case len(p.CLI) == 0 || len(p.Files) == 0:
 		if p.Issue != "" {
 			return errors.New(p.Issue)
@@ -100,10 +197,9 @@ func editable(p Project, file string) error {
 	return nil
 }
 
-// writeTemp writes data to a hidden file beside path, so relative paths and
-// includes in it resolve as they do from path.
-func writeTemp(path string, data []byte, perm os.FileMode) (string, error) {
-	f, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".dpad-*")
+// writeTemp writes data to a hidden file beside another.
+func writeTemp(beside string, data []byte, perm os.FileMode) (string, error) {
+	f, err := os.CreateTemp(filepath.Dir(beside), "."+filepath.Base(beside)+".dpad-*")
 	if err != nil {
 		return "", err
 	}
