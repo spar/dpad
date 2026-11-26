@@ -32,6 +32,9 @@ func (a *App) screens() []screen {
 	if a.themePicker != nil {
 		open = append(open, a.themePicker)
 	}
+	if a.editorPicker != nil {
+		open = append(open, a.editorPicker)
+	}
 	if a.settings != nil {
 		open = append(open, a.settings)
 	}

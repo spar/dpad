@@ -178,14 +178,22 @@ func TestComposeEditOnContainerRowStillOpensShell(t *testing.T) {
 	}
 }
 
-func TestEditorCommandPrefersVisualAndKeepsFlags(t *testing.T) {
+func TestEditorCommandPrefersSettingThenVisualThenEditor(t *testing.T) {
 	t.Setenv("VISUAL", "")
 	t.Setenv("EDITOR", "code --wait")
-	if got := editorCommand("/x/compose.yaml").Args; strings.Join(got, " ") != "code --wait /x/compose.yaml" {
+	if got := editorCommand("", "/x/compose.yaml").Args; strings.Join(got, " ") != "code --wait /x/compose.yaml" {
 		t.Fatal(got)
 	}
 	t.Setenv("VISUAL", "hx")
-	if got := editorCommand("/x/compose.yaml").Args; strings.Join(got, " ") != "hx /x/compose.yaml" {
+	if got := editorCommand("", "/x/compose.yaml").Args; strings.Join(got, " ") != "hx /x/compose.yaml" {
+		t.Fatal(got)
+	}
+	if got := editorCommand("nano", "/x/compose.yaml").Args; strings.Join(got, " ") != "nano /x/compose.yaml" {
+		t.Fatal(got)
+	}
+	t.Setenv("VISUAL", "")
+	t.Setenv("EDITOR", "")
+	if got := editorCommand(" ", "/x/compose.yaml").Args; got[0] != fallbackEditor() {
 		t.Fatal(got)
 	}
 }

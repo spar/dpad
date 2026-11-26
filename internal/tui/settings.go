@@ -38,6 +38,7 @@ func (a *App) openSettings() {
 	m.setItems([]setting{
 		{name: "Theme", key: "C", value: func() string { return render.Theme().Name }, open: a.chooseTheme},
 		{name: "Docker context", key: "c", value: a.contextName, open: a.chooseContext},
+		{name: "Editor", value: a.editorName, open: a.openEditorPicker},
 		{name: "Mouse", value: func() string {
 			if a.mouse {
 				return "on " + render.Dim.Render("· set mouse: false in config.yaml")

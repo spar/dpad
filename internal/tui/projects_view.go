@@ -216,5 +216,5 @@ func (v *ProjectsView) Status() string {
 }
 
 func (v *ProjectsView) Help() [][2]string {
-	return append(v.list.Help(), [2]string{"space", "expand/collapse selected project"}, [2]string{"enter", "follow selected project's or container's logs"}, [2]string{"e on project", "edit a Compose file in $VISUAL/$EDITOR, check it, then save and update"}, [2]string{"S/x/R on project", "preview start/stop/restart of existing project containers"}, [2]string{"u / U", "update the selected / all projects: docker compose pull, then up -d"})
+	return append(v.list.Help(), [2]string{"space", "expand/collapse selected project"}, [2]string{"enter", "follow selected project's or container's logs"}, [2]string{"e on project", "edit a Compose file in your editor (set in o), check it, then save and update"}, [2]string{"S/x/R on project", "preview start/stop/restart of existing project containers"}, [2]string{"u / U", "update the selected / all projects: docker compose pull, then up -d"})
 }

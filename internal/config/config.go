@@ -26,6 +26,9 @@ type Config struct {
 	ComposeProjects map[string]ComposeProject `yaml:"composeProjects"`
 	// Theme names the color theme; see docs/themes.md.
 	Theme string `yaml:"theme"`
+	// Editor is the command that edits Compose files, such as "nano" or
+	// "code --wait". Empty means $VISUAL, then $EDITOR.
+	Editor string `yaml:"editor"`
 }
 
 // ComposeProject holds per-project settings for Compose updates, keyed by
@@ -200,12 +203,16 @@ func quote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
-var themeLine = regexp.MustCompile(`(?m)^theme:.*$`)
+// SaveTheme sets theme: in the config file, creating the file if needed.
+func SaveTheme(name string) error { return save("theme", name) }
 
-// SaveTheme sets theme: in the config file, creating the file if needed. It
-// edits only that line, so the rest of the file, comments included, stays
-// as the user wrote it.
-func SaveTheme(name string) error {
+// SaveEditor sets editor: in the config file; an empty command removes it.
+func SaveEditor(command string) error { return save("editor", command) }
+
+// save sets one top-level key in the config file, or removes it when value
+// is empty. It edits only that line, so the rest of the file, comments
+// included, stays as the user wrote it.
+func save(key, value string) error {
 	path, err := Path()
 	if err != nil {
 		return err
@@ -214,21 +221,29 @@ func SaveTheme(name string) error {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	line := "theme: " + name
+	encoded, err := yaml.Marshal(value)
+	if err != nil {
+		return err
+	}
+	line := key + ": " + strings.TrimSuffix(string(encoded), "\n")
+	existing := regexp.MustCompile(`(?m)^` + key + `:.*$`)
 	switch {
-	case themeLine.Match(data):
-		data = themeLine.ReplaceAll(data, []byte(line))
+	case value == "" && !existing.Match(data):
+		return nil
+	case value == "":
+		data = regexp.MustCompile(`(?m)^`+key+`:.*(\n|$)`).ReplaceAll(data, nil)
+	case existing.Match(data):
+		data = existing.ReplaceAllLiteral(data, []byte(line))
 	default:
 		if len(data) > 0 && data[len(data)-1] != '\n' {
 			data = append(data, '\n')
 		}
 		data = append(data, line+"\n"...)
 	}
-	var check struct {
-		Theme string `yaml:"theme"`
-	}
-	if err := yaml.Unmarshal(data, &check); err != nil || check.Theme != name {
-		return fmt.Errorf("%s: could not set theme: %s; set it by hand", path, name)
+	var check map[string]any
+	err = yaml.Unmarshal(data, &check)
+	if got, _ := check[key].(string); err != nil || got != value {
+		return fmt.Errorf("%s: could not set %s: %s; set it by hand", path, key, value)
 	}
 	mode := fs.FileMode(0o644)
 	if fi, err := os.Stat(path); err == nil {

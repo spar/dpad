@@ -46,13 +46,13 @@ overview, installation and screenshots, see the [README](../README.md).
 | `x` (Images or image details) | confirm removal of the selected tag or image |
 | `S` / `x` / `R` | start (or unpause) / stop / restart (asks y/N) |
 | `P` / `K` / `D` | pause / kill (SIGKILL) / remove, killing a running container first (asks y/N) |
-| `e` (Projects, on a project row) | edit one of the project's Compose files in `$VISUAL`/`$EDITOR`, then review, save and update |
+| `e` (Projects, on a project row) | edit one of the project's Compose files in your editor, then review, save and update |
 | `u` / `U` (Projects) | preview image updates for the selected project / all discovered projects |
 | `X` | preview a prune of stopped containers or unused images, volumes, networks or build cache (asks y) |
 | `ctrl+r` | refresh |
 | `c` (list tabs) | choose a Docker context for this session |
 | `C` | choose a color theme; the screen previews each one (`enter` keeps it and saves it to `config.yaml`, `esc` cancels) |
-| `o` | settings: shows the theme, Docker context, mouse setting and config file location; `enter` on a row opens its picker |
+| `o` | settings: shows the theme, Docker context, editor, mouse setting and config file location; `enter` on a row opens its picker |
 | `?` | help |
 | `q` | quit |
 
@@ -278,9 +278,21 @@ For a quick change, such as bumping an image tag, press `e` on a project row in
 Projects. (On a container row `e` still opens a shell.) dpad finds the file from
 the same `project.config_files` label the update uses; when the project has
 several files, it asks which one. It then suspends the TUI and opens a copy of
-the file in `$VISUAL`, else `$EDITOR`, else `vi` (`notepad` on Windows). Editors
-that return straight away need their wait flag, for example
-`EDITOR="code --wait"`.
+the file in your editor.
+
+To choose the editor, open settings with `o` and press `enter` on Editor. The
+picker lists the editors it finds on your `PATH` (nano, vim, Neovim, vi, Emacs,
+micro, Helix, VS Code, Cursor, Zed, Sublime Text and Notepad) and saves your
+choice as `editor:` in the [config file](#custom-commands). Any other command
+can be set there by hand, with flags, for example `editor: code --wait`. Editors
+that open a window need their wait flag, or dpad sees the edit end at once; the
+picker adds it for the editors it lists. VS Code only appears once its `code`
+command is on your `PATH` (in VS Code, run "Shell Command: Install 'code'
+command in PATH" on macOS).
+
+Without an `editor:` setting dpad uses `$VISUAL`, else `$EDITOR`, else `vi`
+(`notepad` on Windows). Choosing `$VISUAL / $EDITOR` in the picker removes the
+setting.
 
 When the editor closes, dpad checks the copy with `docker compose config`, with
 the copy standing in for the original and the project's other files and env
@@ -552,6 +564,7 @@ customCommands:
 
 # mouse: false   # leave the mouse to the terminal
 # theme: matrix   # see docs/themes.md
+# editor: nano    # for Compose edits; see "Edit a Compose file"
 ```
 
 | Field | Meaning |
