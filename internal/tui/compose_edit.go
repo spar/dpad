@@ -286,15 +286,20 @@ func (v *composeEditView) title() string {
 
 func (v *composeEditView) View() string {
 	lines := []string{v.title()}
-	path := v.file
-	switch v.stage {
-	case editReview:
-		path += "  " + render.Success.Render("valid ✓")
-	case editInvalid:
-		path += "  " + render.Error.Render("invalid ✗")
-	}
-	if path != "" {
-		lines = append(lines, ansi.Truncate(path, v.width, "…"))
+	if v.file != "" {
+		// The verdict stays visible however long the path is.
+		verdict := ""
+		switch v.stage {
+		case editReview:
+			verdict = "  " + render.Success.Render("valid ✓")
+		case editInvalid:
+			verdict = "  " + render.Error.Render("invalid ✗")
+		}
+		file := v.file
+		if over := ansi.StringWidth(file) + ansi.StringWidth(verdict) - v.width; over > 0 {
+			file = ansi.TruncateLeft(file, over+1, "…")
+		}
+		lines = append(lines, file+verdict)
 	}
 	switch v.stage {
 	case editReading:

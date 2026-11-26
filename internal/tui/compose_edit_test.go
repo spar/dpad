@@ -66,6 +66,11 @@ func TestComposeEditSavesAValidEditAndOpensTheUpdate(t *testing.T) {
 	if v.stage != editReview || !strings.Contains(plain, "web: web:latest → web:1.2") || !strings.Contains(plain, "+    image: web:1.2") || !strings.Contains(plain, "valid ✓") {
 		t.Fatal("review lacks the change summary or diff", v.stage, v.note, plain)
 	}
+	v.SetSize(30, 20)
+	if path := strings.Split(ansi.Strip(v.View()), "\n")[1]; !strings.HasPrefix(path, "…") || !strings.HasSuffix(path, "compose.yaml  valid ✓") || ansi.StringWidth(path) != 30 {
+		t.Fatalf("a long path hid the verdict: %q", path)
+	}
+	v.SetSize(120, 30)
 	if b, _ := os.ReadFile(file); !strings.Contains(string(b), "web:latest") {
 		t.Fatal("the original changed before saving")
 	}
