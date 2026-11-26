@@ -147,3 +147,32 @@ func TestSaveTheme(t *testing.T) {
 		t.Errorf("appended file = %q", got)
 	}
 }
+
+func TestSaveEditorQuotesWhenNeededAndRemoves(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("DPAD_CONFIG", path)
+	if err := SaveEditor(""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path); err == nil {
+		t.Error("clearing an unset editor created the file")
+	}
+	if err := os.WriteFile(path, []byte("theme: nord\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, command := range []string{"code --wait", "my-edit --title: dpad #1"} {
+		if err := SaveEditor(command); err != nil {
+			t.Fatal(err)
+		}
+		data, _ := os.ReadFile(path)
+		if cfg, err := Parse(data); err != nil || cfg.Editor != command || cfg.Theme != "nord" {
+			t.Fatalf("file %q parsed as %+v, %v", data, cfg, err)
+		}
+	}
+	if err := SaveEditor(""); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(path); string(got) != "theme: nord\n" {
+		t.Errorf("file = %q, want the editor line removed", got)
+	}
+}

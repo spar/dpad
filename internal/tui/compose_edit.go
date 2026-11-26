@@ -28,6 +28,7 @@ type composeEditView struct {
 	cancel   context.CancelFunc
 	client   dockerClient
 	env      []string
+	editor   string
 	name     string
 	stage    string
 	note     string
@@ -90,7 +91,7 @@ type composeEditSavedMsg struct {
 
 func (a *App) openComposeEdit(name string) tea.Cmd {
 	ctx, cancel := context.WithCancel(a.ctx)
-	v := &composeEditView{ctx: ctx, cancel: cancel, client: a.client, env: a.client.CLIEnvironment(), name: name, stage: editReading, vp: viewport.New()}
+	v := &composeEditView{ctx: ctx, cancel: cancel, client: a.client, env: a.client.CLIEnvironment(), editor: a.editor, name: name, stage: editReading, vp: viewport.New()}
 	v.vp.SoftWrap = true
 	v.SetSize(a.width, a.bodyHeight())
 	a.composeEdit = v
@@ -110,20 +111,27 @@ func (a *App) openComposeEdit(name string) tea.Cmd {
 	}
 }
 
-// editorCommand opens path in $VISUAL or $EDITOR, which may carry flags such
-// as "code --wait".
-func editorCommand(path string) *exec.Cmd {
-	editor := strings.Fields(os.Getenv("VISUAL"))
-	if len(editor) == 0 {
-		editor = strings.Fields(os.Getenv("EDITOR"))
-	}
-	if len(editor) == 0 {
-		editor = []string{"vi"}
-		if runtime.GOOS == "windows" {
-			editor = []string{"notepad"}
+// editorCommand opens path in the editor chosen in settings, else $VISUAL,
+// else $EDITOR. Each may carry flags, such as "code --wait".
+func editorCommand(configured, path string) *exec.Cmd {
+	editor := resolveEditor(configured)
+	return exec.Command(editor[0], append(editor[1:], path)...)
+}
+
+func resolveEditor(configured string) []string {
+	for _, e := range []string{configured, os.Getenv("VISUAL"), os.Getenv("EDITOR")} {
+		if fields := strings.Fields(e); len(fields) > 0 {
+			return fields
 		}
 	}
-	return exec.Command(editor[0], append(editor[1:], path)...)
+	return []string{fallbackEditor()}
+}
+
+func fallbackEditor() string {
+	if runtime.GOOS == "windows" {
+		return "notepad"
+	}
+	return "vi"
 }
 
 func (v *composeEditView) Update(msg tea.Msg) tea.Cmd {
@@ -222,7 +230,7 @@ func (v *composeEditView) choose(file string) tea.Cmd {
 
 func (v *composeEditView) edit() tea.Cmd {
 	v.stage, v.note, v.discard = editEditing, "", false
-	return tea.ExecProcess(editorCommand(v.copyPath), func(err error) tea.Msg {
+	return tea.ExecProcess(editorCommand(v.editor, v.copyPath), func(err error) tea.Msg {
 		return composeEditedMsg{view: v, err: err}
 	})
 }

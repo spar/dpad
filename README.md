@@ -274,7 +274,7 @@ would type `docker`:
 | `u` / `U` | update the selected / all Compose projects: `pull`, then `up -d`, with live progress (Projects tab) |
 | `c` | choose a Docker context |
 | `C` | choose a color theme, previewed live |
-| `o` | settings: theme, Docker context, config file location |
+| `o` | settings: theme, Docker context, editor, config file location |
 | `?` | help for the current view |
 
 The full key list and the behavior of each tab are in [docs/usage.md](docs/usage.md).

@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -62,11 +64,69 @@ func TestSettingsShowsValuesAndOpensPickers(t *testing.T) {
 	press(a, "esc")
 
 	press(a, "j", "enter")
+	if a.screen() != a.editorPicker || a.editorPicker == nil {
+		t.Fatal("enter on Editor did not open the editor picker")
+	}
+	press(a, "esc")
+
+	press(a, "j", "enter")
 	if a.screen() != a.settings {
 		t.Fatal("enter on Mouse should leave settings open")
 	}
 	press(a, "esc")
 	if a.settings != nil || a.screen() != nil {
 		t.Fatal("esc did not close settings")
+	}
+}
+
+func TestEditorPickerOffersInstalledEditorsAndSaves(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("DPAD_CONFIG", path)
+	t.Setenv("VISUAL", "")
+	t.Setenv("EDITOR", "vim")
+	installed := map[string]bool{"nano": true, "vim": true, "code": true}
+	defer func(orig func(string) (string, error)) { lookPath = orig }(lookPath)
+	lookPath = func(name string) (string, error) {
+		if installed[name] {
+			return "/usr/bin/" + name, nil
+		}
+		return "", errors.New("not found")
+	}
+
+	a := newTestApp()
+	a.resize(200, 30)
+	press(a, "o", "j", "j", "enter")
+	view := ansi.Strip(a.render())
+	for _, want := range []string{"$VISUAL / $EDITOR (current)", "now vim · from $EDITOR", "nano", "code --wait"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("editor picker lacks %q:\n%s", want, view)
+		}
+	}
+	if strings.Contains(view, "emacs") {
+		t.Error("offered an editor that is not installed")
+	}
+
+	press(a, "j", "enter")
+	if a.editor != "nano" || a.screen() != a.settings {
+		t.Fatal("choosing nano did not apply it and return to settings", a.editor)
+	}
+	if got, _ := os.ReadFile(path); string(got) != "editor: nano\n" {
+		t.Fatalf("config = %q", got)
+	}
+	if !strings.Contains(ansi.Strip(a.render()), "nano") {
+		t.Error("settings does not show the chosen editor")
+	}
+
+	a.editor = "my-editor --flag"
+	press(a, "enter")
+	if !strings.Contains(ansi.Strip(a.render()), "my-editor --flag (current)") {
+		t.Errorf("an editor set by hand is not listed:\n%s", a.render())
+	}
+	press(a, "home", "enter")
+	if a.editor != "" {
+		t.Fatal("choosing $VISUAL / $EDITOR did not clear the setting")
+	}
+	if got, _ := os.ReadFile(path); string(got) != "" {
+		t.Fatalf("config = %q, want the editor line removed", got)
 	}
 }

@@ -70,6 +70,7 @@ type App struct {
 	shell           *shellPrompt
 	contextPicker   *contextPicker
 	themePicker     *themePicker
+	editorPicker    *editorPicker
 	settings        *settingsMenu
 	nextContext     string
 	actionsInFlight int
@@ -83,6 +84,7 @@ type App struct {
 	click           lastClick
 	commands        []config.CustomCommand
 	composeProjects map[string]config.ComposeProject
+	editor          string // the editor: setting; empty uses $VISUAL/$EDITOR
 }
 
 // Run starts the TUI and blocks until the user quits. cfgErr and themeErr,
@@ -747,7 +749,7 @@ func (a *App) helpRows() (string, [][2]string) {
 		{"P / K / D", "pause / kill / remove selected container (remove kills it first if running)"},
 		{"X", "prune: preview, then remove stopped containers or unused images, volumes, networks, build cache"},
 		{"C", "choose a color theme, previewed as you move"},
-		{"o", "settings: theme, Docker context, mouse, config file location"},
+		{"o", "settings: theme, Docker context, editor, mouse, config file location"},
 		{"ctrl+r", "refresh now"},
 		{"q, ctrl+c", "quit"},
 	}
