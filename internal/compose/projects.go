@@ -34,11 +34,13 @@ type Project struct {
 	Files, EnvFiles   []string
 	Members, Services []string
 	Images            []string
-	Remote            bool
-	Location          string // empty detects available files; "local" and "ssh" are explicit choices
-	CLI               []string
-	ConfigHash        [32]byte
-	Issue             string
+	// ServiceImages maps each of Services to its image, when it has one.
+	ServiceImages map[string]string
+	Remote        bool
+	Location      string // empty detects available files; "local" and "ssh" are explicit choices
+	CLI           []string
+	ConfigHash    [32]byte
+	Issue         string
 	// Env holds KEY=VALUE pairs Compose needs for interpolation that a wrapper
 	// script would normally export, from config.yaml or a Lookup.
 	Env []string
@@ -190,6 +192,7 @@ func prepare(ctx context.Context, env []string, p *Project, lookup Lookup) error
 			return resolveWithLookup(probeCtx, env, p, lookup)
 		}
 	}
+	p.CLI = nil
 	return errors.New("docker compose v2 or later is required on the execution host; SSH also requires noninteractive authentication")
 }
 
@@ -343,7 +346,7 @@ func resolve(ctx context.Context, env []string, p *Project) error {
 		return fmt.Errorf("parse active Compose configuration: %w", err)
 	}
 	p.ConfigHash = sha256.Sum256(append(append(full, '\n'), active...))
-	p.Services, p.Images = nil, nil
+	p.Services, p.Images, p.ServiceImages = nil, nil, nil
 	for name := range model.Services {
 		if _, ok := enabled.Services[name]; ok || slices.Contains(p.Members, name) {
 			p.Services = append(p.Services, name)
@@ -364,9 +367,11 @@ func resolve(ctx context.Context, env []string, p *Project) error {
 			}
 		}
 	}
+	p.ServiceImages = map[string]string{}
 	for _, name := range p.Services {
 		if image := model.Services[name].Image; image != "" {
 			p.Images = append(p.Images, image)
+			p.ServiceImages[name] = image
 		}
 	}
 	slices.Sort(p.Services)

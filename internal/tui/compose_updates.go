@@ -121,17 +121,24 @@ func (v *composeUpdateView) prepare(projects []compose.Project, containers []con
 	gen := v.gen
 	return func() tea.Msg {
 		for i := range projects {
-			p := &projects[i]
-			p.Location = locations[p.Name]
-			env := v.projectConfig[p.Name].Env
-			for _, name := range slices.Sorted(maps.Keys(env)) {
-				p.Env = append(p.Env, name+"="+env[name])
-				p.EnvSources = append(p.EnvSources, name+"="+env[name]+" from config.yaml")
-			}
+			projects[i].Location = locations[projects[i].Name]
 		}
-		lookup := containerEnvLookup(v.ctx, v.client, containers)
-		return composePlanMsg{view: v, gen: gen, projects: compose.Prepare(v.ctx, v.env, projects, lookup)}
+		return composePlanMsg{view: v, gen: gen, projects: prepareComposeProjects(v.ctx, v.client, v.env, projects, containers, v.projectConfig)}
 	}
+}
+
+// prepareComposeProjects reads the projects' Compose files, with the
+// variables config.yaml sets for them or their containers were started with.
+func prepareComposeProjects(ctx context.Context, c dockerClient, env []string, projects []compose.Project, containers []container.Summary, projectConfig map[string]config.ComposeProject) []compose.Project {
+	for i := range projects {
+		p := &projects[i]
+		values := projectConfig[p.Name].Env
+		for _, name := range slices.Sorted(maps.Keys(values)) {
+			p.Env = append(p.Env, name+"="+values[name])
+			p.EnvSources = append(p.EnvSources, name+"="+values[name]+" from config.yaml")
+		}
+	}
+	return compose.Prepare(ctx, env, projects, containerEnvLookup(ctx, c, containers))
 }
 
 // containerEnvLookup recovers a variable a wrapper script set when the project
@@ -891,6 +898,10 @@ func (a *App) openComposeUpdate(all bool) tea.Cmd {
 			return nil
 		}
 	}
+	return a.startComposeUpdate(selected)
+}
+
+func (a *App) startComposeUpdate(selected string) tea.Cmd {
 	var cmd tea.Cmd
 	a.composeUpdate, cmd = newComposeUpdate(a.ctx, a.client, selected, a.width, a.bodyHeight())
 	a.composeUpdate.projectConfig = a.composeProjects

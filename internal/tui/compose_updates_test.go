@@ -62,6 +62,12 @@ func TestTUIComposeHelper(t *testing.T) {
 		os.Exit(0)
 	}
 	if slices.Contains(args, "config") {
+		for i, arg := range args[:len(args)-1] {
+			if b, _ := os.ReadFile(args[i+1]); arg == "--file" && strings.Contains(string(b), "INVALID") {
+				fmt.Fprintln(os.Stderr, "yaml: line 2: mapping values are not allowed in this context")
+				os.Exit(1)
+			}
+		}
 		b, _ := os.ReadFile(os.Getenv("DP_TUI_COMPOSE_MODEL"))
 		os.Stdout.Write(b)
 		os.Exit(0)
