@@ -109,8 +109,10 @@ func newApp(ctx context.Context, c dockerClient) *App {
 	fi.Prompt = "/"
 	stats := NewStatsView(ctx, c, sortx.CPU, false)
 	stats.SetGrouped(true)
+	containers := NewContainersView(ctx, c)
+	containers.usage = stats
 	tabs := []tab{
-		NewContainersView(ctx, c),
+		containers,
 		NewImagesView(ctx, c),
 		stats,
 		NewProjectsView(),

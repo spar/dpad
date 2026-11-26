@@ -147,3 +147,25 @@ func (v *StatsView) historyPanel(id, name string, now time.Time) string {
 	*c = statsHistoryCache{history: h, version: h.version, end: end, width: v.width, theme: render.ThemeGeneration(), name: name, text: text}
 	return text
 }
+
+// recent returns the average CPU of each of the n seconds ending at end,
+// oldest first, and whether that second had a sample. Samples arrive about a
+// second apart, each at its own moment, so a lone second without one takes
+// its predecessor's value rather than drawing as a gap.
+func (h *statsHistory) recent(end int64, n int) ([]float64, []bool) {
+	cpu, present := make([]float64, n), make([]bool, n)
+	start := end - int64(n) + 1
+	for _, b := range h.buckets {
+		if b.count == 0 || b.second < start || b.second > end {
+			continue
+		}
+		cpu[b.second-start] = b.cpuSum / float64(b.count)
+		present[b.second-start] = true
+	}
+	for i := 1; i < n; i++ {
+		if !present[i] && present[i-1] && (i == n-1 || present[i+1]) {
+			cpu[i], present[i] = cpu[i-1], true
+		}
+	}
+	return cpu, present
+}

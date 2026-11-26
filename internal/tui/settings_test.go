@@ -70,6 +70,11 @@ func TestSettingsShowsValuesAndOpensPickers(t *testing.T) {
 	press(a, "esc")
 
 	press(a, "j", "enter")
+	if a.screen() != a.settings || a.containers().graph != render.GraphBraille {
+		t.Fatal("enter on CPU graph should cycle it in place")
+	}
+
+	press(a, "j", "enter")
 	if a.screen() != a.settings {
 		t.Fatal("enter on Mouse should leave settings open")
 	}

@@ -16,6 +16,13 @@ var (
 		{Header: "CONTAINER ID", Drop: 1}, {Header: "NAME", Max: 30, Min: 16}, {Header: "IMAGE", Max: 40, Min: 12, Drop: 2},
 		{Header: "STATE"}, {Header: "STATUS", Min: 12}, {Header: "HEALTH"}, {Header: "PORTS", Max: 60, Min: 11},
 	}
+	// With CPU and memory added, state and health go before them: the
+	// status text repeats both.
+	ContainerUsageColumns = []Column{
+		{Header: "CONTAINER ID", Drop: 1}, {Header: "NAME", Max: 30, Min: 16}, {Header: "IMAGE", Max: 40, Min: 12, Drop: 2},
+		{Header: "STATE", Drop: 3}, {Header: "STATUS", Min: 12}, {Header: "HEALTH", Drop: 4},
+		{Header: "CPU", Drop: 6}, {Header: "MEM", Align: Right, Drop: 5}, {Header: "PORTS", Max: 60, Min: 11},
+	}
 	ImageColumns = []Column{
 		{Header: "REPOSITORY", Max: 50, Min: 24}, {Header: "TAG", Max: 30, Min: 12}, {Header: "IMAGE ID", Drop: 1},
 		{Header: "CREATED", Drop: 2}, {Header: "SIZE", Align: Right},

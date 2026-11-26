@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -32,10 +33,14 @@ type ContainersView struct {
 	client          dockerClient
 	eventPending    bool
 	eventGeneration uint64
+	// usage supplies the CPU and memory columns from the Stats tab's stream;
+	// graph is the CPU graph style, or render.GraphOff to hide both.
+	usage *StatsView
+	graph string
 }
 
 func NewContainersView(ctx context.Context, c dockerClient) *ContainersView {
-	return &ContainersView{ctx: ctx, client: c, list: list[container.Summary]{
+	v := &ContainersView{ctx: ctx, client: c, graph: render.GraphOff, list: list[container.Summary]{
 		columns: render.ContainerColumns,
 		keys:    sortx.ContainerKeys,
 		sortCol: map[sortx.Key]int{sortx.Name: 1, sortx.Status: 3},
@@ -43,14 +48,50 @@ func NewContainersView(ctx context.Context, c dockerClient) *ContainersView {
 		match: func(c container.Summary, f string) bool {
 			return matches(f, docker.ContainerName(c.Names), c.Image, c.ID, string(c.State))
 		},
-		sort: sortx.Containers,
-		rows: func(c container.Summary) []row {
-			name := docker.ContainerName(c.Names)
-			return []row{{key: c.ID, cells: render.ContainerRow(c), id: c.ID, name: name}}
-		},
+		sort:    sortx.Containers,
 		loading: "loading…",
 		empty:   "no containers",
 	}}
+	v.rows = v.containerRows
+	return v
+}
+
+func (v *ContainersView) containerRows(c container.Summary) []row {
+	cells := render.ContainerRow(c)
+	if v.showUsage() {
+		cpu, mem := v.usageCells(c.ID, time.Now())
+		cells = slices.Insert(cells, len(cells)-1, cpu, mem)
+	}
+	return []row{{key: c.ID, cells: cells, id: c.ID, name: docker.ContainerName(c.Names)}}
+}
+
+func (v *ContainersView) showUsage() bool { return v.usage != nil && v.graph != render.GraphOff }
+
+func (v *ContainersView) usageCells(id string, now time.Time) (string, string) {
+	s, ok := v.usage.data[id]
+	h := v.usage.history[id]
+	if !ok || h == nil || v.usage.health[id].err != nil {
+		return "", ""
+	}
+	cpu, present := h.recent(h.endSecond(now), render.GraphSamples)
+	return render.CPUGraph(v.graph, cpu, present), render.CompactSize(s.MemUsage)
+}
+
+// setGraph switches the CPU graph style; watchUsage starts the stream it needs.
+func (v *ContainersView) setGraph(style string) {
+	v.graph = style
+	v.columns = render.ContainerColumns
+	if v.showUsage() {
+		v.columns = render.ContainerUsageColumns
+	}
+	v.rowCache = nil
+}
+
+func (v *ContainersView) watchUsage() tea.Cmd {
+	if !v.showUsage() {
+		return nil
+	}
+	return v.usage.Focus()
 }
 
 func (v *ContainersView) Title() string { return "Containers" }
@@ -73,7 +114,7 @@ func (v *ContainersView) load() tea.Cmd {
 // Event batches from EventsView also refresh this list, sharing its subscription.
 func (v *ContainersView) Init() tea.Cmd { return tea.Batch(v.load(), tick(containersTickMsg{})) }
 
-func (v *ContainersView) Focus() tea.Cmd { return nil }
+func (v *ContainersView) Focus() tea.Cmd { return v.watchUsage() }
 
 func (v *ContainersView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
@@ -107,6 +148,11 @@ func (v *ContainersView) Update(msg tea.Msg) tea.Cmd {
 		return tea.Batch(v.load(), tick(containersTickMsg{}))
 	case refreshMsg:
 		return v.load()
+	case statsSourceBatchMsg, statsTickMsg, statsStartedMsg, statsClosedMsg, statsErrMsg:
+		// Redraw with the samples StatsView takes from the same message.
+		if v.showUsage() {
+			v.rowCache = nil
+		}
 	}
 	return nil
 }
@@ -118,5 +164,17 @@ func (v *ContainersView) Status() string {
 			running++
 		}
 	}
-	return fmt.Sprintf("%d containers · %d running · %s", len(v.items), running, sortLabel(v.key, v.reverse))
+	status := fmt.Sprintf("%d containers · %d running", len(v.items), running)
+	if v.showUsage() && len(v.usage.data) > 0 {
+		var cpu float64
+		var mem uint64
+		for id, s := range v.usage.data {
+			if v.usage.health[id].err == nil {
+				cpu += s.CPUPercent
+				mem += s.MemUsage
+			}
+		}
+		status += fmt.Sprintf(" · CPU %.1f%% · MEM %s", cpu, render.BinSize(mem))
+	}
+	return status + " · " + sortLabel(v.key, v.reverse)
 }

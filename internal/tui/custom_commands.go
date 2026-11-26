@@ -2,8 +2,11 @@ package tui
 
 import (
 	"bytes"
+	"cmp"
+	"errors"
 	"fmt"
 	"os/exec"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -12,6 +15,7 @@ import (
 
 	"dpad/internal/config"
 	"dpad/internal/docker"
+	"dpad/internal/render"
 )
 
 type commandDoneMsg struct {
@@ -25,6 +29,12 @@ func (a *App) configure(cfg config.Config, err error) {
 	a.commands = cfg.CustomCommands
 	a.composeProjects = cfg.ComposeProjects
 	a.editor = cfg.Editor
+	graph := cmp.Or(cfg.CPUGraph, defaultCPUGraph)
+	if !slices.Contains(render.GraphStyles, graph) {
+		err = errors.Join(err, fmt.Errorf("cpuGraph: %q is not one of %s", graph, strings.Join(render.GraphStyles, ", ")))
+		graph = defaultCPUGraph
+	}
+	a.containers().setGraph(graph)
 	if err != nil && a.flash == "" {
 		a.flash, a.flashErr = "config: "+strings.Join(strings.Fields(err.Error()), " "), true
 	}
