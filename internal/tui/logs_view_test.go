@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"charm.land/bubbles/v2/textinput"
-	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
@@ -113,7 +112,7 @@ func TestProjectLogFailuresRemainVisibleWhileOtherSourcesFollow(t *testing.T) {
 func newTestLogsView(height int) *LogsView {
 	return &LogsView{
 		ch:     make(chan docker.LogLine),
-		vp:     viewport.New(viewport.WithWidth(80), viewport.WithHeight(height)),
+		vp:     logScroll{width: 80, height: height},
 		search: textinput.New(),
 	}
 }
@@ -130,7 +129,7 @@ func TestLogsFilterRetainsBufferAndAppliesToNewLines(t *testing.T) {
 	v := newTestLogsView(10)
 	addLogLines(v, "INFO ready", "ERROR timeout", "WARN retry")
 	v.setQuery("ERROR|WARN")
-	if !strings.Contains(v.lines[1].text, render.Match.Render("ERROR")) {
+	if !strings.Contains(v.View(), render.Match.Render("ERROR")) {
 		t.Fatal("matching text was not highlighted")
 	}
 	if v.visible != 2 || strings.Contains(ansi.Strip(v.View()), "INFO") {
@@ -267,7 +266,7 @@ func TestLogsWaitBatchesSteadyStream(t *testing.T) {
 }
 
 func TestLogsPageDownGlidesToTarget(t *testing.T) {
-	v := &LogsView{vp: viewport.New(viewport.WithWidth(40), viewport.WithHeight(10))}
+	v := &LogsView{vp: logScroll{width: 40, height: 10}}
 	lines := make([]string, 100)
 	for i := range lines {
 		lines[i] = fmt.Sprint(i)

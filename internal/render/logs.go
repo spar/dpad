@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"dpad/internal/docker"
 )
@@ -17,6 +18,8 @@ func StableNameStyle(name string) lipgloss.Style {
 	}
 	return paletteStyle(int(hash % uint32(len(active.Names))))
 }
+
+const logTimeLayout = "2006-01-02T15:04:05.000"
 
 type Level int
 
@@ -91,10 +94,25 @@ func LogLine(l docker.LogLine, nameStyle lipgloss.Style, prefixWidth int, timest
 		b.WriteString(fg(active.Logs.Error.C()).Render("┃ "))
 	}
 	if timestamps && !l.Time.IsZero() {
-		b.WriteString(Dim.Render(l.Time.Local().Format("2006-01-02T15:04:05.000")) + " ")
+		b.WriteString(Dim.Render(l.Time.Local().Format(logTimeLayout)) + " ")
 	}
 	b.WriteString(highlight(l.Text, grep))
 	return b.String()
+}
+
+// LogLineWidth is the display width LogLine gives l, where textWidth is the
+// width of l.Text. It lets callers lay lines out without styling them.
+func LogLineWidth(l docker.LogLine, prefixWidth int, timestamps bool, textWidth int) int {
+	w := textWidth
+	if prefixWidth > 0 {
+		w += max(prefixWidth, ansi.StringWidth(l.Container)) + 3
+	} else if l.Stderr {
+		w += 2
+	}
+	if timestamps && !l.Time.IsZero() {
+		w += len(logTimeLayout) + 1
+	}
+	return w
 }
 
 // highlight styles text by priority: grep match > level token > line tint.

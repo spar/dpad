@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -344,5 +345,24 @@ func TestThemeDrivesStyles(t *testing.T) {
 	}
 	if !strings.Contains(Swatch(matrix), "█") {
 		t.Error("swatch is empty")
+	}
+}
+
+func TestLogLineWidthMatchesRenderedLine(t *testing.T) {
+	at := time.Unix(1700000000, 0)
+	for _, c := range []struct {
+		line       docker.LogLine
+		prefix     int
+		timestamps bool
+	}{
+		{docker.LogLine{Text: "INFO ready"}, 0, false},
+		{docker.LogLine{Text: "ERROR failed", Stderr: true, Time: at}, 0, true},
+		{docker.LogLine{Container: "web", Text: "WARN retry", Time: at}, 8, true},
+		{docker.LogLine{Container: "a-long-name", Text: "plain", Stderr: true}, 4, true},
+	} {
+		got := LogLineWidth(c.line, c.prefix, c.timestamps, ansi.StringWidth(c.line.Text))
+		if want := ansi.StringWidth(LogLine(c.line, lipgloss.NewStyle(), c.prefix, c.timestamps, nil)); got != want {
+			t.Errorf("LogLineWidth(%+v) = %d, rendered width %d", c.line, got, want)
+		}
 	}
 }

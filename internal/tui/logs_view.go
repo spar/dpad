@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"charm.land/bubbles/v2/textinput"
-	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 
 	"dpad/internal/docker"
@@ -32,7 +32,7 @@ type (
 	}
 	bufferedLog struct {
 		line    docker.LogLine
-		text    string
+		width   int // display width of line.Text
 		matches bool
 	}
 	logBatchMsg struct {
@@ -56,7 +56,7 @@ type LogsView struct {
 	errc          chan error
 	cancel        context.CancelFunc
 	lines         []bufferedLog
-	vp            viewport.Model
+	vp            logScroll
 	ended         bool
 	err           error
 	search        textinput.Model
@@ -132,7 +132,7 @@ func newLogPane(ctx context.Context, name string, width, height int) (*LogsView,
 		ch:     make(chan docker.LogLine, 512),
 		errc:   make(chan error, 1),
 		cancel: cancel,
-		vp:     viewport.New(viewport.WithWidth(width), viewport.WithHeight(height)),
+		vp:     logScroll{width: width, height: height},
 		search: textinput.New(),
 		colors: render.NameColors{},
 		remote: remoteTerminal(),
@@ -213,40 +213,46 @@ func (v *LogsView) setQuery(query string) {
 	v.animating = false
 	v.gen++
 	for i := range v.lines {
-		v.lines[i] = v.renderLine(v.lines[i].line)
+		v.lines[i].matches = v.matches(v.lines[i].line)
 	}
 	v.rebuild()
 }
 
-func (v *LogsView) renderLine(line docker.LogLine) bufferedLog {
-	entry := bufferedLog{line: line, matches: v.pattern == nil || v.pattern.MatchString(line.Text)}
-	if entry.matches {
-		style := lipgloss.Style{}
-		if v.prefixWidth > 0 {
-			if v.project != nil {
-				style = render.StableNameStyle(line.Container)
-			} else {
-				style = v.colors.Style(line.Container)
-			}
+func (v *LogsView) matches(line docker.LogLine) bool {
+	return v.pattern == nil || v.pattern.MatchString(line.Text)
+}
+
+// text styles one line. It runs only for lines being drawn, since styling
+// every buffered line is what made busy logs and filter typing slow.
+func (v *LogsView) text(line docker.LogLine) string {
+	style := lipgloss.Style{}
+	if v.prefixWidth > 0 {
+		if v.project != nil {
+			style = render.StableNameStyle(line.Container)
+		} else {
+			style = v.colors.Style(line.Container)
 		}
-		entry.text = render.LogLine(line, style, v.prefixWidth, v.timestamps, v.pattern)
 	}
-	return entry
+	return render.LogLine(line, style, v.prefixWidth, v.timestamps, v.pattern)
 }
 
 func (v *LogsView) rebuild() {
 	atBottom := v.vp.AtBottom() && !v.animating
-	lines := make([]string, 0, len(v.lines))
-	for _, line := range v.lines {
-		if line.matches {
-			lines = append(lines, line.text)
+	shown := make([]int, 0, len(v.lines))
+	widths := make([]int, 0, len(v.lines))
+	for i, l := range v.lines {
+		if l.matches {
+			shown = append(shown, i)
+			widths = append(widths, render.LogLineWidth(l.line, v.prefixWidth, v.timestamps, l.width))
 		}
 	}
-	v.visible = len(lines)
-	if len(lines) == 0 && v.query != "" {
-		lines = append(lines, "no matching log lines")
+	v.visible = len(shown)
+	if len(shown) == 0 && v.query != "" {
+		v.vp.SetContentLines([]string{"no matching log lines"})
+	} else {
+		lines := v.lines
+		v.vp.SetLines(widths, func(i int) string { return v.text(lines[shown[i]].line) })
 	}
-	v.vp.SetContentLines(lines)
 	if atBottom {
 		v.vp.GotoBottom()
 	}
@@ -281,15 +287,10 @@ func (v *LogsView) Update(msg tea.Msg) tea.Cmd {
 			for _, line := range msg.lines {
 				width = max(width, len(line.Container))
 			}
-			if width != v.prefixWidth {
-				v.prefixWidth = width
-				for i := range v.lines {
-					v.lines[i] = v.renderLine(v.lines[i].line)
-				}
-			}
+			v.prefixWidth = width
 		}
 		for _, line := range msg.lines {
-			v.lines = append(v.lines, v.renderLine(line))
+			v.lines = append(v.lines, bufferedLog{line: line, width: ansi.StringWidth(line.Text), matches: v.matches(line)})
 		}
 		if over := len(v.lines) - maxLogLines; over > 0 {
 			if !following {
@@ -390,9 +391,8 @@ func (v *LogsView) Update(msg tea.Msg) tea.Cmd {
 		}
 		return cmd
 	}
-	var cmd tea.Cmd
-	v.vp, cmd = v.vp.Update(msg)
-	return cmd
+	v.vp.Update(msg)
+	return nil
 }
 
 // scrollFrame is one animation frame, matching Bubble Tea's 60fps renderer.
