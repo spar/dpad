@@ -25,7 +25,7 @@ brew install spar/tap/dpad
 
 **[Install](#install) · [Quick start](#quick-start) · [Features](#features) · [Commands](#commands) · [Compared with other tools](#compared-with-other-tools) · [Docs](#documentation)**
 
-<img src="docs/images/demo.svg" alt="dp terminal UI: moving between the Containers, Stats and Projects tabs, following a Compose project's logs and filtering them by regex" width="100%">
+<img src="docs/images/demo.svg" alt="dp terminal UI: live CPU graphs on the Containers tab, the Stats and Projects tabs, reviewing a Compose file edit, then following a Compose project's logs and filtering them by regex" width="100%">
 
 </div>
 
@@ -126,11 +126,13 @@ the commands you already know and fills those gaps:
 |---|:---:|:---:|
 | Colored container states and a health column | | ✓ |
 | Sort `ps`, `images` and `stats` by any column | | ✓ |
+| Live CPU graph and memory on every running container in the list | | ✓ |
 | CPU and memory bars, plus two-minute sparklines | | ✓ |
 | Network and disk throughput per second | totals only | ✓ |
 | Logs from several containers interleaved, with level highlighting | one container¹ | ✓ |
 | Regex filter over buffered logs, with match highlighting | | ✓ |
 | Compose projects: grouped stats, project logs, start/stop/restart, image updates | per project dir¹ | ✓ |
+| Edit a Compose file, check it and review the diff before saving, also over SSH | | ✓ |
 | Events timeline, volume and network usage, container shells | separate commands | ✓ in one UI |
 | Prune with a list of exactly what will be removed | | ✓ |
 | Your own commands on a key, mouse support | | ✓ |
@@ -172,9 +174,9 @@ saved current context.
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/containers.svg" alt="Containers tab with colored states, health and ports" width="100%"><br>
+      <img src="docs/images/containers.svg" alt="Containers tab with colored states, health, ports and a braille CPU graph and memory for each running container" width="100%"><br>
       <b>Containers</b><br>
-      <sub>States, health and ports in color. Start, stop, restart, pause, kill and remove with a confirmation; <code>e</code> opens a shell.</sub>
+      <sub>States, health and ports in color, with a live CPU graph and memory for each running container. Start, stop, restart, pause, kill and remove with a confirmation; <code>e</code> opens a shell.</sub>
     </td>
     <td width="50%" valign="top">
       <img src="docs/images/projects.svg" alt="Projects tab grouping containers by Compose project and service" width="100%"><br>
@@ -199,6 +201,18 @@ saved current context.
       <img src="docs/images/prune.svg" alt="Prune preview listing the stopped demo containers that would be removed" width="100%"><br>
       <b>Prune</b><br>
       <sub><code>X</code> lists the stopped containers, unused images, volumes, networks or build cache a prune would remove, then removes exactly those after <code>y</code>.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/compose-edit.svg" alt="Reviewing an edit to the demo Compose file: valid, the image change it makes, and a diff" width="100%"><br>
+      <b>Edit Compose files</b><br>
+      <sub><code>e</code> on a project opens its Compose file in your editor. dpad checks the result with <code>docker compose config</code>, shows what changes and a diff, then saves it and can go straight on to an update. Works for projects on an SSH host too.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/settings.svg" alt="Settings screen listing the theme, Docker context, editor, CPU graph style, mouse setting and config file" width="100%"><br>
+      <b>Settings</b><br>
+      <sub><code>o</code> lists the theme, Docker context, editor, CPU graph style (braille, bars, meter or off), mouse setting and config file. <code>enter</code> on a row opens its picker or cycles the graph style. Theme, editor and graph style are saved to <code>config.yaml</code>; a context choice lasts for the session.</sub>
     </td>
     <td width="50%" valign="top">
       <b>Custom commands and mouse</b><br>
@@ -227,7 +241,8 @@ DOCKER_HOST=ssh://me@server dp
 `dp` opens one SSH tunnel to the remote socket and draws the UI locally, so
 moving through lists doesn't wait on the network. Your `~/.ssh/config`, agent and
 known hosts apply, rootless sockets work (`ssh://me@server/run/user/1000/docker.sock`),
-and dropped connections reconnect in the background. Details are in
+dropped connections reconnect in the background, and `e` edits a project's
+Compose file on the server through the same connection. Details are in
 [Daemon connection](docs/usage.md#daemon-connection).
 
 ### Themes
@@ -281,7 +296,7 @@ would type `docker`:
 | `u` / `U` | update the selected / all Compose projects: `pull`, then `up -d`, with live progress (Projects tab) |
 | `c` | choose a Docker context |
 | `C` | choose a color theme, previewed live |
-| `o` | settings: theme, Docker context, editor, config file location |
+| `o` | settings: theme, Docker context, editor, CPU graph style, mouse, config file location |
 | `?` | help for the current view |
 
 The full key list and the behavior of each tab are in [docs/usage.md](docs/usage.md).
@@ -302,25 +317,25 @@ while it sits open in a terminal tab.
 
 | | Result |
 |---|---|
-| Binary | 10.5 MiB, static and stripped (`CGO_ENABLED=0`) |
-| Memory | about 22 MB resident with the TUI open and live stats streaming |
-| CPU | about 2.5% of one core in the same state (30-second average) |
-| `dp ps -a` | 111 to 122 ms, against 135 to 140 ms for `docker ps -a` (mean of 50 runs) |
-| `dp images` | 89 ms, against 108 ms for `docker images` (mean of 50 runs) |
+| Binary | 14.5 MiB, static and stripped (`CGO_ENABLED=0`) |
+| Memory | about 27 MB resident with the TUI open and live stats streaming |
+| CPU | about 2% of one core in the same state (30-second average) |
+| `dp ps -a` | 115 to 118 ms, against 141 to 147 ms for `docker ps -a` (mean of 50 runs) |
+| `dp images` | 100 to 102 ms, against 111 to 115 ms for `docker images` (mean of 50 runs) |
 
 **Microbenchmarks with 1,000 containers** (`go test -bench`)
 
 | Operation | Time per op |
 |---|---|
-| Move the selection and redraw the Containers tab (140×40 terminal) | 0.11 ms |
-| Move the selection and redraw the Projects tab (100 projects) | 0.11 ms |
-| Redraw the Stats tab | 0.035 ms |
-| Apply a stats batch for 1,000 containers, then redraw (100 collapsed projects) | 2.9 ms |
-| Apply a stats batch for 1,000 containers, then redraw (flat view) | 19 ms |
-| Record one sparkline sample | 17 ns, 0 allocations |
-| Compute network and disk rates for one sample | 51 ns, 0 allocations |
+| Move the selection and redraw the Containers tab (140×40 terminal) | 0.25 ms |
+| Move the selection and redraw the Projects tab (100 projects) | 0.24 ms |
+| Redraw the Stats tab | 0.07 ms |
+| Apply a stats batch for 1,000 containers, then redraw (100 collapsed projects) | 3.3 ms |
+| Apply a stats batch for 1,000 containers, then redraw (flat view) | 24 ms |
+| Record one sparkline sample | 22 ns, 0 allocations |
+| Compute network and disk rates for one sample | 53 ns, 0 allocations |
 
-<sub>Measured on a 4-vCPU Intel Xeon @ 2.10 GHz Linux VM with Docker Engine 29.9 and Go 1.26.7. Your numbers will differ; reproduce the benchmarks with
+<sub>Measured on a 4-vCPU Intel Xeon @ 2.10 GHz Linux VM with Docker Engine 29.9 and Go 1.26.11, on 26 November 2026. Your numbers will differ; reproduce the benchmarks with
 <code>go test -run '^$' -bench . -benchmem ./internal/...</code>.</sub>
 
 ## Compared with other tools

@@ -26,13 +26,16 @@ To write somewhere other than `docs/images`, run
 ## How it works
 
 1. `drive.py` runs `dp` in a pseudo-terminal at a fixed size, types the keys
-   listed in a scenario (`tui.json`, `themes.json`, `cli.json`) and saves everything `dp`
+   listed in a scenario (`tui.json`, `themes.json`, `settings.json`, `cli.json`) and saves everything `dp`
    writes at each `snap` step and, while recording, ten times a second.
    The TUI scenario restarts, pauses and stops a few demo containers so the
-   Events tab has something to show; they are running again afterwards.
+   Events tab has something to show; they are running again afterwards. It
+   also opens the demo Compose file with `editor.sh` as the editor, which
+   changes an image tag and a memory limit so the edit review has a diff,
+   and then discards the edit.
 2. `svg.js` replays each saved stream in a headless
    [xterm.js](https://xtermjs.org/) terminal and writes the screen as SVG in
-   a window frame. Text stays text and bars are drawn as shapes, so the
+   a window frame. Text stays text, and bars, box lines and braille graphs are drawn as shapes, so the
    images are sharp at any size or zoom. The recorded frames become
    `demo.svg`, a looping CSS animation that draws each distinct row once.
 3. `font.py` embeds the JetBrains Mono glyphs each image uses, so the images
