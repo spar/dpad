@@ -210,6 +210,13 @@ func (l *list[T]) sortedColumns() []render.Column {
 
 func (l *list[T]) SortKey() sortx.Key { return l.key }
 
+func (l *list[T]) sortKeys() string {
+	if len(l.keys) < 2 {
+		return "r"
+	}
+	return "s/r"
+}
+
 // Selected returns the container of the highlighted row, resolved the same
 // way View does so actions never target a row that isn't on screen.
 func (l *list[T]) Selected() (string, string, bool) {
@@ -222,8 +229,9 @@ func (l *list[T]) Selected() (string, string, bool) {
 }
 
 func (l *list[T]) Help() [][2]string {
-	return [][2]string{
-		{"s", "cycle sort: " + sortx.Join(l.keys, " / ")},
-		{"r", "reverse sort"},
+	help := [][2]string{{"r", "reverse sort"}}
+	if len(l.keys) > 1 {
+		help = slices.Insert(help, 0, [2]string{"s", "cycle sort: " + sortx.Join(l.keys, " / ")})
 	}
+	return help
 }

@@ -38,7 +38,7 @@ func (a *App) handleMouse(msg tea.MouseMsg) tea.Cmd {
 			return nil
 		}
 		if a.help {
-			a.help = false
+			a.help, a.helpTop = false, 0
 			return nil
 		}
 		if a.overlay() || a.typing() {

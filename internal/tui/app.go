@@ -6,10 +6,12 @@ import (
 	"image/color"
 	"slices"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"dpad/internal/config"
 	"dpad/internal/docker"
@@ -72,6 +74,8 @@ type App struct {
 	help            bool
 	flash           string
 	flashErr        bool
+	flashGen        int
+	helpTop         int // first help row shown when the help is taller than the body
 	daemon          daemonConnection
 	mouse           bool
 	click           lastClick
@@ -189,7 +193,31 @@ func (a *App) setFilter(f string) {
 	a.tabs[a.active].SetFilter(f)
 }
 
+// flashTTL is how long a result stays in the status line. Errors stay until
+// the next key so they aren't missed.
+const flashTTL = 8 * time.Second
+
+type flashExpiredMsg struct{ generation int }
+
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if msg, ok := msg.(flashExpiredMsg); ok {
+		if msg.generation == a.flashGen && !a.flashErr && a.actionsInFlight == 0 {
+			a.flash = ""
+		}
+		return a, nil
+	}
+	previous := a.flash
+	cmd := a.update(msg)
+	// A flash for work in flight is replaced by its result, which starts the timer.
+	if a.flash == "" || a.flash == previous || a.flashErr || a.actionsInFlight > 0 {
+		return a, cmd
+	}
+	a.flashGen++
+	gen := a.flashGen
+	return a, tea.Batch(cmd, tea.Tick(flashTTL, func(time.Time) tea.Msg { return flashExpiredMsg{gen} }))
+}
+
+func (a *App) update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case contextsMsg:
 		if a.contextPicker == msg.picker {
@@ -200,40 +228,40 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-		return a, nil
+		return nil
 	case daemonProbeMsg:
-		return a, a.applyDaemonProbe(msg)
+		return a.applyDaemonProbe(msg)
 	case daemonProbeTickMsg:
 		if msg.generation != a.daemon.generation {
-			return a, nil
+			return nil
 		}
-		return a, a.probeDaemon()
+		return a.probeDaemon()
 	case tea.WindowSizeMsg:
 		a.resize(msg.Width, msg.Height)
-		return a, nil
+		return nil
 	case tea.KeyPressMsg:
-		return a, a.handleKey(msg)
+		return a.handleKey(msg)
 	case tea.MouseClickMsg, tea.MouseWheelMsg:
-		return a, a.handleMouse(msg.(tea.MouseMsg))
+		return a.handleMouse(msg.(tea.MouseMsg))
 	case commandDoneMsg:
 		a.flash = fmt.Sprintf("%s on %s: exited", msg.name, msg.target)
 		a.flashErr = msg.err != nil
 		if msg.err != nil {
 			a.flash += ": " + msg.err.Error()
 		}
-		return a, func() tea.Msg { return refreshMsg{} }
+		return func() tea.Msg { return refreshMsg{} }
 	case shellReadyMsg:
 		if a.shell == nil || a.shell != msg.prompt {
-			return a, nil
+			return nil
 		}
 		if msg.err != nil {
 			a.shell.launching = false
 			a.flash, a.flashErr = msg.err.Error(), true
-			return a, nil
+			return nil
 		}
 		p := a.shell
 		a.shell = nil
-		return a, tea.Exec(msg.process, func(err error) tea.Msg {
+		return tea.Exec(msg.process, func(err error) tea.Msg {
 			return shellDoneMsg{name: p.name, executable: p.input.Value(), err: err}
 		})
 	case shellDoneMsg:
@@ -246,7 +274,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.details != nil {
 			cmds = append(cmds, a.details.load())
 		}
-		return a, tea.Batch(cmds...)
+		return tea.Batch(cmds...)
 	case actionDoneMsg:
 		a.actionsInFlight = max(a.actionsInFlight-1, 0)
 		a.flash, a.flashErr = msg.text, msg.err != nil
@@ -257,7 +285,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.imageDetails.Close()
 			a.imageDetails = nil
 		}
-		return a, func() tea.Msg { return refreshMsg{} }
+		return func() tea.Msg { return refreshMsg{} }
 	}
 
 	var cmds []tea.Cmd
@@ -289,7 +317,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if a.prune != nil {
 		cmds = append(cmds, a.prune.Update(msg))
 	}
-	return a, tea.Batch(cmds...)
+	return tea.Batch(cmds...)
 }
 
 func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
@@ -380,7 +408,23 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		}
 		return nil
 	case a.help:
-		a.help = false
+		if over := a.helpOverflow(); over > 0 {
+			switch key {
+			case "up", "k":
+				a.helpTop = max(a.helpTop-1, 0)
+				return nil
+			case "down", "j":
+				a.helpTop = min(a.helpTop+1, over)
+				return nil
+			case "pgup":
+				a.helpTop = max(a.helpTop-a.bodyHeight(), 0)
+				return nil
+			case "pgdown", "space":
+				a.helpTop = min(a.helpTop+a.bodyHeight(), over)
+				return nil
+			}
+		}
+		a.help, a.helpTop = false, 0
 		return nil
 	case a.logs != nil:
 		if a.logs.searching {
@@ -575,7 +619,7 @@ func (a *App) render() string {
 	if n := a.bodyHeight() - lipgloss.Height(body); n > 0 {
 		body += strings.Repeat("\n", n)
 	}
-	return strings.Join([]string{a.tabBar(), a.tabRule(), a.connectionBar(), body, render.Dim.Render(status), a.footer()}, "\n")
+	return strings.Join([]string{a.tabBar(), a.tabRule(), a.connectionBar(), body, render.DimLine(status), ansi.Truncate(a.footer(), a.width, "…")}, "\n")
 }
 
 func (a *App) tabBar() string {
@@ -660,7 +704,7 @@ func (a *App) footer() string {
 		if a.logs.searching {
 			return a.logs.search.View() + " " + render.Dim.Render(logSearchHints)
 		}
-		return hints("esc", "back", "/", "regex filter", "w", "wrap", "t", "timestamps", "←→", "pan", "g/G", "top/follow", "?", "help")
+		return fitHints(a.width, []string{"esc", "back", "/", "regex filter", "w", "wrap", "t", "timestamps", "←→", "pan", "g/G", "top/follow", "?", "help"}, nil, 1)
 	case a.details != nil:
 		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "enter", "logs", "e", "shell")
 	case a.networkDetails != nil:
@@ -676,14 +720,14 @@ func (a *App) footer() string {
 		return hints("esc", "back", "↑↓/pgup/pgdn", "scroll", "←→", "pan", "g/G", "top/bottom", "ctrl+r", "refresh", "x", "remove tag/image")
 	}
 	if _, ok := a.tabs[a.active].(*EventsView); ok {
-		return hints("tab", "switch", "c", "context", "/", "filter", "r", "reverse time", "g", "top/follow", "d/enter", "container details", "?", "help", "q", "quit")
+		return fitHints(a.width, []string{"tab", "switch", "c", "context", "/", "filter", "r", "reverse time", "g", "top/follow", "d/enter", "container details", "?", "help", "q", "quit"}, generalHints, 2)
 	}
 
 	keys := []string{"tab", "switch"}
 	if _, ok := a.tabs[a.active].(*ProjectsView); ok {
 		keys = append(keys, "u", "update project (pull + up)", "U", "update all")
 	}
-	keys = append(keys, "c", "context", "/", "filter", "s/r", "sort: "+string(a.tabs[a.active].SortKey()))
+	keys = append(keys, "c", "context", "/", "filter", a.tabs[a.active].sortKeys(), "sort: "+string(a.tabs[a.active].SortKey()))
 	if stats, ok := a.tabs[a.active].(*StatsView); ok {
 		view := "projects"
 		if stats.grouped {
@@ -718,7 +762,39 @@ func (a *App) footer() string {
 	} else if projects, ok := a.tabs[a.active].(*ProjectsView); ok && projects.selectedProject() != nil {
 		keys = append(keys, "space", "expand/collapse", "enter", "project logs", "S/x/R", "project start/stop/restart")
 	}
-	return hints(append(keys, "?", "help", "q", "quit")...)
+	return fitHints(a.width, append(keys, "?", "help", "q", "quit"), append(slices.Clone(generalHints), a.tabs[a.active].sortKeys()), 2)
+}
+
+// generalHints are dropped first when a footer is too wide: they work on
+// every tab and the help screen lists them.
+var generalHints = []string{"tab", "c", "/"}
+
+// fitHints renders key/label pairs like hints, leaving some out until the
+// line fits width. Keys named in lowFirst go first, in that order, then pairs
+// from the end, but never the last keepTail pairs.
+func fitHints(width int, pairs, lowFirst []string, keepTail int) string {
+	total := func() int {
+		w := max(len(pairs)/2-1, 0) * 3
+		for _, p := range pairs {
+			w += ansi.StringWidth(p)
+		}
+		return w + len(pairs)/2
+	}
+	for width > 0 && total() > width {
+		body := max(len(pairs)-2*keepTail, 0)
+		drop := body - 2
+		for _, k := range lowFirst {
+			if i := slices.Index(pairs[:body], k); i >= 0 && i%2 == 0 {
+				drop = i
+				break
+			}
+		}
+		if drop < 0 {
+			break
+		}
+		pairs = slices.Delete(slices.Clone(pairs), drop, drop+2)
+	}
+	return hints(pairs...)
 }
 
 func hints(pairs ...string) string {
@@ -729,9 +805,36 @@ func hints(pairs ...string) string {
 	return strings.Join(parts, render.Dim.Render(" · "))
 }
 
+// helpOverflow is how many help rows don't fit the body, 0 when all do.
+func (a *App) helpOverflow() int {
+	_, help := a.helpRows()
+	if len(help)+3 <= a.bodyHeight() {
+		return 0
+	}
+	return len(help) - max(a.bodyHeight()-2, 1)
+}
+
+// helpView shows the keys for the current screen. When they don't fit, the
+// rows scroll under the header.
 func (a *App) helpView() string {
+	title, help := a.helpRows()
+	lines := strings.Split(helpTable(title, help, a.width), "\n")
+	over := a.helpOverflow()
+	if over == 0 {
+		return strings.Join(lines, "\n") + "\n\n" + render.Dim.Render("press any key to close")
+	}
+	top := min(a.helpTop, over)
+	rows := lines[1+top : min(1+top+max(a.bodyHeight()-2, 1), len(lines))]
+	hint := fmt.Sprintf("↑↓ scroll · %d more below · any other key closes", over-top)
+	if top == over {
+		hint = "↑↓ scroll · any other key closes"
+	}
+	return lines[0] + "\n" + strings.Join(rows, "\n") + "\n" + render.Dim.Render(hint)
+}
+
+func (a *App) helpRows() (string, [][2]string) {
 	if a.logs != nil {
-		return helpTable("Logs", logsHelp)
+		return "Logs", logsHelp
 	}
 	global := [][2]string{
 		{"c", "choose Docker context for this session (from a list tab)"},
@@ -760,7 +863,7 @@ func (a *App) helpView() string {
 	if eventsTab {
 		global = slices.DeleteFunc(global, func(h [2]string) bool { return h[0] == "X" })
 	}
-	return helpTable(a.tabs[a.active].Title(), append(append(global, a.tabs[a.active].Help()...), a.customCommandHelp()...))
+	return a.tabs[a.active].Title(), append(append(global, a.tabs[a.active].Help()...), a.customCommandHelp()...)
 }
 
 var logsHelp = [][2]string{
@@ -774,11 +877,11 @@ var logsHelp = [][2]string{
 	{"esc, q", "back"},
 }
 
-func helpTable(title string, help [][2]string) string {
+func helpTable(title string, help [][2]string, width int) string {
 	rows := make([][]string, len(help))
 	for i, h := range help {
 		rows[i] = []string{keyStyle.Render(h[0]), h[1]}
 	}
-	t := render.Table{Columns: []render.Column{{Header: "KEY"}, {Header: title + " — ACTION"}}, Rows: rows}
-	return t.String() + "\n\n" + render.Dim.Render("press any key to close")
+	t := render.Table{Columns: []render.Column{{Header: "KEY"}, {Header: title + " — ACTION"}}, Rows: rows, Width: width}
+	return t.String()
 }
