@@ -52,7 +52,7 @@ overview, installation and screenshots, see the [README](../README.md).
 | `ctrl+r` | refresh |
 | `c` (list tabs) | choose a Docker context for this session |
 | `C` | choose a color theme; the screen previews each one (`enter` keeps it and saves it to `config.yaml`, `esc` cancels) |
-| `o` | settings: shows the theme, Docker context, editor, mouse setting and config file location; `enter` on a row opens its picker |
+| `o` | settings: shows the theme, Docker context, editor, CPU graph, mouse setting and config file location; `enter` on a row opens its picker, or cycles the CPU graph style |
 | `?` | help |
 | `q` | quit |
 
@@ -79,6 +79,29 @@ the mouse to the terminal entirely, set `mouse: false` in the
 [config file](#custom-commands).
 
 ## Containers
+
+### Live CPU and memory
+
+Running containers show a CPU graph with the latest percentage and their memory
+use, updated every second, and the status line adds the totals. The values come
+from the same stats stream as the Stats tab, which starts the first time either
+tab is shown, so opening Containers adds no requests beyond what Stats makes.
+On a remote daemon that is one stream per running container.
+
+`o` → CPU graph cycles the style, and the choice is saved as `cpuGraph:` in the
+[config file](#custom-commands):
+
+| Style | Draws |
+|---|---|
+| `braille` (default) | the last 24 seconds, two per cell |
+| `bars` | the last 12 seconds; older bars dimmed, the last three in usage colors |
+| `meter` | the latest value as a bar, with an arrow for its direction |
+| `off` | nothing: the CPU and MEM columns are hidden and no stream is opened for this tab |
+
+The graph uses a square-root scale, so 2% is visible next to 40%. Under 0.5% a
+second draws as idle (a dim baseline or dot), and anything above 100% (more
+than one core) fills the cell. Colors follow the theme's usage roles, like the
+Stats bars.
 
 ### Details
 
@@ -565,6 +588,7 @@ customCommands:
 # mouse: false   # leave the mouse to the terminal
 # theme: matrix   # see docs/themes.md
 # editor: nano    # for Compose edits; see "Edit a Compose file"
+# cpuGraph: bars  # braille, bars, meter or off; see "Live CPU and memory"
 ```
 
 | Field | Meaning |
@@ -601,7 +625,7 @@ least useful columns are hidden:
 
 | Tab | Hidden first |
 |---|---|
-| Containers | container ID, then image |
+| Containers | container ID, then image; with a CPU graph on, then state, health, memory and CPU |
 | Images | image ID, then created |
 | Stats | disk I/O, memory bar, PIDS, CPU bar, network, memory usage |
 

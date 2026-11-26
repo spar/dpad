@@ -2,6 +2,7 @@ package tui
 
 import (
 	"os"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -39,6 +40,9 @@ func (a *App) openSettings() {
 		{name: "Theme", key: "C", value: func() string { return render.Theme().Name }, open: a.chooseTheme},
 		{name: "Docker context", key: "c", value: a.contextName, open: a.chooseContext},
 		{name: "Editor", value: a.editorName, open: a.openEditorPicker},
+		{name: "CPU graph", value: func() string {
+			return a.containers().graph + " " + render.Dim.Render("· Containers tab; enter cycles "+strings.Join(render.GraphStyles, "/"))
+		}, open: a.cycleCPUGraph},
 		{name: "Mouse", value: func() string {
 			if a.mouse {
 				return "on " + render.Dim.Render("· set mouse: false in config.yaml")
@@ -49,6 +53,30 @@ func (a *App) openSettings() {
 	}, nil)
 	m.SetSize(a.width, a.bodyHeight())
 	a.settings = m
+}
+
+// defaultCPUGraph is the Containers CPU graph when config.yaml names none.
+const defaultCPUGraph = render.GraphBraille
+
+func (a *App) containers() *ContainersView {
+	for _, t := range a.tabs {
+		if v, ok := t.(*ContainersView); ok {
+			return v
+		}
+	}
+	return nil
+}
+
+func (a *App) cycleCPUGraph() tea.Cmd {
+	v := a.containers()
+	i := slices.Index(render.GraphStyles, v.graph)
+	style := render.GraphStyles[(i+1)%len(render.GraphStyles)]
+	v.setGraph(style)
+	if err := config.SaveCPUGraph(style); err != nil {
+		a.flash, a.flashErr = "CPU graph: "+style+" for now; could not save: "+oneLine(err.Error()), true
+	}
+	a.settings.rowCache = nil
+	return v.watchUsage()
 }
 
 func (a *App) contextName() string {

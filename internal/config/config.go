@@ -29,6 +29,9 @@ type Config struct {
 	// Editor is the command that edits Compose files, such as "nano" or
 	// "code --wait". Empty means $VISUAL, then $EDITOR.
 	Editor string `yaml:"editor"`
+	// CPUGraph is how the Containers tab draws CPU: braille, bars, meter, or
+	// off to hide the CPU and memory columns. Empty means braille.
+	CPUGraph string `yaml:"cpuGraph"`
 }
 
 // ComposeProject holds per-project settings for Compose updates, keyed by
@@ -208,6 +211,9 @@ func SaveTheme(name string) error { return save("theme", name) }
 
 // SaveEditor sets editor: in the config file; an empty command removes it.
 func SaveEditor(command string) error { return save("editor", command) }
+
+// SaveCPUGraph sets cpuGraph: in the config file.
+func SaveCPUGraph(style string) error { return save("cpuGraph", style) }
 
 // save sets one top-level key in the config file, or removes it when value
 // is empty. It edits only that line, so the rest of the file, comments
