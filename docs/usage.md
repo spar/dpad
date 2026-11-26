@@ -46,6 +46,7 @@ overview, installation and screenshots, see the [README](../README.md).
 | `x` (Images or image details) | confirm removal of the selected tag or image |
 | `S` / `x` / `R` | start (or unpause) / stop / restart (asks y/N) |
 | `P` / `K` / `D` | pause / kill (SIGKILL) / remove, killing a running container first (asks y/N) |
+| `e` (Projects, on a project row) | edit one of the project's Compose files in `$VISUAL`/`$EDITOR`, then review, save and update |
 | `u` / `U` (Projects) | preview image updates for the selected project / all discovered projects |
 | `X` | preview a prune of stopped containers or unused images, volumes, networks or build cache (asks y) |
 | `ctrl+r` | refresh |
@@ -220,7 +221,7 @@ message. A bulk update ends on this summary table with the first failed project
 selected; `enter` opens its full output. Closing the view shows the totals in
 the Projects status bar. A failed
 project does not stop the remaining projects. The update uses the tags already
-in the Compose files; it does not upgrade pinned versions, edit files, build
+in the Compose files; it does not upgrade pinned versions (press `e` to edit them), edit files, build
 images, run `down`, prune images, or remove volumes. Services without profiles,
 services selected by `COMPOSE_PROFILES`, active non-one-off services, and their
 Compose dependencies are included. Existing profiled services can therefore be
@@ -270,6 +271,35 @@ Press `esc` from the live console or project list to cancel remaining work. In-f
 recreation may already have applied, and an SSH command may still be finishing;
 interrupted `up` is marked `unknown`. Each project has a 20-minute timeout.
 Return to the same filtered Projects view after completion to see refreshed state.
+
+### Edit a Compose file
+
+For a quick change, such as bumping an image tag, press `e` on a project row in
+Projects. (On a container row `e` still opens a shell.) dpad finds the file from
+the same `project.config_files` label the update uses; when the project has
+several files, it asks which one. It then suspends the TUI and opens a copy of
+the file in `$VISUAL`, else `$EDITOR`, else `vi` (`notepad` on Windows). Editors
+that return straight away need their wait flag, for example
+`EDITOR="code --wait"`.
+
+When the editor closes, dpad checks the copy with `docker compose config`, with
+the copy standing in for the original and the project's other files and env
+files as they are. The original is not touched until you save:
+
+- If Compose rejects the edit, its error is shown. `e` reopens the editor with
+  your changes kept; `esc` twice discards them.
+- If the edit is valid, dpad shows what it changes in the running project (for
+  example `web: nginx:1.27 → nginx:1.28`, or services added and removed) and a
+  diff of the file. `enter` saves and opens the update preview for the project,
+  `s` only saves, `e` edits again and `esc` twice discards.
+
+Saving writes a temporary file beside the original and renames it over it, with
+the original's permissions, so a failed write leaves the original as it was. No
+backup is kept; keep Compose files in version control. If the file changed on
+disk while you were editing, dpad refuses to overwrite it.
+
+Only files on this machine can be edited for now. For a project whose files are
+on an SSH host, `e` says so.
 
 ## Images
 

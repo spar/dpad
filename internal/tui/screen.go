@@ -23,6 +23,9 @@ func (a *App) screens() []screen {
 	if a.composeUpdate != nil {
 		open = append(open, a.composeUpdate)
 	}
+	if a.composeEdit != nil {
+		open = append(open, a.composeEdit)
+	}
 	if a.contextPicker != nil {
 		open = append(open, a.contextPicker)
 	}

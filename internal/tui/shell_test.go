@@ -237,9 +237,10 @@ func TestShellShortcutTargetsDetailsAndContainerRowsOnly(t *testing.T) {
 	}
 	a.Update(containersMsg{items: []container.Summary{composeContainer("web", "shop", "web", "running")}})
 	press(a, "4", "e")
-	if a.shell != nil {
-		t.Fatal("project header opened a shell")
+	if a.shell != nil || a.composeEdit == nil {
+		t.Fatal("project header opened a shell instead of editing the Compose file")
 	}
+	press(a, "esc")
 	press(a, "j", "e")
 	if a.shell == nil || a.shell.id != "web" {
 		t.Fatal("project container row did not open shell prompt")

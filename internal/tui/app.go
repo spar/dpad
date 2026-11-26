@@ -66,6 +66,7 @@ type App struct {
 	projectAction   *projectActionView
 	prune           *pruneView
 	composeUpdate   *composeUpdateView
+	composeEdit     *composeEditView
 	shell           *shellPrompt
 	contextPicker   *contextPicker
 	themePicker     *themePicker
@@ -260,6 +261,8 @@ func (a *App) update(msg tea.Msg) tea.Cmd {
 			cmds = append(cmds, a.details.load())
 		}
 		return tea.Batch(cmds...)
+	case composeEditSavedMsg:
+		return a.composeEditSaved(msg)
 	case actionDoneMsg:
 		a.actionsInFlight = max(a.actionsInFlight-1, 0)
 		a.flash, a.flashErr = msg.text, msg.err != nil
@@ -423,6 +426,11 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "e":
 		if id, name, ok := a.tabs[a.active].Selected(); ok {
 			return a.openShell(id, name)
+		}
+		if projects, ok := a.tabs[a.active].(*ProjectsView); ok {
+			if p := projects.selectedProject(); p != nil {
+				return a.openComposeEdit(p.name)
+			}
 		}
 	case "S":
 		if cmd, ok := a.openProjectAction("start"); ok {
@@ -603,8 +611,13 @@ func (a *App) footer() string {
 	}
 
 	keys := []string{"tab", "switch"}
-	if _, ok := a.tabs[a.active].(*ProjectsView); ok {
-		keys = append(keys, "u", "update project (pull + up)", "U", "update all")
+	if projects, ok := a.tabs[a.active].(*ProjectsView); ok {
+		if projects.selectedProject() != nil {
+			keys = append(keys, "e", "edit compose", "u", "update (pull + up)")
+		} else {
+			keys = append(keys, "u", "update project (pull + up)")
+		}
+		keys = append(keys, "U", "update all")
 	}
 	keys = append(keys, "o", "settings", "/", "filter", a.tabs[a.active].sortKeys(), "sort: "+string(a.tabs[a.active].SortKey()))
 	if stats, ok := a.tabs[a.active].(*StatsView); ok {
@@ -639,9 +652,16 @@ func (a *App) footer() string {
 		}
 		keys = append(keys, "X", "prune")
 	} else if projects, ok := a.tabs[a.active].(*ProjectsView); ok && projects.selectedProject() != nil {
-		keys = append(keys, "space", "expand/collapse", "enter", "project logs", "S/x/R", "project start/stop/restart")
+		keys = append(keys, "enter", "project logs", "space", "expand/collapse", "S/x/R", "project start/stop/restart")
 	}
-	return fitHints(a.width, append(keys, "?", "help", "q", "quit"), append(slices.Clone(generalHints), a.tabs[a.active].sortKeys()), 2)
+	keys = append(keys, "?", "help", "q", "quit")
+	lowFirst := append(slices.Clone(generalHints), a.tabs[a.active].sortKeys())
+	footer := fitHints(a.width, keys, lowFirst, 2)
+	if _, ok := a.tabs[a.active].(*ProjectsView); ok && !strings.Contains(ansi.Strip(footer), "o settings") {
+		// Narrow Projects footers give U's room to e and o; help lists U.
+		footer = fitHints(a.width, keys, append(lowFirst, "U"), 2)
+	}
+	return footer
 }
 
 // generalHints are dropped first when a footer is too wide: they work on
