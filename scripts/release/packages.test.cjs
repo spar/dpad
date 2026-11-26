@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { parseSums, formula, scoop, pkgbuild, srcinfo, wingetManifests } = require('./packages.cjs');
+const { parseSums, formula, scoop, pkgbuild, srcinfo, wingetManifests, publishWinget } = require('./packages.cjs');
 
 const names = ['darwin-amd64.tar.gz', 'darwin-arm64.tar.gz', 'linux-amd64.tar.gz',
   'linux-arm64.tar.gz', 'windows-amd64.zip', 'windows-arm64.zip'].map(n => 'dpad-' + n);
@@ -61,4 +61,30 @@ test('rejects missing assets and odd tags', () => {
   const { 'dpad-linux-arm64.tar.gz': _, ...partial } = sums;
   assert.throws(() => formula('v1.2.3', partial), /dpad-linux-arm64\.tar\.gz/);
   assert.throws(() => scoop('main', sums), /unexpected release tag/);
+});
+
+test('skips a winget release while an earlier submission is still open', async () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const sumsFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'dpad-')), 'SHA256SUMS');
+  fs.writeFileSync(sumsFile, names.map((n, i) => `${hash(i)}  ${n}`).join('\n') + '\n');
+  const queries = [];
+  const created = [];
+  const notFound = () => Promise.reject(Object.assign(new Error('Not Found'), { status: 404 }));
+  const github = {
+    rest: {
+      repos: { getContent: notFound },
+      search: { issuesAndPullRequests: async ({ q }) => {
+        queries.push(q);
+        return { data: { items: [{ html_url: 'https://github.com/microsoft/winget-pkgs/pull/1' }] } };
+      } },
+      pulls: { create: async (args) => { created.push(args); } },
+    },
+  };
+  const info = [];
+  await publishWinget({ github, core: { info: (m) => info.push(m) }, tag: 'v1.2.3', sumsFile, fork: 'spar' });
+  assert.deepEqual(queries, ['repo:microsoft/winget-pkgs is:pr is:open author:spar "spar.dpad" in:title']);
+  assert.equal(created.length, 0);
+  assert.match(info[0], /pull\/1$/);
 });

@@ -25,7 +25,9 @@ workflow downloads `SHA256SUMS` from the release and renders the manifests with
 - The winget manifests (schema 1.28.0) are committed to a new branch of the
   `spar/winget-pkgs` fork, cut from upstream `master`, and a pull request is
   opened against microsoft/winget-pkgs with the `WINGET_TOKEN` secret. The step
-  does nothing if that version is already upstream or its pull request is open.
+  does nothing if that version is already upstream or any dpad pull request is
+  still open there, so a release made while one is under review is not
+  submitted. Run the workflow by hand for the latest tag once it merges.
   winget's moderators review and merge it; that usually takes from a few hours
   to a few days.
 - `PKGBUILD` and `.SRCINFO` are pushed to `ssh://aur@aur.archlinux.org/dpad-bin.git`
@@ -74,8 +76,10 @@ gh workflow run packages.yml --repo spar/dpad -f tag=v0.4.0
    gh secret set WINGET_TOKEN --repo spar/dpad
    ```
 
-4. Sign the Microsoft Contributor License Agreement when the bot asks on the
-   first pull request. Later pull requests don't ask again.
+4. Sign the Microsoft Contributor License Agreement when the bot asks, by
+   commenting `@microsoft-github-policy-service agree` on the pull request.
+   The bot can label later pull requests `Needs-CLA` again; reply the same way
+   or wait for a moderator to clear the label.
 
 ### AUR
 

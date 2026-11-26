@@ -262,9 +262,12 @@ async function publishWinget({ github, core, tag, sumsFile, fork }) {
     return;
   }
   const branch = `${winget.id}-${version}`;
-  const open = await github.rest.pulls.list({ ...up, state: 'open', head: `${fork}:${branch}` });
-  if (open.data.length) {
-    core.info(`Pull request already open: ${open.data[0].html_url}`);
+  // winget moderators review one pending submission per package; a later
+  // release waits until the open one merges or is closed.
+  const q = `repo:${up.owner}/${up.repo} is:pr is:open author:${fork} "${winget.id}" in:title`;
+  const pending = (await github.rest.search.issuesAndPullRequests({ q })).data.items[0];
+  if (pending) {
+    core.info(`Pull request already open for ${winget.id}: ${pending.html_url}`);
     return;
   }
 
