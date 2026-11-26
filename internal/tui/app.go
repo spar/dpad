@@ -69,6 +69,7 @@ type App struct {
 	shell           *shellPrompt
 	contextPicker   *contextPicker
 	themePicker     *themePicker
+	settings        *settingsMenu
 	nextContext     string
 	actionsInFlight int
 	help            bool
@@ -372,17 +373,11 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "u", "U":
 		return a.openComposeUpdate(key == "U")
 	case "c":
-		if a.actionsInFlight > 0 {
-			a.flash, a.flashErr = "wait for the container action to finish before switching contexts", true
-			return nil
-		}
-		return a.openContextPicker()
+		return a.chooseContext()
 	case "C":
-		if render.ColorDisabled() {
-			a.flash, a.flashErr = "colors are off (NO_COLOR or --no-color), so themes don't apply", true
-			return nil
-		}
-		a.openThemePicker()
+		return a.chooseTheme()
+	case "o":
+		a.openSettings()
 	case "q":
 		return tea.Quit
 	case "tab", "right", "l":
@@ -568,6 +563,23 @@ func (a *App) tabRule() string {
 	return render.Dim.Render(strings.Repeat("─", a.width))
 }
 
+func (a *App) chooseContext() tea.Cmd {
+	if a.actionsInFlight > 0 {
+		a.flash, a.flashErr = "wait for the container action to finish before switching contexts", true
+		return nil
+	}
+	return a.openContextPicker()
+}
+
+func (a *App) chooseTheme() tea.Cmd {
+	if render.ColorDisabled() {
+		a.flash, a.flashErr = "colors are off (NO_COLOR or --no-color), so themes don't apply", true
+		return nil
+	}
+	a.openThemePicker()
+	return nil
+}
+
 func (a *App) footer() string {
 	switch {
 	case a.shell != nil:
@@ -587,14 +599,14 @@ func (a *App) footer() string {
 		return s.Footer()
 	}
 	if _, ok := a.tabs[a.active].(*EventsView); ok {
-		return fitHints(a.width, []string{"tab", "switch", "c", "context", "/", "filter", "r", "reverse time", "g", "top/follow", "d/enter", "container details", "?", "help", "q", "quit"}, generalHints, 2)
+		return fitHints(a.width, []string{"tab", "switch", "o", "settings", "/", "filter", "r", "reverse time", "g", "top/follow", "d/enter", "container details", "?", "help", "q", "quit"}, generalHints, 2)
 	}
 
 	keys := []string{"tab", "switch"}
 	if _, ok := a.tabs[a.active].(*ProjectsView); ok {
 		keys = append(keys, "u", "update project (pull + up)", "U", "update all")
 	}
-	keys = append(keys, "c", "context", "/", "filter", a.tabs[a.active].sortKeys(), "sort: "+string(a.tabs[a.active].SortKey()))
+	keys = append(keys, "o", "settings", "/", "filter", a.tabs[a.active].sortKeys(), "sort: "+string(a.tabs[a.active].SortKey()))
 	if stats, ok := a.tabs[a.active].(*StatsView); ok {
 		view := "projects"
 		if stats.grouped {
@@ -634,7 +646,7 @@ func (a *App) footer() string {
 
 // generalHints are dropped first when a footer is too wide: they work on
 // every tab and the help screen lists them.
-var generalHints = []string{"tab", "c", "/"}
+var generalHints = []string{"tab", "/"}
 
 // fitHints renders key/label pairs like hints, leaving some out until the
 // line fits width. Keys named in lowFirst go first, in that order, then pairs
@@ -715,6 +727,7 @@ func (a *App) helpRows() (string, [][2]string) {
 		{"P / K / D", "pause / kill / remove selected container (remove kills it first if running)"},
 		{"X", "prune: preview, then remove stopped containers or unused images, volumes, networks, build cache"},
 		{"C", "choose a color theme, previewed as you move"},
+		{"o", "settings: theme, Docker context, mouse, config file location"},
 		{"ctrl+r", "refresh now"},
 		{"q, ctrl+c", "quit"},
 	}

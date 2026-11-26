@@ -229,7 +229,7 @@ and dropped connections reconnect in the background. Details are in
 
 dpad ships ten color themes, from the default that follows your terminal's
 palette to matrix, amber CRT, black and white, high contrast and a light theme.
-Press `C` to preview them live and save your pick, or set `theme: matrix` in `config.yaml`. A
+Press `C` (or open settings with `o`) to preview them live and save your pick, or set `theme: matrix` in `config.yaml`. A
 theme is one YAML file, so you can write your own or contribute one. See the
 [gallery and theme guide](docs/themes.md).
 
@@ -273,6 +273,7 @@ would type `docker`:
 | `u` / `U` | update the selected / all Compose projects: `pull`, then `up -d`, with live progress (Projects tab) |
 | `c` | choose a Docker context |
 | `C` | choose a color theme, previewed live |
+| `o` | settings: theme, Docker context, config file location |
 | `?` | help for the current view |
 
 The full key list and the behavior of each tab are in [docs/usage.md](docs/usage.md).

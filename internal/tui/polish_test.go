@@ -27,15 +27,18 @@ func TestFooterKeepsHelpAndQuitAtAnyWidth(t *testing.T) {
 			if lipgloss.Width(footer) > width || !strings.HasSuffix(footer, "? help · q quit") {
 				t.Errorf("%s at %d columns: %q", a.tabs[i].Title(), width, footer)
 			}
+			if width >= 80 && !strings.Contains(footer, "o settings") {
+				t.Errorf("%s at %d columns hides the settings hint: %q", a.tabs[i].Title(), width, footer)
+			}
 		}
 	}
 	a.active = 0
 	a.resize(200, 30)
-	if !strings.Contains(ansi.Strip(a.footer()), "tab switch · c context · / filter · s/r sort: status · d details") {
+	if !strings.Contains(ansi.Strip(a.footer()), "tab switch · o settings · / filter · s/r sort: status · d details") {
 		t.Errorf("a wide footer lost hints: %q", ansi.Strip(a.footer()))
 	}
 	a.resize(110, 30)
-	if footer := ansi.Strip(a.footer()); strings.Contains(footer, "tab switch") || !strings.Contains(footer, "P/K/D pause/kill/remove") {
+	if footer := ansi.Strip(a.footer()); strings.Contains(footer, "tab switch") || !strings.Contains(footer, "S/x/R start/stop/restart") {
 		t.Errorf("general hints should go before row actions: %q", footer)
 	}
 }
