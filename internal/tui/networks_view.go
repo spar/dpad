@@ -1,14 +1,11 @@
 package tui
 
 import (
-	"cmp"
 	"context"
 	"fmt"
-	"slices"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/network"
 
 	"dpad/internal/docker"
@@ -25,13 +22,12 @@ type networksMsg struct {
 // NetworksView is read-only and shares the dashboard's container lookup.
 type NetworksView struct {
 	list[network.Summary]
-	ctx                         context.Context
-	client                      dockerClient
-	requested, loading, pending bool
-	containers                  []container.Summary
-	usage                       map[string][]docker.NetworkUse
-	usageLoaded                 bool
-	usageErr                    error
+	loader
+	containerUsage
+	ctx       context.Context
+	client    dockerClient
+	requested bool
+	usage     map[string][]docker.NetworkUse
 }
 
 func NewNetworksView(ctx context.Context, c dockerClient) *NetworksView {
@@ -49,14 +45,7 @@ func NewNetworksView(ctx context.Context, c dockerClient) *NetworksView {
 			}
 			return false
 		},
-		sort: func(items []network.Summary, _ sortx.Key, reverse bool) {
-			slices.SortFunc(items, func(a, b network.Summary) int {
-				if reverse {
-					return cmp.Compare(b.Name, a.Name)
-				}
-				return cmp.Compare(a.Name, b.Name)
-			})
-		},
+		sort: sortByName(func(n network.Summary) string { return n.Name }),
 		rows: func(n network.Summary) []row {
 			usage := render.NetworkUsage(v.usage[n.ID], v.usageKnown())
 			cells := []string{n.Name, n.Driver, n.Scope, n.Labels[composeProjectLabel], usage}
@@ -88,7 +77,6 @@ func (v *NetworksView) Focus() tea.Cmd {
 	}
 	return v.load()
 }
-func (v *NetworksView) usageKnown() bool { return v.usageLoaded && v.usageErr == nil }
 func (v *NetworksView) indexUsage() {
 	clear(v.usage)
 	if v.requested && v.usageKnown() {
@@ -100,11 +88,9 @@ func (v *NetworksView) load() tea.Cmd {
 	if !v.requested || v.ctx.Err() != nil {
 		return nil
 	}
-	if v.loading {
-		v.pending = true
+	if !v.begin() {
 		return nil
 	}
-	v.loading = true
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(v.ctx, 5*time.Second)
 		defer cancel()
@@ -118,7 +104,7 @@ func (v *NetworksView) Update(msg tea.Msg) tea.Cmd {
 		if msg.v != v || v.ctx.Err() != nil {
 			return nil
 		}
-		v.loading = false
+		again := v.end()
 		if msg.err != nil {
 			v.err = msg.err
 			v.loaded = true
@@ -128,14 +114,11 @@ func (v *NetworksView) Update(msg tea.Msg) tea.Cmd {
 				v.indexUsage()
 			})
 		}
-		if v.pending {
-			v.pending = false
+		if again {
 			return v.load()
 		}
 	case containersMsg:
-		v.containers = msg.items
-		v.usageLoaded = true
-		v.usageErr = msg.err
+		v.setContainers(msg)
 		v.indexUsage()
 	case refreshMsg:
 		return v.load()

@@ -7,20 +7,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"dpad/internal/config"
 	"dpad/internal/render"
 	"dpad/internal/theme"
 )
 
 // setupTheme applies the theme named by the --theme flag, else $DPAD_THEME,
-// else the config file. The default theme stays when none is named or the
-// named one can't be loaded.
-func setupTheme(flag string) error {
-	name := cmp.Or(flag, os.Getenv("DPAD_THEME"))
-	if name == "" {
-		cfg, _ := config.Load() // config errors are reported where the config is used
-		name = cfg.Theme
-	}
+// else configured, the config file's. The default theme stays when none is
+// named or the named one can't be loaded.
+func setupTheme(flag, configured string) error {
+	name := cmp.Or(flag, os.Getenv("DPAD_THEME"), configured)
 	if name == "" {
 		return nil
 	}
@@ -47,10 +42,10 @@ func newThemesCmd() *cobra.Command {
 				return err
 			}
 			var rows [][]string
-			for _, name := range theme.Names(dir) {
-				t, err := theme.Load(name, dir)
-				if err != nil {
-					rows = append(rows, []string{name, "", render.Error.Render(err.Error()), ""})
+			for _, entry := range theme.All(dir) {
+				name, t := entry.Name, entry.Theme
+				if entry.Err != nil {
+					rows = append(rows, []string{name, "", render.Error.Render(entry.Err.Error()), ""})
 					continue
 				}
 				if name == render.Theme().Name {

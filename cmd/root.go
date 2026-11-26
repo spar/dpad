@@ -13,6 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"dpad/internal/config"
 	"dpad/internal/docker"
 	"dpad/internal/passthrough"
 	"dpad/internal/render"
@@ -40,6 +41,9 @@ var (
 	themeName string
 	// themeErr is why the chosen theme could not be used; the TUI shows it.
 	themeErr error
+	// cfg is the config file, read once; the TUI reports cfgErr.
+	cfg    config.Config
+	cfgErr error
 )
 
 var (
@@ -86,14 +90,15 @@ so "dp network ls" or "dp ps --format ..." behave exactly like docker.`,
 		Args:          cobra.NoArgs,
 		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 			render.SetupColor(noColor)
-			themeErr = setupTheme(themeName)
+			cfg, cfgErr = config.Load()
+			themeErr = setupTheme(themeName, cfg.Theme)
 			if themeErr != nil && cmd != cmd.Root() {
 				fmt.Fprintf(os.Stderr, "dp: %v; using the default theme\n", themeErr)
 			}
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return withClient(cmd.Context(), func(ctx context.Context, c *docker.Client) error {
-				return tui.Run(ctx, c, themeErr)
+				return tui.Run(ctx, c, cfg, cfgErr, themeErr)
 			})
 		},
 	}

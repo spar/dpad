@@ -5,7 +5,6 @@ import (
 	"slices"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
 
 	"dpad/internal/docker"
@@ -21,12 +20,10 @@ type imagesMsg struct {
 // ImagesView lists local images; one row per tag.
 type ImagesView struct {
 	list[image.Summary]
-	ctx              context.Context
-	client           dockerClient
-	loading, pending bool
-	containers       []container.Summary
-	usageLoaded      bool
-	usageErr         error
+	loader
+	containerUsage
+	ctx    context.Context
+	client dockerClient
 }
 
 func NewImagesView(ctx context.Context, c dockerClient) *ImagesView {
@@ -66,11 +63,9 @@ func NewImagesView(ctx context.Context, c dockerClient) *ImagesView {
 func (v *ImagesView) Title() string { return "Images" }
 
 func (v *ImagesView) load() tea.Cmd {
-	if v.loading {
-		v.pending = true
+	if !v.begin() {
 		return nil
 	}
-	v.loading = true
 	return func() tea.Msg {
 		items, err := v.client.Images(v.ctx)
 		return imagesMsg{items, err}
@@ -82,7 +77,7 @@ func (v *ImagesView) load() tea.Cmd {
 func (v *ImagesView) Init() tea.Cmd { return v.load() }
 
 func (v *ImagesView) Focus() tea.Cmd {
-	if v.loading {
+	if v.inFlight {
 		return nil
 	}
 	return v.load()
@@ -91,16 +86,15 @@ func (v *ImagesView) Focus() tea.Cmd {
 func (v *ImagesView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case imagesMsg:
-		v.loading = false
+		again := v.end()
 		v.preserveSelection(func() {
 			v.setItems(msg.items, msg.err)
 		})
-		if v.pending {
-			v.pending = false
+		if again {
 			return v.load()
 		}
 	case containersMsg:
-		v.containers, v.usageErr, v.usageLoaded = msg.items, msg.err, true
+		v.setContainers(msg)
 		v.rowCache = nil
 	case refreshMsg:
 		return v.load()

@@ -27,11 +27,11 @@ type (
 // ContainersView lists all containers with state colors.
 type ContainersView struct {
 	list[container.Summary]
-	ctx              context.Context
-	client           dockerClient
-	loading, pending bool
-	eventPending     bool
-	eventGeneration  uint64
+	loader
+	ctx             context.Context
+	client          dockerClient
+	eventPending    bool
+	eventGeneration uint64
 }
 
 func NewContainersView(ctx context.Context, c dockerClient) *ContainersView {
@@ -59,11 +59,9 @@ func (v *ContainersView) load() tea.Cmd {
 	v.eventPending = false
 	v.eventGeneration++
 
-	if v.loading {
-		v.pending = true
+	if !v.begin() {
 		return nil
 	}
-	v.loading = true
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(v.ctx, 5*time.Second)
 		defer cancel()
@@ -80,10 +78,9 @@ func (v *ContainersView) Focus() tea.Cmd { return nil }
 func (v *ContainersView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case containersMsg:
-		v.loading = false
+		again := v.end()
 		v.setItems(msg.items, msg.err)
-		if v.pending {
-			v.pending = false
+		if again {
 			return v.load()
 		}
 	case eventsBatchMsg:

@@ -11,6 +11,7 @@ import (
 	"github.com/moby/moby/api/types/container"
 
 	"dpad/internal/config"
+	"dpad/internal/docker"
 )
 
 type commandDoneMsg struct {
@@ -42,7 +43,7 @@ func (a *App) customCommandTarget(scope string) (string, config.Vars, bool) {
 		}
 		vars := config.Vars{Project: p.name}
 		for _, c := range p.containers {
-			if dir := c.Labels[composeProjectLabel+".working_dir"]; dir != "" {
+			if dir := c.Labels[docker.ComposeWorkingDirLabel]; dir != "" {
 				vars.WorkingDir = dir
 				break
 			}
@@ -58,7 +59,7 @@ func (a *App) customCommandTarget(scope string) (string, config.Vars, bool) {
 		vars.Image = c.Image
 		vars.Project = c.Labels[composeProjectLabel]
 		vars.Service = c.Labels[composeServiceLabel]
-		vars.WorkingDir = c.Labels[composeProjectLabel+".working_dir"]
+		vars.WorkingDir = c.Labels[docker.ComposeWorkingDirLabel]
 	}
 	return name, vars, true
 }

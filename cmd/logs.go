@@ -20,9 +20,9 @@ import (
 )
 
 const (
-	composeProjectLabel = "com.docker.compose.project"
-	composeServiceLabel = "com.docker.compose.service"
-	composeOneoffLabel  = "com.docker.compose.oneoff"
+	composeProjectLabel = docker.ComposeProjectLabel
+	composeServiceLabel = docker.ComposeServiceLabel
+	composeOneoffLabel  = docker.ComposeOneoffLabel
 )
 
 func newLogsCmd() *cobra.Command {

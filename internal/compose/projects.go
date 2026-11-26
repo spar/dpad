@@ -22,9 +22,11 @@ import (
 	"time"
 
 	"github.com/moby/moby/api/types/container"
+
+	"dpad/internal/docker"
 )
 
-const projectLabel = "com.docker.compose.project"
+const projectLabel = docker.ComposeProjectLabel
 
 // Project is an immutable update preview; Issue makes a row ineligible.
 type Project struct {
@@ -72,8 +74,8 @@ func Discover(items []container.Summary, selected string) []Project {
 		if name == "" || selected != "" && name != selected {
 			continue
 		}
-		dir := c.Labels[projectLabel+".working_dir"]
-		files := splitPaths(c.Labels[projectLabel+".config_files"])
+		dir := c.Labels[docker.ComposeWorkingDirLabel]
+		files := splitPaths(c.Labels[docker.ComposeConfigLabel])
 		envFiles := splitPaths(c.Labels[projectLabel+".environment_file"])
 		p := projects[name]
 		if p == nil {
@@ -86,7 +88,7 @@ func Discover(items []container.Summary, selected string) []Project {
 			p.Issue = "missing Compose working-directory or config-file labels"
 		}
 		active := c.State == container.StateRunning || c.State == container.StatePaused || c.State == container.StateRestarting
-		if service := c.Labels["com.docker.compose.service"]; service != "" && active && !strings.EqualFold(c.Labels["com.docker.compose.oneoff"], "true") {
+		if service := c.Labels[docker.ComposeServiceLabel]; service != "" && active && !strings.EqualFold(c.Labels[docker.ComposeOneoffLabel], "true") {
 			p.Members = append(p.Members, service)
 		}
 	}

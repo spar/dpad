@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"dpad/internal/config"
 	"dpad/internal/render"
 	"dpad/internal/theme"
 )
@@ -26,7 +27,8 @@ func TestSetupThemePrecedence(t *testing.T) {
 		{"mono", "nord", "mono"},
 	} {
 		t.Setenv("DPAD_THEME", tt.env)
-		if err := setupTheme(tt.flag); err != nil {
+		cfg, _ := config.Load()
+		if err := setupTheme(tt.flag, cfg.Theme); err != nil {
 			t.Fatal(err)
 		}
 		if got := render.Theme().Name; got != tt.want {
@@ -34,7 +36,7 @@ func TestSetupThemePrecedence(t *testing.T) {
 		}
 	}
 	render.ApplyTheme(theme.Default())
-	if err := setupTheme("nope"); err == nil || !strings.Contains(err.Error(), "unknown theme") || render.Theme().Name != "default" {
+	if err := setupTheme("nope", ""); err == nil || !strings.Contains(err.Error(), "unknown theme") || render.Theme().Name != "default" {
 		t.Errorf("unknown theme: err %v, theme %s", err, render.Theme().Name)
 	}
 }
