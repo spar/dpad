@@ -21,11 +21,12 @@ type imagesMsg struct {
 // ImagesView lists local images; one row per tag.
 type ImagesView struct {
 	list[image.Summary]
-	ctx         context.Context
-	client      dockerClient
-	containers  []container.Summary
-	usageLoaded bool
-	usageErr    error
+	ctx              context.Context
+	client           dockerClient
+	loading, pending bool
+	containers       []container.Summary
+	usageLoaded      bool
+	usageErr         error
 }
 
 func NewImagesView(ctx context.Context, c dockerClient) *ImagesView {
@@ -65,23 +66,39 @@ func NewImagesView(ctx context.Context, c dockerClient) *ImagesView {
 func (v *ImagesView) Title() string { return "Images" }
 
 func (v *ImagesView) load() tea.Cmd {
+	if v.loading {
+		v.pending = true
+		return nil
+	}
+	v.loading = true
 	return func() tea.Msg {
 		items, err := v.client.Images(v.ctx)
 		return imagesMsg{items, err}
 	}
 }
 
-// Images change rarely, so they reload only on demand (refreshMsg), not on a timer.
+// Images change rarely, so they reload when the tab is opened and on demand
+// (refreshMsg), not on a timer.
 func (v *ImagesView) Init() tea.Cmd { return v.load() }
 
-func (v *ImagesView) Focus() tea.Cmd { return nil }
+func (v *ImagesView) Focus() tea.Cmd {
+	if v.loading {
+		return nil
+	}
+	return v.load()
+}
 
 func (v *ImagesView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case imagesMsg:
+		v.loading = false
 		v.preserveSelection(func() {
 			v.setItems(msg.items, msg.err)
 		})
+		if v.pending {
+			v.pending = false
+			return v.load()
+		}
 	case containersMsg:
 		v.containers, v.usageErr, v.usageLoaded = msg.items, msg.err, true
 		v.rowCache = nil
