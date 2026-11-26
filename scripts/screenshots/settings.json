@@ -1,0 +1,4 @@
+[
+  {"wait": 3},
+  {"keys": "o"}, {"wait": 1.5}, {"snap": "settings"}
+]

@@ -26,17 +26,24 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
 echo "capture: recording the TUI (about 100 seconds; restarts, pauses and stops a few demo containers)"
-python3 "$here/drive.py" "$work/raw" 150 30 "$here/tui.json" -- "$dp"
+# The stand-in editor gives the Compose edit review a diff; the scenario discards it.
+VISUAL="$here/editor.sh" python3 "$here/drive.py" "$work/raw" 150 30 "$here/tui.json" -- "$dp"
 echo "capture: recording the theme gallery"
 # No user config, so the picker lists only the built-in themes.
 DPAD_CONFIG="$work/none.yaml" DPAD_THEME=default python3 "$here/drive.py" "$work/raw" 150 30 "$here/themes.json" -- "$dp"
+echo "capture: recording the settings screen"
+# A fresh HOME, so settings shows the default config path and a plain $EDITOR;
+# DOCKER_CONFIG keeps your Docker contexts.
+mkdir -p "$work/home"
+env -u DPAD_CONFIG -u XDG_CONFIG_HOME DOCKER_CONFIG="${DOCKER_CONFIG:-$HOME/.docker}" HOME="$work/home" EDITOR=vim VISUAL= DPAD_THEME=default python3 "$here/drive.py" "$work/raw" 120 13 "$here/settings.json" -- "$dp"
 echo "capture: recording CLI commands"
 python3 "$here/drive.py" "$work/raw" 160 39 "$here/cli.json" -- bash "$here/cli.sh" "$dp"
 
 echo "capture: rendering"
-for name in containers stats projects logs details events prune; do
+for name in containers stats projects compose-edit logs details events prune; do
 	node "$here/svg.js" 150 30 dp "$out/$name.svg" "$work/raw/$name.bin"
 done
+node "$here/svg.js" 120 13 dp "$out/settings.svg" "$work/raw/settings.bin"
 mkdir -p "$out/themes"
 for snap in "$work"/raw/theme-*.bin; do
 	name="$(basename "$snap" .bin)"

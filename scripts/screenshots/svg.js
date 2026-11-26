@@ -87,6 +87,16 @@ const BOX = {
 // Not in JetBrains Mono, so drawn rather than left to the viewer's fonts.
 const HEART = 'M.5 .95C.1 .65 0 .45 0 .3 0 .12 .14 0 .28 0 .38 0 .46 .06 .5 .15 .54 .06 .62 0 .72 0 .86 0 1 .12 1 .3 1 .45 .9 .65 .5 .95z';
 
+// Braille is missing from JetBrains Mono too; each raised dot becomes a circle.
+const BRAILLE_DOTS = [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [0, 3], [1, 3]];
+
+function brailleDots(ch, x, c, dim) {
+  const bits = ch.codePointAt(0) - 0x2800;
+  const op = dim ? ' fill-opacity=".5"' : '';
+  return BRAILLE_DOTS.filter((_, i) => bits & (1 << i)).map(([col, row]) =>
+    `<circle cx="${n(x + CW * (0.3 + 0.4 * col))}" cy="${n(CH * (0.14 + 0.24 * row))}" r="1.2" ${fill(c)}${op}/>`).join('');
+}
+
 function boxPath(ch, x) {
   const arms = BOX[ch];
   const cx = n(x + CW / 2);
@@ -155,6 +165,11 @@ function drawRow(line, cell) {
     if (!invisible && ch === '♥') {
       flush();
       shapes.push(`<path d="${HEART}" transform="translate(${n(x * CW + 0.6)} 5.6) scale(7.2 6.8)" ${fill(fg)}/>`);
+      continue;
+    }
+    if (!invisible && ch >= '\u2800' && ch <= '\u28ff') {
+      flush();
+      shapes.push(brailleDots(ch, x * CW, fg, cell.isDim()));
       continue;
     }
     if (!invisible && BOX[ch]) {
