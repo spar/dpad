@@ -83,10 +83,10 @@ type App struct {
 	composeProjects map[string]config.ComposeProject
 }
 
-// Run starts the TUI and blocks until the user quits. themeErr, when set,
-// is shown once: why the chosen theme could not be used.
-func Run(ctx context.Context, c dockerClient, themeErr error) error {
-	cfg, cfgErr := config.Load()
+// Run starts the TUI and blocks until the user quits. cfgErr and themeErr,
+// when set, are shown once: what is wrong in the config file, and why the
+// chosen theme could not be used.
+func Run(ctx context.Context, c dockerClient, cfg config.Config, cfgErr, themeErr error) error {
 	return runSessions(ctx, c, func(app *App) error {
 		app.configure(cfg, cfgErr)
 		if themeErr != nil && app.flash == "" {

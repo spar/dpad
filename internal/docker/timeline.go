@@ -56,7 +56,7 @@ func timelineEvent(m events.Message) (ContainerEvent, bool) {
 		at = time.Unix(0, m.TimeNano)
 	}
 	a := m.Actor.Attributes
-	return ContainerEvent{At: at, ID: m.Actor.ID, Name: eventText(a["name"]), Action: eventText(string(m.Action)), Image: eventText(a["image"]), Project: eventText(a["com.docker.compose.project"]), Service: eventText(a["com.docker.compose.service"]), ExitCode: eventText(a["exitCode"]), Signal: eventText(a["signal"])}, true
+	return ContainerEvent{At: at, ID: m.Actor.ID, Name: eventText(a["name"]), Action: eventText(string(m.Action)), Image: eventText(a["image"]), Project: eventText(a[ComposeProjectLabel]), Service: eventText(a[ComposeServiceLabel]), ExitCode: eventText(a["exitCode"]), Signal: eventText(a["signal"])}, true
 }
 
 // WatchEvents follows lifecycle and health events with bounded backpressure.

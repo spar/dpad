@@ -322,6 +322,23 @@ func validName(name string) bool {
 	return name != "" && strings.Trim(name, "abcdefghijklmnopqrstuvwxyz0123456789-") == ""
 }
 
+// Listed is one theme from All: the theme, or why it could not be loaded.
+type Listed struct {
+	Name  string
+	Theme *Theme
+	Err   error
+}
+
+// All loads every theme Names lists.
+func All(userDir string) []Listed {
+	var out []Listed
+	for _, name := range Names(userDir) {
+		t, err := Load(name, userDir)
+		out = append(out, Listed{Name: name, Theme: t, Err: err})
+	}
+	return out
+}
+
 // Names lists the built-in themes and those in userDir, default first.
 func Names(userDir string) []string {
 	var names []string

@@ -30,9 +30,8 @@ type themeItem struct {
 func (a *App) openThemePicker() {
 	dir, _ := theme.Dir()
 	var items []themeItem
-	for _, name := range theme.Names(dir) {
-		t, err := theme.Load(name, dir)
-		items = append(items, themeItem{name: name, theme: t, err: err})
+	for _, t := range theme.All(dir) {
+		items = append(items, themeItem{name: t.Name, theme: t.Theme, err: t.Err})
 	}
 	p := &themePicker{original: render.Theme()}
 	p.list = list[themeItem]{

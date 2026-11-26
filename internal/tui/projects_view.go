@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	composeProjectLabel = "com.docker.compose.project"
-	composeServiceLabel = "com.docker.compose.service"
+	composeProjectLabel = docker.ComposeProjectLabel
+	composeServiceLabel = docker.ComposeServiceLabel
 )
 
 type composeProject struct {
