@@ -53,7 +53,7 @@ overview, installation and screenshots, see the [README](../README.md).
 | `ctrl+r` | refresh |
 | `c` (list tabs) | choose a Docker context for this session |
 | `C` | choose a color theme; the screen previews each one (`enter` keeps it and saves it to `config.yaml`, `esc` cancels) |
-| `o` | settings: shows the theme, Docker context, editor, CPU graph, mouse setting and config file location; `enter` on a row opens its picker, or cycles the CPU graph style |
+| `o` | settings: shows the theme, Docker context, editor, CPU graph, icons, mouse setting and config file location; `enter` on a row opens its picker, or cycles the CPU graph style or icon mode |
 | `?` | help |
 | `q` | quit |
 
@@ -103,6 +103,27 @@ The graph uses a square-root scale, so 2% is visible next to 40%. Under 0.5% a
 second draws as idle (a dim baseline or dot), and anything above 100% (more
 than one core) fills the cell. Colors follow the theme's usage roles, like the
 Stats bars.
+
+### Icons
+
+Containers, Stats and Projects can show an icon for the image before each
+container name, such as the PostgreSQL elephant for `postgres:16` or the Pi-hole
+logo for `pihole/pihole`. The icons are [Nerd Font](https://www.nerdfonts.com/)
+glyphs, so they need a terminal font that has them; without one each name
+starts with a box. Images without an icon of their own get a dim cube, so names
+stay aligned.
+
+`o` → Icons cycles the mode, saved as `icons:` in the
+[config file](#custom-commands):
+
+| Mode | Icons |
+|---|---|
+| `auto` (default) | on in terminals that ship Nerd Font symbols themselves: Ghostty, WezTerm and kitty 0.36 or later. Off elsewhere, including inside tmux and screen, which hide the terminal behind them |
+| `nerd` | always on; pick this if your terminal uses a Nerd Font, for example in iTerm2, Windows Terminal or tmux |
+| `off` | never |
+
+The settings row shows what `auto` chose. Icons appear only in the TUI, never
+in `dp ps` output.
 
 ### Details
 
@@ -610,6 +631,7 @@ customCommands:
 # theme: matrix   # see docs/themes.md
 # editor: nano    # for Compose edits; see "Edit a Compose file"
 # cpuGraph: bars  # braille, bars, meter or off; see "Live CPU and memory"
+# icons: nerd     # auto, nerd or off; see "Icons"
 ```
 
 | Field | Meaning |

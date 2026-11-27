@@ -128,7 +128,7 @@ func (v *ProjectsView) projectRows(p composeProject) []row {
 			health = render.HealthBadge(string(c.Health.Status))
 		}
 		rows = append(rows, row{key: c.ID, id: c.ID, name: name, cells: []string{
-			"  " + service, name, render.StateStyle(string(c.State), render.ExitCode(c.Status)).Render(string(c.State)), health, "",
+			"  " + render.ImageIcon(c.Image) + service, name, render.StateStyle(string(c.State), render.ExitCode(c.Status)).Render(string(c.State)), health, "",
 		}})
 	}
 	return rows

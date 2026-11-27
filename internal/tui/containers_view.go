@@ -58,6 +58,7 @@ func NewContainersView(ctx context.Context, c dockerClient) *ContainersView {
 
 func (v *ContainersView) containerRows(c container.Summary) []row {
 	cells := render.ContainerRow(c)
+	cells[1] = render.ImageIcon(c.Image) + cells[1]
 	if v.showUsage() {
 		cpu, mem := v.usageCells(c.ID, time.Now())
 		cells = slices.Insert(cells, len(cells)-1, cpu, mem)

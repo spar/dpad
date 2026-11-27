@@ -35,6 +35,12 @@ func (a *App) configure(cfg config.Config, err error) {
 		graph = defaultCPUGraph
 	}
 	a.containers().setGraph(graph)
+	a.icons = cmp.Or(cfg.Icons, render.IconsAuto)
+	if !slices.Contains(render.IconModes, a.icons) {
+		err = errors.Join(err, fmt.Errorf("icons: %q is not one of %s", a.icons, strings.Join(render.IconModes, ", ")))
+		a.icons = render.IconsAuto
+	}
+	a.applyIcons()
 	if err != nil && a.flash == "" {
 		a.flash, a.flashErr = "config: "+strings.Join(strings.Fields(err.Error()), " "), true
 	}

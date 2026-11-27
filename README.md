@@ -218,9 +218,9 @@ saved current context.
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/settings.svg" alt="Settings screen listing the theme, Docker context, editor, CPU graph style, mouse setting and config file" width="100%"><br>
+      <img src="docs/images/settings.svg" alt="Settings screen listing the theme, Docker context, editor, CPU graph style, icons, mouse setting and config file" width="100%"><br>
       <b>Settings</b><br>
-      <sub><code>o</code> lists the theme, Docker context, editor, CPU graph style (braille, bars, meter or off), mouse setting and config file. <code>enter</code> on a row opens its picker or cycles the graph style. Theme, editor and graph style are saved to <code>config.yaml</code>; a context choice lasts for the session.</sub>
+      <sub><code>o</code> lists the theme, Docker context, editor, CPU graph style (braille, bars, meter or off), icons, mouse setting and config file. <code>enter</code> on a row opens its picker or cycles the graph style or icon mode. Theme, editor, graph style and icons are saved to <code>config.yaml</code>; a context choice lasts for the session.</sub>
     </td>
     <td width="50%" valign="top">
       <b>Custom commands and mouse</b><br>
@@ -306,7 +306,7 @@ would type `docker`:
 | `u` / `U` | update the selected / all Compose projects: `pull`, then `up -d`, with live progress (Projects tab) |
 | `c` | choose a Docker context |
 | `C` | choose a color theme, previewed live |
-| `o` | settings: theme, Docker context, editor, CPU graph style, mouse, config file location |
+| `o` | settings: theme, Docker context, editor, CPU graph style, icons, mouse, config file location |
 | `?` | help for the current view |
 
 The full key list and the behavior of each tab are in [docs/usage.md](docs/usage.md).
