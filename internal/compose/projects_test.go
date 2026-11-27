@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -468,5 +469,51 @@ func TestPrepareRecoversWrapperVariablesAndReportsBlankOnes(t *testing.T) {
 	configured[0].Env = []string{"RUNNER_STACK=from-config"}
 	if p := Prepare(t.Context(), os.Environ(), configured, lookup)[0]; p.Issue != "" || !slices.Equal(p.Env, []string{"RUNNER_STACK=from-config"}) {
 		t.Fatalf("configured value was not used or was overridden: %+v", p)
+	}
+}
+
+func TestComposeV2(t *testing.T) {
+	for out, want := range map[string]bool{
+		"2.29.1\n": true, "v2.40.0": true, "10.0.0": false, "1.29.2": false, "": false, "2": false, "dev": false,
+	} {
+		if _, got := composeV2([]byte(out)); got != want {
+			t.Errorf("composeV2(%q) = %v, want %v", out, got, want)
+		}
+	}
+}
+
+func TestSSHScriptUsesTheTunnelsHostRules(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses a shell script as ssh")
+	}
+	bin := t.TempDir()
+	if err := os.WriteFile(filepath.Join(bin, "ssh"), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin)
+	env := []string{"DOCKER_HOST=ssh://me@server:2222/run/user/1000/docker.sock"}
+	cmd, err := sshScript(t.Context(), env, "true", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := cmd.Args[1:]
+	for _, want := range [][]string{{"-l", "me"}, {"-p", "2222"}, {"-o", "BatchMode=yes"}, {"-o", "ServerAliveInterval=5"}, {"--", "server", "true"}} {
+		i := slices.Index(args, want[0])
+		for i >= 0 && !slices.Equal(args[i:min(i+len(want), len(args))], want) {
+			next := slices.Index(args[i+1:], want[0])
+			if next < 0 {
+				i = -1
+				break
+			}
+			i += next + 1
+		}
+		if i < 0 {
+			t.Errorf("ssh args %q lack %q", args, want)
+		}
+	}
+	for _, host := range []string{"ssh://me:secret@server", "ssh://server/run/${HOME}/docker.sock", "ssh://server?x=1"} {
+		if _, err := sshScript(t.Context(), []string{"DOCKER_HOST=" + host}, "true", false); err == nil {
+			t.Errorf("sshScript accepted %q, which the tunnel rejects", host)
+		}
 	}
 }

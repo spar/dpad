@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -168,8 +167,7 @@ func prepare(ctx context.Context, env []string, p *Project, lookup Lookup) error
 		return errors.New("compose files are unavailable on this machine")
 	}
 	if p.Location == "ssh" || !local {
-		u, err := url.Parse(envValue(env, "DOCKER_HOST"))
-		if err != nil || u.Scheme != "ssh" || u.Hostname() == "" {
+		if _, err := docker.ParseSSHHost(envValue(env, "DOCKER_HOST")); err != nil {
 			return errors.New("compose files are unavailable locally; remote execution requires an SSH Docker endpoint")
 		}
 		if !path.IsAbs(p.Directory) {
@@ -179,15 +177,14 @@ func prepare(ctx context.Context, env []string, p *Project, lookup Lookup) error
 	}
 	probeCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	for _, cli := range [][]string{{"docker", "compose"}, {"docker-compose"}} {
+	for _, cli := range composeCLIs {
 		p.CLI = cli
 		cmd, err := command(probeCtx, env, *p, "version", "--short")
 		if err != nil {
 			continue
 		}
 		b, err := cmd.Output()
-		version := strings.TrimPrefix(strings.TrimSpace(string(b)), "v")
-		if err == nil && len(version) > 1 && version[0] >= '2' && version[0] <= '9' && version[1] == '.' {
+		if version, ok := composeV2(b); err == nil && ok {
 			p.JSONProgress = supportsJSONProgress(version)
 			return resolveWithLookup(probeCtx, env, p, lookup)
 		}
@@ -394,6 +391,16 @@ func supportsJSONProgress(version string) bool {
 	return err1 == nil && err2 == nil && (ma > 2 || ma == 2 && mi >= 32)
 }
 
+// composeCLIs are the Compose commands tried, in order.
+var composeCLIs = [][]string{{"docker", "compose"}, {"docker-compose"}}
+
+// composeV2 reads `compose version --short` output and reports whether it is
+// Compose v2 or later, which dpad needs.
+func composeV2(out []byte) (string, bool) {
+	v := strings.TrimPrefix(strings.TrimSpace(string(out)), "v")
+	return v, len(v) > 1 && v[0] >= '2' && v[0] <= '9' && v[1] == '.'
+}
+
 func baseArgs(p Project) []string {
 	return progressArgs(p, "plain")
 }
@@ -432,15 +439,11 @@ func command(ctx context.Context, env []string, p Project, args ...string) (*exe
 		configureCommand(cmd)
 		return cmd, nil
 	}
-	u, err := url.Parse(envValue(env, "DOCKER_HOST"))
-	if err != nil || u.Scheme != "ssh" || u.Hostname() == "" {
+	target, err := docker.ParseSSHHost(envValue(env, "DOCKER_HOST"))
+	if err != nil {
 		return nil, errors.New("remote Compose execution requires the bound SSH endpoint")
 	}
-	socket := u.Path
-	if socket == "" {
-		socket = "/var/run/docker.sock"
-	}
-	remote := []string{"env", "DOCKER_HOST=unix://" + socket, "DOCKER_CONTEXT=", "DOCKER_TLS=", "DOCKER_TLS_VERIFY=", "DOCKER_CERT_PATH="}
+	remote := []string{"env", "DOCKER_HOST=unix://" + target.Socket, "DOCKER_CONTEXT=", "DOCKER_TLS=", "DOCKER_TLS_VERIFY=", "DOCKER_CERT_PATH="}
 	remote = append(remote, p.Env...)
 	remote = append(remote, p.CLI...)
 	remote = append(remote, args...)
@@ -453,25 +456,19 @@ func command(ctx context.Context, env []string, p Project, args ...string) (*exe
 // sshScript runs a shell script on the SSH host of the bound endpoint. Only
 // a script that reads stdin gets the caller's stdin; others get none.
 func sshScript(ctx context.Context, env []string, script string, stdin bool) (*exec.Cmd, error) {
-	u, err := url.Parse(envValue(env, "DOCKER_HOST"))
-	if err != nil || u.Scheme != "ssh" || u.Hostname() == "" {
+	target, err := docker.ParseSSHHost(envValue(env, "DOCKER_HOST"))
+	if err != nil {
 		return nil, errors.New("remote Compose execution requires the bound SSH endpoint")
 	}
-	sshArgs := []string{"-T", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=3"}
+	sshArgs := append([]string{"-T"}, target.Options(true)...)
 	if !stdin {
 		sshArgs = append([]string{"-n"}, sshArgs...)
-	}
-	if u.User != nil {
-		sshArgs = append(sshArgs, "-l", u.User.Username())
-	}
-	if u.Port() != "" {
-		sshArgs = append(sshArgs, "-p", u.Port())
 	}
 	executable, err := exec.LookPath("ssh")
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.CommandContext(ctx, executable, append(sshArgs, "--", u.Hostname(), script)...)
+	cmd := exec.CommandContext(ctx, executable, append(sshArgs, "--", target.Host, script)...)
 	cmd.Env = slices.Clone(env)
 	configureCommand(cmd)
 	return cmd, nil

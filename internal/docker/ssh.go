@@ -15,45 +15,49 @@ import (
 	"time"
 )
 
-const defaultRemoteSocket = "/var/run/docker.sock"
+// DefaultRemoteSocket is the daemon socket of an ssh:// endpoint that names none.
+const DefaultRemoteSocket = "/var/run/docker.sock"
 
 // sshCommand builds the ssh process; tests replace it with a fake.
 var sshCommand = func(args ...string) *exec.Cmd { return exec.Command("ssh", args...) }
 
-type sshTarget struct{ user, host, port, socket string }
+// SSHTarget is an ssh:// Docker endpoint: the login, the host and port, and
+// the daemon socket on that host.
+type SSHTarget struct{ User, Host, Port, Socket string }
 
-// parseSSHHost accepts ssh://[user@]host[:port][/socket/path].
-func parseSSHHost(raw string) (sshTarget, error) {
+// ParseSSHHost accepts ssh://[user@]host[:port][/socket/path]. The tunnel
+// and remote Compose commands both go through it, so they accept the same hosts.
+func ParseSSHHost(raw string) (SSHTarget, error) {
 	u, err := url.Parse(raw)
 	if err != nil {
-		return sshTarget{}, err
+		return SSHTarget{}, err
 	}
 	if u.Scheme != "ssh" {
-		return sshTarget{}, fmt.Errorf("expected an ssh:// host, got %q", raw)
+		return SSHTarget{}, fmt.Errorf("expected an ssh:// host, got %q", raw)
 	}
-	t := sshTarget{socket: defaultRemoteSocket}
+	t := SSHTarget{Socket: DefaultRemoteSocket}
 	if u.User != nil {
 		if _, ok := u.User.Password(); ok {
-			return sshTarget{}, errors.New("ssh host: plain-text passwords are not supported")
+			return SSHTarget{}, errors.New("ssh host: plain-text passwords are not supported")
 		}
-		t.user = u.User.Username()
+		t.User = u.User.Username()
 	}
-	t.host, t.port = u.Hostname(), u.Port()
+	t.Host, t.Port = u.Hostname(), u.Port()
 	switch {
-	case t.host == "":
-		return sshTarget{}, fmt.Errorf("ssh host %q has no hostname", raw)
+	case t.Host == "":
+		return SSHTarget{}, fmt.Errorf("ssh host %q has no hostname", raw)
 	case u.RawQuery != "" || u.Fragment != "":
-		return sshTarget{}, fmt.Errorf("ssh host %q: query and fragment are not supported", raw)
+		return SSHTarget{}, fmt.Errorf("ssh host %q: query and fragment are not supported", raw)
 	}
 	if u.Path != "" {
 		if !strings.HasPrefix(u.Path, "/") || strings.HasSuffix(u.Path, "/") {
-			return sshTarget{}, errors.New("ssh socket path must name an absolute socket file")
+			return SSHTarget{}, errors.New("ssh socket path must name an absolute socket file")
 		}
 		// OpenSSH expands ${...} locally before parsing forwarding paths.
 		if strings.Contains(u.Path, "${") || strings.ContainsAny(u.Path, "\x00\r\n") {
-			return sshTarget{}, errors.New("ssh socket path cannot contain environment expansions or NUL/newline characters")
+			return SSHTarget{}, errors.New("ssh socket path cannot contain environment expansions or NUL/newline characters")
 		}
-		t.socket = u.Path
+		t.Socket = u.Path
 	}
 	return t, nil
 }
@@ -62,7 +66,7 @@ func parseSSHHost(raw string) (sshTarget, error) {
 // one ssh connection. Every API request is a channel on that connection, so
 // per-container stats streams don't each start an ssh process.
 type sshTunnel struct {
-	target sshTarget
+	target SSHTarget
 	dir    string
 	socket string
 
@@ -94,7 +98,7 @@ func startSSHTunnel(host string) (*sshTunnel, error) {
 }
 
 func startSSHTunnelContext(ctx context.Context, host string) (*sshTunnel, error) {
-	target, err := parseSSHHost(host)
+	target, err := ParseSSHHost(host)
 	if err != nil {
 		return nil, err
 	}
@@ -114,28 +118,36 @@ func startSSHTunnelContext(ctx context.Context, host string) (*sshTunnel, error)
 	return t, nil
 }
 
-func (t *sshTunnel) args(batch bool) []string {
-	args := []string{"-n", "-N", "-T",
-		"-o", "ExitOnForwardFailure=yes",
-		"-o", "StreamLocalBindUnlink=yes",
+// Options are the ssh options every connection dpad makes uses: the login,
+// the port, a connect timeout, and keepalives that notice a dead connection
+// (sleep, network change) within 15s so the next request can start a new
+// one. batch turns off prompts, for when the TUI owns the terminal.
+func (t SSHTarget) Options(batch bool) []string {
+	args := []string{
 		"-o", "ConnectTimeout=10",
-		// Notice a dead connection (sleep, network change) within 15s so the
-		// next request can start a new one.
 		"-o", "ServerAliveInterval=5",
 		"-o", "ServerAliveCountMax=3",
 	}
 	if batch {
 		args = append(args, "-o", "BatchMode=yes")
 	}
-	if t.target.user != "" {
-		args = append(args, "-l", t.target.user)
+	if t.User != "" {
+		args = append(args, "-l", t.User)
 	}
-	if t.target.port != "" {
-		args = append(args, "-p", t.target.port)
+	if t.Port != "" {
+		args = append(args, "-p", t.Port)
 	}
+	return args
+}
+
+func (t *sshTunnel) args(batch bool) []string {
+	args := append([]string{"-n", "-N", "-T",
+		"-o", "ExitOnForwardFailure=yes",
+		"-o", "StreamLocalBindUnlink=yes",
+	}, t.target.Options(batch)...)
 	// OpenSSH uses colons as field separators and backslashes as escapes.
 	escape := strings.NewReplacer("\\", "\\\\", ":", "\\:")
-	return append(args, "-L", escape.Replace(t.socket)+":"+escape.Replace(t.target.socket), "--", t.target.host)
+	return append(args, "-L", escape.Replace(t.socket)+":"+escape.Replace(t.target.Socket), "--", t.target.Host)
 }
 
 // start runs ssh and waits until it listens on the local socket or exits.
@@ -145,7 +157,7 @@ func (t *sshTunnel) start(ctx context.Context, batch bool) (*sshProcess, error) 
 	p := &sshProcess{cmd: sshCommand(t.args(batch)...), done: make(chan struct{})}
 	p.cmd.Stderr = &p.stderr
 	if err := p.cmd.Start(); err != nil {
-		return nil, fmt.Errorf("ssh tunnel to %s: %w", t.target.host, err)
+		return nil, fmt.Errorf("ssh tunnel to %s: %w", t.target.Host, err)
 	}
 	go func() {
 		_ = p.cmd.Wait()
@@ -163,7 +175,7 @@ func (t *sshTunnel) start(ctx context.Context, batch bool) (*sshProcess, error) 
 			if msg == "" {
 				msg = p.cmd.ProcessState.String()
 			}
-			return nil, fmt.Errorf("ssh tunnel to %s: %s", t.target.host, msg)
+			return nil, fmt.Errorf("ssh tunnel to %s: %s", t.target.Host, msg)
 		case <-ctx.Done():
 			_ = p.cmd.Process.Kill()
 			<-p.done
