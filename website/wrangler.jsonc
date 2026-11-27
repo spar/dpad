@@ -1,0 +1,26 @@
+// Cloudflare Workers settings for the dpad.sh website. Cloudflare reads this file
+// when it deploys with `npx wrangler deploy`, run from the `website` folder (the root
+// directory set in the Cloudflare dashboard). See docs/website.md.
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  // Must match the Worker's name in the Cloudflare dashboard, or the deploy fails.
+  "name": "dpad",
+  "compatibility_date": "2026-11-01",
+  // No Worker code: Cloudflare serves the files in public/ as they are.
+  "assets": {
+    "directory": "./public",
+    "html_handling": "auto-trailing-slash",
+    // Unknown addresses get public/404.html with a 404 status.
+    "not_found_handling": "404-page",
+  },
+  // Workers Logs (Observability in the dashboard): recent requests and errors.
+  // Keep this line in step with the dashboard setting.
+  "observability": {
+    "enabled": true,
+  },
+  // Pull request preview builds run `npx wrangler preview`, which refuses to run
+  // without this block. It can stay empty.
+  "previews": {},
+  // The free *.workers.dev address. Turn it off once dpad.sh works, if you like.
+  "workers_dev": true,
+}

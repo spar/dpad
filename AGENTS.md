@@ -29,6 +29,7 @@ Setup instructions for macOS, Linux and Windows are in
 | `themes/` | built-in color themes, one YAML file each, embedded in the binary |
 | `testenv/` | demo compose environment (`make demo-up`) |
 | `scripts/screenshots/` | regenerates `docs/images` from the demo (`make screenshots`) |
+| `website/` | the dpad.sh site: plain HTML and CSS in `public/`, served by Cloudflare ([docs/website.md](docs/website.md)) |
 
 ## Commands
 
@@ -38,6 +39,7 @@ make test
 make vet
 make lint     # golangci-lint, version pinned in the Makefile
 make vuln     # govulncheck
+make website  # copy docs/images into the website after make screenshots
 ```
 
 Run `make test vet lint` before considering a change done. CI runs the same
@@ -50,6 +52,9 @@ checks (`.github/workflows/`).
 - Don't add abstractions, options or error handling the change doesn't need.
 - Take colors from the theme (`render` styles, `render.Theme()`), never
   hard-coded values; [docs/themes.md](docs/themes.md) lists the roles.
+- Website changes use `docs(website):` so they don't cut a release. Keep the
+  site free of analytics and third-party requests, and don't hand-edit files
+  under `website/public/assets/` that `make website` writes.
 - Add or update tests next to the code you change (`*_test.go`). Tests use fakes
   (`fake_test.go`) rather than a live Docker daemon.
 

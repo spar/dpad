@@ -10,7 +10,7 @@ DEMO    := $(COMPOSE) -f testenv/compose.yaml
 GOLANGCI_LINT ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 GOVULNCHECK   ?= golang.org/x/vuln/cmd/govulncheck@v1.9.0
 
-.PHONY: build install uninstall run test vet lint vuln clean demo-up demo-extras demo-down demo-status screenshots
+.PHONY: build install uninstall run test vet lint vuln clean demo-up demo-extras demo-down demo-status screenshots website
 
 # Static, reproducible build: no cgo, no local paths in the binary.
 build:
@@ -74,3 +74,8 @@ demo-status:
 # Regenerates docs/images from the running demo; see scripts/screenshots/README.md.
 screenshots:
 	scripts/screenshots/capture.sh
+
+# Copies docs/images into the dpad.sh website and makes the light-mode copies;
+# see website/README.md. Run it after `make screenshots`.
+website:
+	go run ./website/sync

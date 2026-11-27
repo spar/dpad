@@ -44,3 +44,6 @@ To write somewhere other than `docs/images`, run
 The TUI scenario waits about a minute on the Stats tab first so the history
 sparklines have data. To change what is captured, edit the scenario files;
 the step types are described at the top of `drive.py`.
+
+After a capture, run `make website` to copy the new images into the dpad.sh
+website (and remake its light-mode copies). `go test ./...` fails until you do.

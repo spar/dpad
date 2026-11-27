@@ -1,0 +1,7 @@
+# Cloudflare reads this file and applies these redirects. It is not served.
+# https://developers.cloudflare.com/workers/static-assets/redirects/
+# The install scripts live in the repository, so the site never holds a copy
+# that could drift from them. curl needs -L (in -fsSL) to follow the redirect.
+/install https://raw.githubusercontent.com/spar/dpad/main/scripts/install.sh 302
+/install.sh https://raw.githubusercontent.com/spar/dpad/main/scripts/install.sh 302
+/install.ps1 https://raw.githubusercontent.com/spar/dpad/main/scripts/install.ps1 302
