@@ -37,6 +37,11 @@ type ContainersView struct {
 	// graph is the CPU graph style, or render.GraphOff to hide both.
 	usage *StatsView
 	graph string
+	// cells caches each container's columns other than CPU and MEM, so a
+	// stats tick only draws those two; it is reset with the item list and
+	// the theme.
+	cells      map[string][]string
+	cellsTheme int
 }
 
 func NewContainersView(ctx context.Context, c dockerClient) *ContainersView {
@@ -57,11 +62,18 @@ func NewContainersView(ctx context.Context, c dockerClient) *ContainersView {
 }
 
 func (v *ContainersView) containerRows(c container.Summary) []row {
-	cells := render.ContainerRow(c)
-	cells[1] = render.ImageIcon(c.Image) + cells[1]
+	if v.cells == nil || v.cellsTheme != render.ThemeGeneration() {
+		v.cells, v.cellsTheme = map[string][]string{}, render.ThemeGeneration()
+	}
+	cells, ok := v.cells[c.ID]
+	if !ok {
+		cells = render.ContainerRow(c)
+		cells[1] = render.ImageIcon(c.Image) + cells[1]
+		v.cells[c.ID] = cells
+	}
 	if v.showUsage() {
 		cpu, mem := v.usageCells(c.ID, time.Now())
-		cells = slices.Insert(cells, len(cells)-1, cpu, mem)
+		cells = slices.Insert(slices.Clip(cells), len(cells)-1, cpu, mem)
 	}
 	return []row{{key: c.ID, cells: cells, id: c.ID, name: docker.ContainerName(c.Names)}}
 }
@@ -121,6 +133,7 @@ func (v *ContainersView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case containersMsg:
 		again := v.end()
+		v.cells = nil
 		v.setItems(msg.items, msg.err)
 		if again {
 			return v.load()
