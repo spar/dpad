@@ -21,7 +21,7 @@ and a full-screen terminal UI. Anything it doesn't enhance goes straight to `doc
 brew install spar/tap/dpad
 ```
 
-<sub>On Windows, use [Scoop](#scoop-windows). Install scripts and archives are under [Install](#install).</sub>
+<sub>No Homebrew, or on Windows? [Install](#install) has a one-line command for every platform.</sub>
 
 **[Install](#install) · [Quick start](#quick-start) · [Features](#features) · [Commands](#commands) · [Compared with other tools](#compared-with-other-tools) · [Docs](#documentation)**
 
@@ -31,10 +31,20 @@ brew install spar/tap/dpad
 
 ## Install
 
-dpad needs a running Docker engine and the Docker CLI. Every install method
-provides both `dpad` and the short `dp` command.
+dpad needs a running Docker engine and the Docker CLI. Every method installs
+both `dpad` and the short `dp` command. Pick one line:
 
-### Homebrew (macOS and Linux)
+| Platform | Method | Command |
+| --- | --- | --- |
+| macOS, Linux | [Homebrew](#homebrew) | `brew install spar/tap/dpad` |
+| macOS, Linux, WSL2 | [Install script](#install-scripts) | `curl -fsSL https://dpad.sh/install \| sh` |
+| Windows | [Scoop](#scoop) | `scoop bucket add spar https://github.com/spar/scoop-bucket; scoop install spar/dpad` |
+| Windows | [PowerShell script](#install-scripts) | `irm https://dpad.sh/install.ps1 \| iex` |
+| Any | [Release archive](#release-archives) or [source](#from-source) | see below |
+
+Then run `dp`. To check the install, run `dp --version`.
+
+### Homebrew
 
 ```sh
 brew install spar/tap/dpad
@@ -42,7 +52,7 @@ brew install spar/tap/dpad
 
 Upgrade with `brew upgrade dpad`.
 
-### Scoop (Windows)
+### Scoop
 
 ```powershell
 scoop bucket add spar https://github.com/spar/scoop-bucket
@@ -51,28 +61,27 @@ scoop install spar/dpad
 
 Upgrade with `scoop update dpad`.
 
-### Install script
+### Install scripts
 
-Without a package manager, run one command to install or upgrade the latest
-release. The installer detects amd64 or arm64, verifies the binary against the
-release’s SHA-256 checksum, and installs both `dpad` and `dp` for your user.
-
-**macOS or Linux** (including WSL2):
+For machines without a package manager. Run the same command again to upgrade.
+The scripts detect amd64 or arm64, check the download against the release's
+SHA-256 checksum, and install for your user only.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/spar/dpad/main/scripts/install.sh | sh
+# macOS, Linux or WSL2: installs into ~/.local/bin
+curl -fsSL https://dpad.sh/install | sh
 ```
-
-The commands install into `~/.local/bin`. If your shell cannot find `dp`,
-add `export PATH="$HOME/.local/bin:$PATH"` to your shell profile.
-
-**Windows** (PowerShell):
 
 ```powershell
-& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/spar/dpad/main/scripts/install.ps1')))
+# Windows PowerShell: installs into %LOCALAPPDATA%\Programs\dpad and adds it to your PATH
+irm https://dpad.sh/install.ps1 | iex
 ```
 
-The Windows installer adds `%LOCALAPPDATA%\Programs\dpad` to your user PATH.
+`dpad.sh/install` and `dpad.sh/install.ps1` redirect to
+[`scripts/install.sh`](scripts/install.sh) and
+[`scripts/install.ps1`](scripts/install.ps1) in this repository, so you can
+read them first. If your shell can't find `dp` after the macOS or Linux script,
+add `export PATH="$HOME/.local/bin:$PATH"` to your shell profile.
 
 ### Release archives
 
@@ -98,8 +107,7 @@ cd dpad
 make install
 ```
 
-Run `dp --version` to check the installation. Shell completion, other install
-locations and troubleshooting are covered in
+Shell completion, other install locations and troubleshooting are covered in
 [Running locally](docs/local-development.md).
 
 ## Quick start
