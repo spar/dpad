@@ -176,15 +176,18 @@ To remove it, run `make uninstall` (use the same `PREFIX` you installed with).
 
 ## 4. Start the demo environment
 
-`testenv/compose.yaml` starts about 20 containers, each designed to exercise one
-dp feature. Among them are a CPU hog, a container near its memory limit, an
-unhealthy one, a crash-looping one, a paused one, several log formats, and
-network and disk I/O generators.
+`testenv/` holds three Compose projects that look like a real machine: a
+`bookshop` web app (nginx, a Python API, billing and worker services, Postgres
+and Redis), a `monitoring` stack (Prometheus, Grafana, Alertmanager,
+node-exporter) and a `homelab` (Jellyfin, Vaultwarden, Uptime Kuma, a backup
+job). Each container also exercises a dp feature: a CPU hog, a container near
+its memory limit, an unhealthy one, a crash-looping one, a paused one, several
+log formats, and network and disk I/O generators.
 
 ```sh
-make demo-up        # pulls alpine, nginx, python (~165MB total) and starts everything
-dp                  # explore. The demo containers are all named dp-demo-*
-make demo-down      # removes containers, the volume, and the dangling demo image
+make demo-up        # pulls the images (about 4GB on disk, mostly Jellyfin, Uptime Kuma and Grafana)
+dp                  # explore
+make demo-down      # removes containers, volumes, and the dangling demo image
 ```
 
 `make demo-up` also creates three things compose can't express: a **paused**
@@ -193,16 +196,16 @@ container, a **created** (never started) container, and a **dangling** image.
 See **[testenv/README.md](../testenv/README.md)** for what each container
 demonstrates and a step-by-step feature tour.
 
-> **Resource use:** `cpu-hog` and `cpu-warm` together use about 1.5 CPU cores
-> and `traffic` moves about 5MB/s over the local bridge network. To pause just
-> those while keeping the rest:
-> `docker compose -f testenv/compose.yaml stop cpu-hog cpu-warm traffic`
+> **Resource use:** `jellyfin` and `bookshop-worker-1` together use about 1.5
+> CPU cores and `bookshop-loadgen-1` moves about 5MB/s over the local bridge
+> network. To stop just those while keeping the rest:
+> `docker stop jellyfin bookshop-worker-1 bookshop-loadgen-1`
 
 **Other demo targets:**
 
 | Target | Does |
 |---|---|
-| `make demo-status` | `docker compose ps -a` for the demo project |
+| `make demo-status` | `docker compose ps -a` for each demo project |
 | `make demo-extras` | re-create the paused, created and dangling extras |
 | `make demo-up COMPOSE=docker-compose` | force a specific compose binary |
 
@@ -225,7 +228,7 @@ make build && ./bin/dpad stats
 | `internal/render/` | colors, the ANSI-aware table, formatters, log-level highlighting |
 | `internal/sortx/` | sort keys shared by the CLI and the TUI |
 | `internal/tui/` | the Bubble Tea app (`app.go`) and its tabs |
-| `testenv/` | demo compose file and the scripts its containers run |
+| `testenv/` | demo Compose projects and the scripts their containers run |
 
 **Tips:**
 - **Colors and piping:** colors are disabled automatically when output is piped, so `dp ps | less` shows plain text. Run `dp ps` directly in a terminal to see colors.

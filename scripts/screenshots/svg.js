@@ -90,6 +90,13 @@ const HEART = 'M.5 .95C.1 .65 0 .45 0 .3 0 .12 .14 0 .28 0 .38 0 .46 .06 .5 .15 
 // Braille is missing from JetBrains Mono too; each raised dot becomes a circle.
 const BRAILLE_DOTS = [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [0, 3], [1, 3]];
 
+// Nerd Font icons sit in the Private Use Areas. Each gets its own element
+// centred on its cell, since the symbol font's glyphs are wider than a cell.
+const isIcon = (ch) => {
+  const cp = ch.codePointAt(0);
+  return (cp >= 0xe000 && cp <= 0xf8ff) || cp >= 0xf0000;
+};
+
 function brailleDots(ch, x, c, dim) {
   const bits = ch.codePointAt(0) - 0x2800;
   const op = dim ? ' fill-opacity=".5"' : '';
@@ -170,6 +177,12 @@ function drawRow(line, cell) {
     if (!invisible && ch >= '\u2800' && ch <= '\u28ff') {
       flush();
       shapes.push(brailleDots(ch, x * CW, fg, cell.isDim()));
+      continue;
+    }
+    if (!invisible && isIcon(ch)) {
+      flush();
+      const cls = ['ic', fg.startsWith('#') ? '' : fg, cell.isDim() ? 'd' : ''].filter(Boolean).join(' ');
+      texts.push(`<text x="${n((x + 0.5) * CW)}" y="${BASE}" class="${cls}"${fg.startsWith('#') ? ` style="fill:${fg}"` : ''}>${ch}</text>`);
       continue;
     }
     if (!invisible && BOX[ch]) {
@@ -279,6 +292,7 @@ const write = (term, data) => new Promise((resolve) => term.write(data, resolve)
 text{font-family:'dp mono',ui-monospace,Menlo,Consolas,monospace;font-size:${FS}px;white-space:pre;fill:${theme.foreground}}
 .fg{fill:${theme.foreground}}.bg{fill:${theme.background}}.sfg{stroke:${theme.foreground}}.sbg{stroke:${theme.background}}
 path{fill:none;stroke-width:1.2}.b{font-weight:700}.d{opacity:.5}.i{font-style:italic}.u{text-decoration:underline}
+.ic{font-family:'dp icons';font-size:${CW + 2}px;text-anchor:middle}
 ${pal}${css}</style>
 <defs><filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="14" stdDeviation="14" flood-opacity=".45"/></filter>
 <clipPath id="clip"><rect width="${n(screenW)}" height="${screenH}"/></clipPath>${defs.join('\n')}</defs>

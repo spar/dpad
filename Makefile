@@ -5,7 +5,9 @@ LDFLAGS := -s -w -X dpad/cmd.version=$(VERSION)
 
 # Prefer the compose plugin, fall back to standalone docker-compose.
 COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo docker-compose)
-DEMO    := $(COMPOSE) -f testenv/compose.yaml
+# One Compose project per folder under testenv/.
+DEMO_PROJECTS := bookshop monitoring homelab
+demo = $(COMPOSE) -f testenv/$(1)/compose.yaml
 
 GOLANGCI_LINT ?= github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 GOVULNCHECK   ?= golang.org/x/vuln/cmd/govulncheck@v1.9.0
@@ -47,29 +49,29 @@ clean:
 # ── Demo environment (testenv/) ──────────────────────────────────────────────
 
 demo-up:
-	$(DEMO) up -d
+	$(foreach p,$(DEMO_PROJECTS),$(call demo,$(p)) up -d &&) true
 	@$(MAKE) --no-print-directory demo-extras
 	@echo
-	@echo "Demo running. Try: dp, dp ps -a, dp stats, dp logs -f dp-demo-logger-text-1 dp-demo-logger-json-1"
+	@echo "Demo running. Try: dp, dp ps -a, dp stats, dp logs -f bookshop-api-1 bookshop-billing-1"
 
 # States compose can't express: paused, created (never started), dangling image.
 # The dangling image is made by force-untagging an image a container still
 # uses; simply rebuilding a tag doesn't leave one behind with the containerd store.
 demo-extras:
-	-$(DEMO) pause paused
-	-docker rm -f dp-demo-created >/dev/null 2>&1
-	printf 'FROM alpine:3.20\nLABEL dp-demo=true\n' | docker build -q -t dp-demo/dangling:latest - >/dev/null
-	docker create --name dp-demo-created --label dp-demo=true dp-demo/dangling:latest true >/dev/null
-	docker rmi -f dp-demo/dangling:latest >/dev/null
+	-$(call demo,homelab) pause uptime-kuma
+	-docker rm -f api-canary >/dev/null 2>&1
+	printf 'FROM alpine:3.20\nLABEL dpad.demo=true\n' | docker build -q -t bookshop/api:canary - >/dev/null
+	docker create --name api-canary --label dpad.demo=true bookshop/api:canary true >/dev/null
+	docker rmi -f bookshop/api:canary >/dev/null
 
 demo-down:
-	-$(DEMO) unpause paused
-	$(DEMO) down -v --remove-orphans
-	-docker rm -f dp-demo-created
-	-docker image prune -f --filter label=dp-demo=true
+	-$(call demo,homelab) unpause uptime-kuma
+	$(foreach p,$(DEMO_PROJECTS),$(call demo,$(p)) down -v --remove-orphans;)
+	-docker rm -f api-canary
+	-docker image prune -f --filter label=dpad.demo=true
 
 demo-status:
-	$(DEMO) ps -a
+	$(foreach p,$(DEMO_PROJECTS),$(call demo,$(p)) ps -a;)
 
 # Regenerates docs/images from the running demo; see scripts/screenshots/README.md.
 screenshots:

@@ -5,6 +5,6 @@ export PATH="$bin:$PATH"
 p() { printf '\033[36m$\033[0m \033[1m%s\033[0m\n' "$*"; "$@"; echo; }
 clear
 p dp ps -a --sort status
-p dp logs -n 4 logger-text logger-json logger-logfmt
+p dp logs -n 4 api billing worker
 rm -r "$bin"
 exec sleep 30
