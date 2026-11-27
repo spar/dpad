@@ -106,11 +106,7 @@ func (a *App) runCustomCommand(key string) (tea.Cmd, bool) {
 		if !ok {
 			continue
 		}
-		line, err := c.Render(vars)
-		if err != nil {
-			a.flash, a.flashErr = c.Name+": "+err.Error(), true
-			return nil, true
-		}
+		line := c.Render(vars)
 		start := func() tea.Cmd { return a.startCustomCommand(c, target, line) }
 		if c.Confirm {
 			a.confirm = &pending{question: fmt.Sprintf("Run %s on %s?", c.Name, target), start: start}

@@ -12,6 +12,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"dpad/internal/debuglog"
 	"dpad/internal/render"
 )
 
@@ -60,6 +61,12 @@ func (a *App) applyDaemonProbe(msg daemonProbeMsg) tea.Cmd {
 	}
 	a.daemon.inFlight = false
 	recovered := !a.daemon.connected
+	switch {
+	case msg.err != nil && (a.daemon.connected || a.daemon.err == nil):
+		debuglog.Warn("daemon unreachable", "endpoint", a.daemon.label, "err", msg.err)
+	case msg.err == nil && recovered:
+		debuglog.Info("daemon reachable", "endpoint", a.daemon.label)
+	}
 	a.daemon.err = msg.err
 	delay := 2 * time.Second
 	if msg.err == nil {

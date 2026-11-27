@@ -14,6 +14,8 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/events"
 	"github.com/moby/moby/client"
+
+	"dpad/internal/debuglog"
 )
 
 // Stats is a computed resource-usage sample for one container.
@@ -200,6 +202,7 @@ func (c *Client) watchStats(ctx context.Context, idleTimeout time.Duration) (<-c
 					break
 				}
 				h.attemptCancel = nil
+				debuglog.Warn("stats stream ended", "container", name, "err", err, "retry", delay)
 				select {
 				case out <- StatsUpdate{Stats: Stats{ID: id, Name: name}, Generation: h.generation, Unavailable: true, Err: err}:
 				case <-cctx.Done():

@@ -16,6 +16,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"dpad/internal/config"
+	"dpad/internal/debuglog"
 	"dpad/internal/docker"
 	"dpad/internal/render"
 	"dpad/internal/sortx"
@@ -90,6 +91,7 @@ type App struct {
 	editor          string // the editor: setting; empty uses $VISUAL/$EDITOR
 	icons           string // the icons: setting
 	terminal        string // the terminal's name and version, for icons: auto
+	tabCache        tabBarCache
 }
 
 // Run starts the TUI and blocks until the user quits. cfgErr and themeErr,
@@ -525,8 +527,15 @@ func (a *App) switchTab(i int) tea.Cmd {
 	return a.tabs[i].Focus()
 }
 
+// slowFrame is how long a frame may take before the debug log notes it.
+const slowFrame = 16 * time.Millisecond
+
 func (a *App) View() tea.View {
+	began := time.Now()
 	v := tea.NewView(a.render())
+	if took := time.Since(began); took > slowFrame {
+		debuglog.Warn("slow frame", "ms", took.Milliseconds(), "tab", a.tabs[a.active].Title())
+	}
 	v.AltScreen = true
 	if t := render.Theme(); !render.ColorDisabled() {
 		// Bubble Tea restores the terminal's own colors on exit.
@@ -565,7 +574,30 @@ func (a *App) render() string {
 	if n := a.bodyHeight() - lipgloss.Height(body); n > 0 {
 		body += strings.Repeat("\n", n)
 	}
-	return strings.Join([]string{a.tabBar(), a.tabRule(), a.connectionBar(), body, render.DimLine(status), ansi.Truncate(a.footer(), a.width, "…")}, "\n")
+	bar, rule := a.tabLines()
+	return strings.Join([]string{bar, rule, a.connectionBar(), body, render.DimLine(status), ansi.Truncate(a.footer(), a.width, "…")}, "\n")
+}
+
+// tabBarCache holds the tab bar and the rule under it, which only change
+// with the width, the active tab, a tab title or the theme.
+type tabBarCache struct {
+	width, active, theme int
+	titles               []string
+	bar, rule            string
+}
+
+// tabLines returns the tab bar and its rule, drawing them only when one of
+// their inputs changed: styling each label costs about half a frame.
+func (a *App) tabLines() (string, string) {
+	c := &a.tabCache
+	titles := make([]string, len(a.tabs))
+	for i, t := range a.tabs {
+		titles[i] = t.Title()
+	}
+	if c.bar == "" || c.width != a.width || c.active != a.active || c.theme != render.ThemeGeneration() || !slices.Equal(c.titles, titles) {
+		*c = tabBarCache{width: a.width, active: a.active, theme: render.ThemeGeneration(), titles: titles, bar: a.tabBar(), rule: a.tabRule()}
+	}
+	return c.bar, c.rule
 }
 
 func (a *App) tabBar() string {

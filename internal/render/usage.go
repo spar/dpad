@@ -65,7 +65,7 @@ func CPUGraph(style string, samples []float64, present []bool) string {
 	default:
 		graph = brailleGraph(samples, present)
 	}
-	return graph + " " + PercentStyle(latest).Render(fmt.Sprintf("%5.1f%%", latest))
+	return graph + " " + percentPaint(latest).wrap(fmt.Sprintf("%5.1f%%", latest))
 }
 
 func last[T any](s []T, n int) []T { return s[max(len(s)-n, 0):] }
@@ -73,6 +73,7 @@ func last[T any](s []T, n int) []T { return s[max(len(s)-n, 0):] }
 func barsGraph(samples []float64, present []bool) string {
 	const bars = "▁▂▃▄▅▆▇█"
 	samples, present = last(samples, GraphWidth), last(present, GraphWidth)
+	u := usagePaint()
 	var b strings.Builder
 	b.WriteString(strings.Repeat(" ", GraphWidth-len(samples)))
 	for i, p := range samples {
@@ -81,11 +82,11 @@ func barsGraph(samples []float64, present []bool) string {
 		case !present[i]:
 			b.WriteByte(' ')
 		case level == 0:
-			b.WriteString(Dim.Render("·"))
+			u.dim.write(&b, "·")
 		case i >= len(samples)-recentBars:
-			b.WriteString(PercentStyle(p).Render(bars[(level-1)*3 : level*3]))
+			percentPaint(p).write(&b, bars[(level-1)*3:level*3])
 		default:
-			b.WriteString(Dim.Render(bars[(level-1)*3 : level*3]))
+			u.dim.write(&b, bars[(level-1)*3:level*3])
 		}
 	}
 	return b.String()
@@ -98,6 +99,7 @@ func brailleGraph(samples []float64, present []bool) string {
 	right := [4]rune{0x80, 0x20, 0x10, 0x08}
 	samples, present = last(samples, GraphSamples), last(present, GraphSamples)
 	cells := (len(samples) + 1) / 2
+	u := usagePaint()
 	var b strings.Builder
 	b.WriteString(strings.Repeat(" ", GraphWidth-cells))
 	for c := range cells {
@@ -118,9 +120,9 @@ func brailleGraph(samples []float64, present []bool) string {
 		case !seen:
 			b.WriteByte(' ')
 		case dots == 0:
-			b.WriteString(Dim.Render("⣀"))
+			u.dim.write(&b, "⣀")
 		default:
-			b.WriteString(PercentStyle(peak).Render(string(0x2800 + dots)))
+			percentPaint(peak).write(&b, string(0x2800+dots))
 		}
 	}
 	return b.String()
@@ -142,8 +144,8 @@ func meterGraph(samples []float64, present []bool, latest float64) string {
 		}
 	}
 	used := full + len([]rune(partial))
-	track := fg(active.Usage.Track.C())
-	bar := track.Render("▕") + PercentStyle(latest).Render(strings.Repeat("█", full)+partial) + track.Render(strings.Repeat("░", width-used)+"▏")
+	u := usagePaint()
+	bar := u.track.wrap("▕") + percentPaint(latest).wrap(strings.Repeat("█", full)+partial) + u.track.wrap(strings.Repeat("░", width-used)+"▏")
 
 	var sum float64
 	n := 0
@@ -152,13 +154,13 @@ func meterGraph(samples []float64, present []bool, latest float64) string {
 			sum, n = sum+samples[i], n+1
 		}
 	}
-	arrow := Dim.Render("→")
+	arrow := u.dim.wrap("→")
 	if n > 0 {
 		switch before := sum / float64(n); {
 		case latest > before*1.3+idleCPU:
-			arrow = PercentStyle(latest).Render("↗")
+			arrow = percentPaint(latest).wrap("↗")
 		case latest < before*0.7-idleCPU:
-			arrow = Dim.Render("↘")
+			arrow = u.dim.wrap("↘")
 		}
 	}
 	return bar + arrow

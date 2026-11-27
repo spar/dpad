@@ -12,6 +12,8 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
 	"github.com/moby/moby/client"
+
+	"dpad/internal/debuglog"
 )
 
 // Client is a thin wrapper around the Engine API client.
@@ -98,6 +100,9 @@ func newClient(ctx context.Context, name, host string, opts []client.Opt) (*Clie
 		}
 		opts = append(opts, client.WithHost("unix://"+tunnel.socket), client.WithDialContext(tunnel.dial))
 	}
+	if debuglog.On() {
+		opts = append(opts, logRequests()...)
+	}
 	api, err := client.New(opts...)
 	if err != nil {
 		_ = tunnel.Close()
@@ -114,7 +119,9 @@ func newClient(ctx context.Context, name, host string, opts []client.Opt) (*Clie
 			env = append(env, entry)
 		}
 	}
-	return &Client{api: api, tunnel: tunnel, label: connectionLabel(name, daemon), cliEnv: env}, nil
+	label := connectionLabel(name, daemon)
+	debuglog.Info("docker client", "endpoint", label)
+	return &Client{api: api, tunnel: tunnel, label: label, cliEnv: env}, nil
 }
 
 func isSSHHost(host string) bool { return strings.HasPrefix(host, "ssh://") }

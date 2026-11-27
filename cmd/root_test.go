@@ -24,6 +24,8 @@ func TestDockerArgs(t *testing.T) {
 		{[]string{"--theme=amber", "--no-color", "volume", "ls"}, false, []string{"volume", "ls"}},
 		{[]string{"ps", "--theme", "mono", "-q"}, true, []string{"ps", "-q"}},
 		{[]string{"exec", "web", "app", "--theme", "x"}, false, []string{"exec", "web", "app", "--theme", "x"}},
+		{[]string{"--debug-log", "/tmp/dp.log", "network", "ls"}, false, []string{"network", "ls"}},
+		{[]string{"ps", "--debug-log=/tmp/dp.log", "-q"}, true, []string{"ps", "-q"}},
 	}
 	for _, tt := range tests {
 		if got := dockerArgs(tt.args, tt.anywhere); !slices.Equal(got, tt.want) {
@@ -49,6 +51,8 @@ func TestShouldPassthrough(t *testing.T) {
 		"--theme matrix ps":         false,
 		"--theme=matrix network ls": true,
 		"--theme matrix network ls": true,
+		"--debug-log x.log":         false,
+		"--debug-log x.log ps":      false,
 		"-H tcp://h:2375 ps":        true,
 	} {
 		if got := shouldPassthrough(root, strings.Fields(args)); got != want {

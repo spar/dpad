@@ -19,6 +19,7 @@ overview, installation and screenshots, see the [README](../README.md).
 - [Responsiveness](#responsiveness)
 - [Colors](#colors): themes, `NO_COLOR`
 - [Daemon connection](#daemon-connection): contexts, remote daemons over SSH, connection status, switching contexts
+- [Debug log](#debug-log): an opt-in local log for bug reports
 
 
 ## Keys
@@ -643,12 +644,14 @@ customCommands:
 | `attach` | `true` hands the terminal to the command, for interactive commands; `dp` comes back when it exits |
 | `confirm` | `true` asks `y/N` first |
 
-The command is a Go template. Container commands can use `{{.ID}}`,
-`{{.Name}}`, `{{.Image}}`, `{{.Project}}`, `{{.Service}}` and `{{.WorkingDir}}`
-(the Compose project directory); project commands can use `{{.Project}}` and
-`{{.WorkingDir}}`. Values are inserted already quoted as single words, so don't
-add quotes around them. A value `dp` doesn't know, such as the project of a
-container outside Compose, is an empty word.
+Placeholders in the command are filled in when it runs. Container commands can
+use `{{.ID}}`, `{{.Name}}`, `{{.Image}}`, `{{.Project}}`, `{{.Service}}` and
+`{{.WorkingDir}}` (the Compose project directory); project commands can use
+`{{.Project}}` and `{{.WorkingDir}}`. Values are inserted already quoted as
+single words, so don't add quotes around them. A value `dp` doesn't know, such
+as the project of a container outside Compose, is an empty word. Placeholders
+are the only thing `{{ }}` can hold: Go template actions such as `{{if}}`
+aren't supported.
 
 Commands run with the same daemon as the dashboard: `DOCKER_HOST` is set to its
 endpoint, as for shells. Without `attach`, a command runs in the background and
@@ -656,8 +659,8 @@ its last line of output, or its error, appears in the status line; use `attach`
 when you want to read all of it, for example `docker logs {{.ID}} | less`.
 Context switching waits for background commands to finish.
 
-Problems in the file, such as a key `dp` already uses, a duplicate key or a
-template error, are shown in the status line at startup; the other commands
+Problems in the file, such as a key `dp` already uses, a duplicate key or an
+unknown placeholder, are shown in the status line at startup; the other commands
 still load.
 
 ## Narrow terminals
@@ -781,3 +784,24 @@ opening the picker. SSH authentication prompts appear between dashboard sessions
 If opening the selected context fails, the previous daemon reopens with fresh
 views and an error message. An unreachable daemon shows the existing disconnected
 state and retry behavior after selection.
+
+## Debug log
+
+When something is slow or keeps failing, especially over SSH, run `dp` with a
+debug log and attach it to the bug report:
+
+```sh
+dp --debug-log ~/dp-debug.log        # or DPAD_DEBUG_LOG=~/dp-debug.log dp
+```
+
+The file is appended to and only readable by you. It records the dpad and Go
+versions, each Engine API request with its status and how long the daemon took
+to answer, the SSH tunnel starting, exiting (with ssh's error output) and
+restarting, stats streams that end and when they retry, the Compose and ssh
+commands dpad runs, the daemon becoming unreachable or reachable again, and any
+frame that takes longer than 16 ms to draw. It doesn't record container
+environment, log lines, file contents or query strings, and the scripts sent
+over ssh are logged only by size, since they can carry `composeProjects` env
+values. Container names, image names, paths and host names do appear, so look
+it over before sharing. Nothing is logged unless you ask for a file, and
+nothing is ever sent anywhere.

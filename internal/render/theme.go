@@ -200,7 +200,7 @@ func Bar(p float64, width int) string {
 		p = 100
 	}
 	n := int(p/100*float64(width) + 0.5)
-	return PercentStyle(p).Render(strings.Repeat("█", n)) + fg(active.Usage.Track.C()).Render(strings.Repeat("░", width-n))
+	return percentPaint(p).wrap(strings.Repeat("█", n)) + usagePaint().track.wrap(strings.Repeat("░", width-n))
 }
 
 func paletteStyle(i int) lipgloss.Style {

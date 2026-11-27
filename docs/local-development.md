@@ -41,8 +41,8 @@ available, so this step is optional.
 **On Linux (Ubuntu/Debian):**
 ```sh
 # Install Go (adjust version as needed)
-wget https://go.dev/dl/go1.26.11.linux-amd64.tar.gz
-sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.26.11.linux-amd64.tar.gz
+wget https://go.dev/dl/go1.27.4.linux-amd64.tar.gz
+sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.27.4.linux-amd64.tar.gz
 export PATH=$PATH:/usr/local/go/bin
 
 # Or use your distro's package manager:

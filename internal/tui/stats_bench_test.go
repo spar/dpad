@@ -7,7 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moby/moby/api/types/container"
+
 	"dpad/internal/docker"
+	"dpad/internal/render"
 	"dpad/internal/sortx"
 )
 
@@ -92,5 +95,43 @@ func BenchmarkStatsRateSortAndView(b *testing.B) {
 	for b.Loop() {
 		v.Update(batch)
 		v.View()
+	}
+}
+
+// BenchmarkContainersUsage applies one stats batch to the Containers tab with
+// each CPU graph style and redraws it, as happens about once a second.
+func BenchmarkContainersUsage(b *testing.B) {
+	for _, n := range []int{50, 1000} {
+		for _, style := range render.GraphStyles {
+			b.Run(fmt.Sprintf("%d/%s", n, style), func(b *testing.B) {
+				ctx := context.Background()
+				stats := NewStatsView(ctx, &fakeClient{}, sortx.CPU, false)
+				v := NewContainersView(ctx, &fakeClient{})
+				v.usage = stats
+				v.SetSize(140, 40)
+				v.setGraph(style)
+				items := make([]container.Summary, n)
+				batch := make(statsBatchMsg, n)
+				for i := range items {
+					id := fmt.Sprintf("%064d", i)
+					items[i] = container.Summary{ID: id, Names: []string{fmt.Sprintf("/web-%04d", i)}, Image: "postgres:16", State: container.StateRunning, Status: "Up 2 hours"}
+					batch[i] = docker.StatsUpdate{Stats: docker.Stats{ID: id, Name: items[i].Names[0][1:], CPUPercent: float64(i % 90), MemUsage: 64 << 20}}
+				}
+				v.Update(containersMsg{items: items})
+				now := time.Now()
+				for s := render.GraphSamples; s > 0; s-- {
+					for i := range batch {
+						batch[i].SampledAt = now.Add(-time.Duration(s) * time.Second)
+					}
+					stats.Update(batch)
+				}
+				v.View()
+				b.ReportAllocs()
+				for b.Loop() {
+					v.Update(statsTickMsg{})
+					v.View()
+				}
+			})
+		}
 	}
 }

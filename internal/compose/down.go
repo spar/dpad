@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"slices"
 	"strings"
+
+	"dpad/internal/debuglog"
 )
 
 // DownArgs is the Compose command Down runs, for showing in a preview.
@@ -43,6 +45,7 @@ func Down(ctx context.Context, env []string, name string, volumes bool) (string,
 			cmd := exec.CommandContext(ctx, executable, append(slices.Clone(cli[1:]), args...)...)
 			cmd.Env, cmd.Dir = env, dir
 			configureCommand(cmd)
+			debuglog.Info("compose command", "args", cmd.Args)
 			return cmd
 		}
 		version, err := run("version", "--short").Output()
