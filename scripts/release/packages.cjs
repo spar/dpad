@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const repo = 'spar/dpad';
-const desc = 'Colorful, interactive companion to the docker CLI';
+const desc = 'Stop juggling docker ps, stats and logs. One screen to rule them all';
 const homepage = 'https://github.com/' + repo;
 
 function parseSums(text) {
