@@ -16,6 +16,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"dpad/internal/config"
+	"dpad/internal/debuglog"
 	"dpad/internal/docker"
 	"dpad/internal/render"
 	"dpad/internal/sortx"
@@ -526,8 +527,15 @@ func (a *App) switchTab(i int) tea.Cmd {
 	return a.tabs[i].Focus()
 }
 
+// slowFrame is how long a frame may take before the debug log notes it.
+const slowFrame = 16 * time.Millisecond
+
 func (a *App) View() tea.View {
+	began := time.Now()
 	v := tea.NewView(a.render())
+	if took := time.Since(began); took > slowFrame {
+		debuglog.Warn("slow frame", "ms", took.Milliseconds(), "tab", a.tabs[a.active].Title())
+	}
 	v.AltScreen = true
 	if t := render.Theme(); !render.ColorDisabled() {
 		// Bubble Tea restores the terminal's own colors on exit.

@@ -19,6 +19,7 @@ overview, installation and screenshots, see the [README](../README.md).
 - [Responsiveness](#responsiveness)
 - [Colors](#colors): themes, `NO_COLOR`
 - [Daemon connection](#daemon-connection): contexts, remote daemons over SSH, connection status, switching contexts
+- [Debug log](#debug-log): an opt-in local log for bug reports
 
 
 ## Keys
@@ -783,3 +784,24 @@ opening the picker. SSH authentication prompts appear between dashboard sessions
 If opening the selected context fails, the previous daemon reopens with fresh
 views and an error message. An unreachable daemon shows the existing disconnected
 state and retry behavior after selection.
+
+## Debug log
+
+When something is slow or keeps failing, especially over SSH, run `dp` with a
+debug log and attach it to the bug report:
+
+```sh
+dp --debug-log ~/dp-debug.log        # or DPAD_DEBUG_LOG=~/dp-debug.log dp
+```
+
+The file is appended to and only readable by you. It records the dpad and Go
+versions, each Engine API request with its status and how long the daemon took
+to answer, the SSH tunnel starting, exiting (with ssh's error output) and
+restarting, stats streams that end and when they retry, the Compose and ssh
+commands dpad runs, the daemon becoming unreachable or reachable again, and any
+frame that takes longer than 16 ms to draw. It doesn't record container
+environment, log lines, file contents or query strings, and the scripts sent
+over ssh are logged only by size, since they can carry `composeProjects` env
+values. Container names, image names, paths and host names do appear, so look
+it over before sharing. Nothing is logged unless you ask for a file, and
+nothing is ever sent anywhere.
