@@ -1,0 +1,63 @@
+# Black ink on white, like an e-ink screen. The light-terminal counterpart of
+# mono: bold and the selected row carry emphasis instead of hue.
+name: ink
+description: Black ink on white, like an e-ink screen
+author: dpad
+
+terminal:
+  background: "#ffffff"
+  foreground: "#111111"
+
+ui:
+  brand: "#111111"
+  dim: "#707070"
+  header: "#111111"
+  accent: "#111111"
+  success: "#111111"
+  warning: "#3d3d3d"
+  error: "#111111"
+  onAccent: "#ffffff"
+  matchText: "#111111"
+  matchBackground: "#c8c8c8"
+
+tabs:
+  containers: "#111111"
+  images: "#111111"
+  stats: "#111111"
+  projects: "#111111"
+  events: "#111111"
+  volumes: "#111111"
+  networks: "#111111"
+
+states:
+  running: "#111111"
+  exited: "#707070"
+  failed: "#111111"
+  paused: "#3d3d3d"
+  restarting: "#3d3d3d"
+  created: "#3d3d3d"
+  dead: "#111111"
+
+health:
+  healthy: "#3d3d3d"
+  unhealthy: "#111111"
+  starting: "#707070"
+
+usage:
+  low: "#3d3d3d"
+  medium: "#262626"
+  high: "#111111"
+  track: "#d9d9d9"
+  sparkline: "#111111"
+
+logs:
+  error: "#111111"
+  warn: "#262626"
+  info: "#3d3d3d"
+  debug: "#707070"
+
+columns:
+  ports: "#3d3d3d"
+  tag: "#3d3d3d"
+
+names: ["#111111", "#3d3d3d", "#5c5c5c"]

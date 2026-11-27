@@ -249,8 +249,9 @@ Compose file on the server through the same connection. Details are in
 
 <img src="docs/images/themes/matrix.svg" alt="The Containers tab in the matrix theme: green text on black" width="100%">
 
-dpad ships ten color themes, from the default that follows your terminal's
-palette to matrix, amber CRT, black and white, high contrast and a light theme.
+dpad ships eleven color themes, from the default that follows your terminal's
+palette to matrix, amber CRT, black and white, high contrast and two light
+themes, including ink, black on white like an e-ink screen.
 Press `C` (or open settings with `o`) to preview them live and save your pick, or set `theme: matrix` in `config.yaml`. A
 theme is one YAML file, so you can write your own or contribute one. See the
 [gallery and theme guide](docs/themes.md).
