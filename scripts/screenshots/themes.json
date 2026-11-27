@@ -8,6 +8,7 @@
   {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "k"}, {"wait": 1.2}, {"snap": "theme-dracula"},
   {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "j"}, {"wait": 1.2}, {"snap": "theme-gruvbox"},
   {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "k"}, {"wait": 1.2}, {"snap": "theme-high-contrast"},
+  {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "j"}, {"wait": 0.3}, {"keys": "k"}, {"wait": 1.2}, {"snap": "theme-ink"},
   {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "j"}, {"wait": 1.2}, {"snap": "theme-matrix"},
   {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "k"}, {"wait": 1.2}, {"snap": "theme-mono"},
   {"keys": "C"}, {"wait": 0.3}, {"keys": "j\r"}, {"wait": 0.3}, {"keys": "j"}, {"wait": 1.2}, {"snap": "theme-nord"},

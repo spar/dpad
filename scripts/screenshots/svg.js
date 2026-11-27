@@ -266,6 +266,11 @@ const write = (term, data) => new Promise((resolve) => term.write(data, resolve)
     screen = useRows(frames[frames.length - 1]);
   }
 
+  // A light theme gets a light title bar, as a terminal in a light window would.
+  const lum = (hex) => [1, 3, 5].reduce((sum, i, k) => sum + [0.299, 0.587, 0.114][k] * parseInt(hex.slice(i, i + 2), 16), 0) / 255;
+  const chrome = lum(theme.background) > 0.6
+    ? { bar: '#ececec', rule: '#d9d9d9', title: '#6e6e6e', edge: '#000000;stroke-opacity:.12' }
+    : { bar: '#1b1f2b', rule: '#232838', title: '#8a91a5', edge: '#ffffff;stroke-opacity:.07' };
   const pal = theme.palette.map((c, i) => `.p${i}{fill:${c}}.sp${i}{stroke:${c}}`).join('');
   const W = n(winW + 2 * MARGIN);
   const H = n(winH + 2 * MARGIN);
@@ -279,11 +284,11 @@ ${pal}${css}</style>
 <clipPath id="clip"><rect width="${n(screenW)}" height="${screenH}"/></clipPath>${defs.join('\n')}</defs>
 <g transform="translate(${MARGIN} ${MARGIN})">
 <rect width="${n(winW)}" height="${winH}" rx="12" fill="${theme.background}" filter="url(#shadow)"/>
-<path d="M0 ${BAR}V12a12 12 0 0 1 12-12H${n(winW - 12)}a12 12 0 0 1 12 12V${BAR}z" style="fill:#1b1f2b;stroke:none"/>
-<rect y="${BAR}" width="${n(winW)}" height="1" fill="#232838"/>
+<path d="M0 ${BAR}V12a12 12 0 0 1 12-12H${n(winW - 12)}a12 12 0 0 1 12 12V${BAR}z" style="fill:${chrome.bar};stroke:none"/>
+<rect y="${BAR}" width="${n(winW)}" height="1" fill="${chrome.rule}"/>
 <circle cx="20" cy="19" r="6" fill="#ff5f57"/><circle cx="40" cy="19" r="6" fill="#febc2e"/><circle cx="60" cy="19" r="6" fill="#28c840"/>
-<text x="${n(winW / 2)}" y="23.5" text-anchor="middle" style="font-size:13px;font-weight:500;fill:#8a91a5">${esc(title)}</text>
-<rect width="${n(winW)}" height="${winH}" rx="12" style="fill:none;stroke:#ffffff;stroke-opacity:.07"/>
+<text x="${n(winW / 2)}" y="23.5" text-anchor="middle" style="font-size:13px;font-weight:500;fill:${chrome.title}">${esc(title)}</text>
+<rect width="${n(winW)}" height="${winH}" rx="12" style="fill:none;stroke:${chrome.edge}"/>
 <g transform="translate(${PAD.x} ${BAR + PAD.top})" clip-path="url(#clip)">${screen}</g>
 </g></svg>
 `;

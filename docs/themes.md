@@ -2,7 +2,7 @@
 
 A theme sets every color dpad draws with: the tab accents, container states,
 health badges, CPU and memory bars, sparklines, log levels, the selected row
-and the terminal background while the TUI runs. dpad ships ten themes, and you
+and the terminal background while the TUI runs. dpad ships eleven themes, and you
 can write your own in a few lines of YAML.
 
 - [Choosing a theme](#choosing-a-theme)
@@ -74,8 +74,8 @@ All images show the Containers tab of the [demo environment](../testenv/README.m
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="images/themes/high-contrast.svg" alt="high-contrast theme" width="100%"><br>
-      <b>high-contrast</b>: saturated colors on pure black
+      <img src="images/themes/ink.svg" alt="ink theme" width="100%"><br>
+      <b>ink</b>: black ink on white, like an e-ink screen
     </td>
     <td width="50%" valign="top">
       <img src="images/themes/paper.svg" alt="paper theme" width="100%"><br>
@@ -101,6 +101,13 @@ All images show the Containers tab of the [demo environment](../testenv/README.m
       <img src="images/themes/catppuccin-mocha.svg" alt="catppuccin-mocha theme" width="100%"><br>
       <b>catppuccin-mocha</b>: the <a href="https://catppuccin.com">Catppuccin</a> Mocha palette
     </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="images/themes/high-contrast.svg" alt="high-contrast theme" width="100%"><br>
+      <b>high-contrast</b>: saturated colors on pure black
+    </td>
+    <td width="50%" valign="top"></td>
   </tr>
 </table>
 
@@ -256,9 +263,11 @@ compiled into the binary. To add one:
    and, for themes that set a hex background, keep text readable (a contrast
    ratio of at least 4 for text and 3 for secondary text, with
    `ui.onAccent` readable on every tab color).
-6. With the demo environment running, `make screenshots` regenerates the
-   gallery, including `docs/images/themes/<name>.svg`; add your theme to the
-   gallery table above.
+6. Add a step for the theme to `scripts/screenshots/themes.json`, in the
+   picker's alphabetical order. With the demo environment running,
+   `make screenshots` regenerates the gallery, including
+   `docs/images/themes/<name>.svg`, and `make website` copies it to the
+   website. Add your theme to the gallery table above.
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for the rest of the pull request
 checklist.
