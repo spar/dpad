@@ -158,7 +158,7 @@ ui:
   brand: green         # the ▍ mark before "dpad"
   dim: bright-black    # secondary text: IDs, hints, the status line
   header: blue         # table headers in CLI output
-  accent: cyan         # names in status lines, work in progress
+  accent: cyan         # names in status lines, work in progress, container icons
   success: green       # connected, finished, ✓ marks
   warning: yellow      # confirmations, reconnecting, warnings
   error: red           # errors (drawn bold)

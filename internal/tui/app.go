@@ -88,6 +88,8 @@ type App struct {
 	commands        []config.CustomCommand
 	composeProjects map[string]config.ComposeProject
 	editor          string // the editor: setting; empty uses $VISUAL/$EDITOR
+	icons           string // the icons: setting
+	terminal        string // the terminal's name and version, for icons: auto
 }
 
 // Run starts the TUI and blocks until the user quits. cfgErr and themeErr,
@@ -95,6 +97,7 @@ type App struct {
 // chosen theme could not be used.
 func Run(ctx context.Context, c dockerClient, cfg config.Config, cfgErr, themeErr error) error {
 	return runSessions(ctx, c, func(app *App) error {
+		app.terminal = terminalFromEnv()
 		app.configure(cfg, cfgErr)
 		if themeErr != nil && app.flash == "" {
 			app.flash, app.flashErr = oneLine(themeErr.Error())+"; using the default theme", true
@@ -186,7 +189,7 @@ func (a *App) Init() tea.Cmd {
 	for _, t := range a.tabs {
 		cmds = append(cmds, t.Init())
 	}
-	cmds = append(cmds, a.probeDaemon())
+	cmds = append(cmds, a.probeDaemon(), tea.RequestTerminalVersion)
 	return tea.Batch(append(cmds, a.tabs[a.active].Focus())...)
 }
 
@@ -256,6 +259,12 @@ func (a *App) update(msg tea.Msg) tea.Cmd {
 		return a.probeDaemon()
 	case tea.WindowSizeMsg:
 		a.resize(msg.Width, msg.Height)
+		return nil
+	case tea.TerminalVersionMsg:
+		if msg.Name != "" {
+			a.terminal = msg.Name
+			a.applyIcons()
+		}
 		return nil
 	case tea.KeyPressMsg:
 		return a.handleKey(msg)

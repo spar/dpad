@@ -32,6 +32,9 @@ type Config struct {
 	// CPUGraph is how the Containers tab draws CPU: braille, bars, meter, or
 	// off to hide the CPU and memory columns. Empty means braille.
 	CPUGraph string `yaml:"cpuGraph"`
+	// Icons puts a Nerd Font icon before container names: auto (only in
+	// terminals that ship the glyphs), nerd, or off. Empty means auto.
+	Icons string `yaml:"icons"`
 }
 
 // ComposeProject holds per-project settings for Compose updates, keyed by
@@ -214,6 +217,9 @@ func SaveEditor(command string) error { return save("editor", command) }
 
 // SaveCPUGraph sets cpuGraph: in the config file.
 func SaveCPUGraph(style string) error { return save("cpuGraph", style) }
+
+// SaveIcons sets icons: in the config file.
+func SaveIcons(mode string) error { return save("icons", mode) }
 
 // save sets one top-level key in the config file, or removes it when value
 // is empty. It edits only that line, so the rest of the file, comments

@@ -282,7 +282,8 @@ func width(s string) int {
 		case c >= utf8.RuneSelf:
 			r, size := utf8.DecodeRuneInString(s[i:])
 			switch {
-			case r >= 0x2580 && r <= 0x259f, r == '→', r == '▾', r == '▸', r == '—', r == '·', r == '▲', r == '▼', r == '↑', r == '↓', r == '♥', r == '✗', r == '…':
+			case r >= 0x2580 && r <= 0x259f, r == '→', r == '▾', r == '▸', r == '—', r == '·', r == '▲', r == '▼', r == '↑', r == '↓', r == '♥', r == '✗', r == '…',
+				r >= 0xe000 && r <= 0xf8ff, r >= 0xf0000 && r <= 0xffffd: // Nerd Font icons sit in the Private Use Areas
 				w++
 				i += size - 1
 			default:

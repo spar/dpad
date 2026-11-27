@@ -12,8 +12,8 @@ import (
 )
 
 type statsMembership struct {
-	project, service, name string
-	running                bool
+	project, service, name, image string
+	running                       bool
 }
 type statsProject struct {
 	name      string
@@ -61,7 +61,7 @@ func (v *StatsView) updateMembership(msg containersMsg) {
 		// A restarting container has no stats stream between attempts, so
 		// waiting for its sample would blank a crash-looping project for good.
 		active := c.State == container.StateRunning || c.State == container.StatePaused
-		membership[c.ID] = statsMembership{project: c.Labels[composeProjectLabel], service: c.Labels[composeServiceLabel], name: docker.ContainerName(c.Names), running: active}
+		membership[c.ID] = statsMembership{project: c.Labels[composeProjectLabel], service: c.Labels[composeServiceLabel], name: docker.ContainerName(c.Names), image: c.Image, running: active}
 	}
 	v.membership = membership
 	if v.requested {
@@ -215,7 +215,9 @@ func (v *StatsView) statsCells(s docker.Stats) []string {
 
 func (v *StatsView) statsRows(s docker.Stats) []row {
 	if !v.grouped || v.projects[s.ID] == nil {
-		return []row{{key: s.ID, id: s.ID, name: s.Name, cells: v.statsCells(s)}}
+		cells := v.statsCells(s)
+		cells[0] = render.ImageIcon(v.membership[s.ID].image) + cells[0]
+		return []row{{key: s.ID, id: s.ID, name: s.Name, cells: cells}}
 	}
 	p := v.projects[s.ID]
 	marker := "▸ "
@@ -248,7 +250,7 @@ func (v *StatsView) statsRows(s docker.Stats) []row {
 		if service != "" {
 			label = service + " · " + label
 		}
-		cells[0] = "  " + label
+		cells[0] = "  " + render.ImageIcon(v.membership[c.ID].image) + label
 		rows = append(rows, row{key: c.ID, id: c.ID, name: c.Name, cells: cells})
 	}
 	return rows

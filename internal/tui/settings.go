@@ -43,6 +43,7 @@ func (a *App) openSettings() {
 		{name: "CPU graph", value: func() string {
 			return a.containers().graph + " " + render.Dim.Render("· Containers tab; enter cycles "+strings.Join(render.GraphStyles, "/"))
 		}, open: a.cycleCPUGraph},
+		{name: "Icons", value: a.iconsValue, open: func() tea.Cmd { a.cycleIcons(); return nil }},
 		{name: "Mouse", value: func() string {
 			if a.mouse {
 				return "on " + render.Dim.Render("· set mouse: false in config.yaml")
