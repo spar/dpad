@@ -16,15 +16,15 @@ import (
 func TestParseSSHHost(t *testing.T) {
 	tests := []struct {
 		in   string
-		want sshTarget
+		want SSHTarget
 		err  string
 	}{
-		{in: "ssh://server", want: sshTarget{host: "server", socket: defaultRemoteSocket}},
-		{in: "ssh://me@server:2222", want: sshTarget{user: "me", host: "server", port: "2222", socket: defaultRemoteSocket}},
-		{in: "ssh://me@[::1]:22", want: sshTarget{user: "me", host: "::1", port: "22", socket: defaultRemoteSocket}},
-		{in: "ssh://server/var/run/docker.sock", want: sshTarget{host: "server", socket: defaultRemoteSocket}},
-		{in: "ssh://me@[::1]:2222/run/user/1000/docker.sock", want: sshTarget{user: "me", host: "::1", port: "2222", socket: "/run/user/1000/docker.sock"}},
-		{in: "ssh://server/run/custom%20socket%3Aone%5Ctwo.sock", want: sshTarget{host: "server", socket: "/run/custom socket:one\\two.sock"}},
+		{in: "ssh://server", want: SSHTarget{Host: "server", Socket: DefaultRemoteSocket}},
+		{in: "ssh://me@server:2222", want: SSHTarget{User: "me", Host: "server", Port: "2222", Socket: DefaultRemoteSocket}},
+		{in: "ssh://me@[::1]:22", want: SSHTarget{User: "me", Host: "::1", Port: "22", Socket: DefaultRemoteSocket}},
+		{in: "ssh://server/var/run/docker.sock", want: SSHTarget{Host: "server", Socket: DefaultRemoteSocket}},
+		{in: "ssh://me@[::1]:2222/run/user/1000/docker.sock", want: SSHTarget{User: "me", Host: "::1", Port: "2222", Socket: "/run/user/1000/docker.sock"}},
+		{in: "ssh://server/run/custom%20socket%3Aone%5Ctwo.sock", want: SSHTarget{Host: "server", Socket: "/run/custom socket:one\\two.sock"}},
 		{in: "ssh://me:secret@server", err: "passwords"},
 		{in: "ssh://server/", err: "absolute socket file"},
 		{in: "ssh://server/run/user/1000/", err: "absolute socket file"},
@@ -41,21 +41,21 @@ func TestParseSSHHost(t *testing.T) {
 		{in: "tcp://server", err: "expected an ssh://"},
 	}
 	for _, tt := range tests {
-		got, err := parseSSHHost(tt.in)
+		got, err := ParseSSHHost(tt.in)
 		if tt.err != "" {
 			if err == nil || !strings.Contains(err.Error(), tt.err) {
-				t.Errorf("parseSSHHost(%q) error = %v, want %q", tt.in, err, tt.err)
+				t.Errorf("ParseSSHHost(%q) error = %v, want %q", tt.in, err, tt.err)
 			}
 			continue
 		}
 		if err != nil || got != tt.want {
-			t.Errorf("parseSSHHost(%q) = %+v, %v; want %+v", tt.in, got, err, tt.want)
+			t.Errorf("ParseSSHHost(%q) = %+v, %v; want %+v", tt.in, got, err, tt.want)
 		}
 	}
 }
 
 func TestSSHArgs(t *testing.T) {
-	tun := &sshTunnel{target: sshTarget{user: "me", host: "-oProxyCommand=x", port: "2222", socket: defaultRemoteSocket}, socket: "/tmp/d/docker.sock"}
+	tun := &sshTunnel{target: SSHTarget{User: "me", Host: "-oProxyCommand=x", Port: "2222", Socket: DefaultRemoteSocket}, socket: "/tmp/d/docker.sock"}
 	args := tun.args(false)
 	if slices.Contains(args, "BatchMode=yes") {
 		t.Fatal("first start must allow prompts")
@@ -67,7 +67,7 @@ func TestSSHArgs(t *testing.T) {
 	if !slices.Contains(tun.args(true), "BatchMode=yes") {
 		t.Fatal("restart can prompt while the TUI owns the terminal")
 	}
-	tun.target.socket = "/run/custom socket:one\\two.sock"
+	tun.target.Socket = "/run/custom socket:one\\two.sock"
 	for _, batch := range []bool{false, true} {
 		args := tun.args(batch)
 		if got := args[slices.Index(args, "-L")+1]; got != `/tmp/d/docker.sock:/run/custom socket\:one\\two.sock` {
@@ -186,7 +186,7 @@ func testSSHTunnelServesAndRestarts(t *testing.T, socket string, fromContext boo
 		t.Fatalf("ssh starts = %q", s)
 	}
 	if socket == "" {
-		socket = defaultRemoteSocket
+		socket = DefaultRemoteSocket
 	}
 	for _, start := range s {
 		if !strings.Contains(start, "-L "+c.tunnel.socket+":"+socket+" -- server") {

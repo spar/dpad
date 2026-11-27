@@ -35,7 +35,7 @@ func Down(ctx context.Context, env []string, name string, volumes bool) (string,
 		return strings.EqualFold(key, "COMPOSE_FILE") || strings.EqualFold(key, "COMPOSE_PROJECT_NAME")
 	})
 	var errs []error
-	for _, cli := range [][]string{{"docker", "compose"}, {"docker-compose"}} {
+	for _, cli := range composeCLIs {
 		executable, err := exec.LookPath(cli[0])
 		if err != nil {
 			errs = append(errs, err)
@@ -49,7 +49,7 @@ func Down(ctx context.Context, env []string, name string, volumes bool) (string,
 			return cmd
 		}
 		version, err := run("version", "--short").Output()
-		if v := strings.TrimPrefix(strings.TrimSpace(string(version)), "v"); err != nil || len(v) < 2 || v[0] < '2' || v[0] > '9' || v[1] != '.' {
+		if _, ok := composeV2(version); err != nil || !ok {
 			errs = append(errs, errors.New(strings.Join(cli, " ")+" v2 or later is not available"))
 			continue
 		}
