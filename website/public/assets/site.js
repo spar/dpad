@@ -3,7 +3,11 @@
 (function () {
   var root = document.documentElement;
   var key = 'dpad-theme';
+  // The light look: 'ink', 'paper' or 'white' (site.css). Change lightShots in
+  // website/sync/main.go to match and run `make website`.
+  var light = 'ink';
   root.classList.add('js');
+  root.setAttribute('data-light', light);
 
   try {
     if (localStorage.getItem(key) === 'light') root.setAttribute('data-theme', 'light');
@@ -13,7 +17,7 @@
     return root.getAttribute('data-theme') === 'light';
   }
 
-  // Screenshots have a light copy in shots-light/, made by `make website`.
+  // Screenshots have a light copy in shots-light/, written by `make website`.
   function swapShots() {
     var dir = isLight() ? '/assets/shots-light/' : '/assets/shots/';
     document.querySelectorAll('img[src*="/assets/shots"]').forEach(function (img) {

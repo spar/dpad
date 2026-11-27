@@ -36,6 +36,9 @@ echo "capture: recording the settings screen"
 # DOCKER_CONFIG keeps your Docker contexts.
 mkdir -p "$work/home"
 env -u DPAD_CONFIG -u XDG_CONFIG_HOME DOCKER_CONFIG="${DOCKER_CONFIG:-$HOME/.docker}" HOME="$work/home" EDITOR=vim VISUAL= DPAD_THEME=default python3 "$here/drive.py" "$work/raw" 120 13 "$here/settings.json" -- "$dp"
+echo "capture: recording the TUI and settings in the ink theme, for the website's light mode"
+VISUAL="$here/editor.sh" DPAD_THEME=ink python3 "$here/drive.py" "$work/ink" 150 30 "$here/tui.json" -- "$dp"
+env -u DPAD_CONFIG -u XDG_CONFIG_HOME DOCKER_CONFIG="${DOCKER_CONFIG:-$HOME/.docker}" HOME="$work/home" EDITOR=vim VISUAL= DPAD_THEME=ink python3 "$here/drive.py" "$work/ink" 120 13 "$here/settings.json" -- "$dp"
 echo "capture: recording CLI commands"
 python3 "$here/drive.py" "$work/raw" 160 39 "$here/cli.json" -- bash "$here/cli.sh" "$dp"
 
@@ -51,5 +54,11 @@ for snap in "$work"/raw/theme-*.bin; do
 done
 node "$here/svg.js" 160 39 '~/app' "$out/cli.svg" "$work/raw/cli.bin"
 node "$here/svg.js" --anim 10 150 30 dp "$out/demo.svg" "$work"/raw/tour-*.bin
-python3 "$here/font.py" "$out"/*.svg "$out"/themes/*.svg
+mkdir -p "$out/light"
+for name in containers stats projects compose-edit logs details events prune; do
+	node "$here/svg.js" 150 30 dp "$out/light/$name.svg" "$work/ink/$name.bin"
+done
+node "$here/svg.js" 120 13 dp "$out/light/settings.svg" "$work/ink/settings.bin"
+node "$here/svg.js" --anim 10 150 30 dp "$out/light/demo.svg" "$work"/ink/tour-*.bin
+python3 "$here/font.py" "$out"/*.svg "$out"/themes/*.svg "$out"/light/*.svg
 echo "capture: wrote $out"

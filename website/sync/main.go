@@ -1,6 +1,6 @@
 // Command sync copies the screenshots, theme previews and logo from docs/images
-// into website/public/assets, and writes a light copy of each screenshot in the
-// colors of the paper theme for the site's light mode.
+// into website/public/assets, with a light copy of each screenshot for the
+// site's light mode.
 //
 // Run it from the repository root with `make website` after `make screenshots`.
 package main
@@ -21,6 +21,14 @@ var shots = []string{
 	"compose-edit.svg", "containers.svg", "demo.svg", "details.svg", "events.svg",
 	"logs.svg", "projects.svg", "prune.svg", "settings.svg", "stats.svg",
 }
+
+// lightShots picks the light copies of the screenshots. Keep it in step with
+// `light` in public/assets/site.js.
+//
+//	ink:   docs/images/light, captured with the ink theme
+//	paper: the dark screenshots recolored with the paper palette
+//	white: the paper copies on a white window
+const lightShots = "ink"
 
 // paperPalette maps the screenshots' 16 ANSI color classes (p0 to p15) to
 // colors from themes/paper.yaml. p0 is the text on a selected row.
@@ -72,7 +80,7 @@ func outputs(root string) (map[string][]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		light, err := lighten(b)
+		light, err := lightCopy(root, name, b)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", name, err)
 		}
@@ -100,6 +108,20 @@ func outputs(root string) (map[string][]byte, error) {
 		out[dst(name)] = b
 	}
 	return out, nil
+}
+
+func lightCopy(root, name string, dark []byte) ([]byte, error) {
+	switch lightShots {
+	case "ink":
+		return os.ReadFile(filepath.Join(root, "docs/images/light", name))
+	case "white":
+		b, err := lighten(dark)
+		b = bytes.ReplaceAll(b, []byte("#fbfaf6"), []byte("#ffffff")) // window
+		b = bytes.ReplaceAll(b, []byte("#f0eee8"), []byte("#f6f8fa")) // title bar
+		return b, err
+	default:
+		return lighten(dark)
+	}
 }
 
 // lighten recolors a dark screenshot with the paper palette.

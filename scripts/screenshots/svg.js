@@ -225,7 +225,7 @@ const write = (term, data) => new Promise((resolve) => term.write(data, resolve)
     await write(term, all.subarray(fps ? written : 0));
     written = all.length;
     frames.push(snapshot(term, cell));
-    if (!fps) defaultColors(all.toString('latin1'));
+    defaultColors(all.toString('latin1'));
   }
 
   const rowIds = new Map();
