@@ -2,14 +2,14 @@ module dpad
 
 go 1.26.7
 
-toolchain go1.26.11
+toolchain go1.27.4
 
 require (
 	charm.land/bubbles/v2 v2.2.2
-	charm.land/bubbletea/v2 v2.1.2
+	charm.land/bubbletea/v2 v2.2.0
 	charm.land/lipgloss/v2 v2.1.1
 	github.com/charmbracelet/colorprofile v0.4.3
-	github.com/charmbracelet/x/ansi v0.11.10
+	github.com/charmbracelet/x/ansi v0.12.0
 	github.com/docker/go-units v0.5.0
 	github.com/moby/docker-image-spec v1.3.1
 	github.com/moby/moby/api v1.57.0

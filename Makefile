@@ -37,11 +37,15 @@ test:
 vet:
 	go vet ./...
 
+# go run of a pinned tool ignores go.mod's toolchain; build the tools with it
+# so they can read code written for it.
+TOOLCHAIN = GOTOOLCHAIN=$$(go env GOVERSION)
+
 lint:
-	go run $(GOLANGCI_LINT) run ./...
+	$(TOOLCHAIN) go run $(GOLANGCI_LINT) run ./...
 
 vuln:
-	go run $(GOVULNCHECK) ./...
+	$(TOOLCHAIN) go run $(GOVULNCHECK) ./...
 
 clean:
 	rm -rf bin
