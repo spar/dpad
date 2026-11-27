@@ -24,6 +24,7 @@ and [custom domains](https://developers.cloudflare.com/workers/configuration/rou
 | https://dpad.sh | the home page, `website/public/index.html` |
 | https://dpad.sh/install | a redirect to [`scripts/install.sh`](../scripts/install.sh) on `main` |
 | https://dpad.sh/install.ps1 | a redirect to [`scripts/install.ps1`](../scripts/install.ps1) on `main` |
+| https://dpad.sh/sitemap.xml, /robots.txt | the page list and crawler rules for search engines |
 | any other address | `website/public/404.html`, with a 404 status |
 
 [`website/wrangler.jsonc`](../website/wrangler.jsonc) tells Cloudflare what to
@@ -127,6 +128,29 @@ dpad.sh controls the script.
 - Under the domain's **Registrar** settings (**Manage Domains**, dpad.sh), keep
   **Auto renew** on and the registrar lock enabled.
 - Keep Cloudflare Web Analytics off. The site promises no tracking.
+
+## Step 6: Google Search Console
+
+Search Console shows how dpad.sh appears in Google and lets you ask Google to
+crawl it. It adds nothing to the site, so the no-tracking promise holds.
+
+1. Open [Google Search Console](https://search.google.com/search-console),
+   choose **Add property**, then **Domain**, and type `dpad.sh`. A Domain
+   property covers every address on dpad.sh.
+2. Google shows a TXT record that starts with `google-site-verification=`.
+   In Cloudflare, open the domain's **DNS**, **Records**, **Add record**: type
+   `TXT`, name `@`, content the whole value Google gave. Save it. If Search
+   Console offers to add the record in Cloudflare for you, that works too.
+3. Back in Search Console, select **Verify**. If it fails, wait a few minutes
+   and try again.
+4. Open **Sitemaps**, type `sitemap.xml` and select **Submit**.
+5. Open **URL inspection**, paste `https://dpad.sh/` and select **Request
+   indexing**.
+
+Pull request previews (`<branch>.dpad.sh`) and `workers.dev` addresses send
+`X-Robots-Tag: noindex` from `_headers`, and every page names
+`https://dpad.sh/` as its canonical address, so only the real site is indexed.
+Keep the TXT record: Google checks it again from time to time.
 
 ## Changing the website later
 

@@ -3,14 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>dpad: a colorful, interactive companion to the docker CLI</title>
-<meta name="description" content="dp adds live stats with sparklines, multi-container logs, Compose project controls and a full-screen terminal UI to the docker CLI. Anything it doesn't enhance goes straight to docker.">
+<title>dpad: stop juggling docker ps, stats and logs</title>
+<meta name="description" content="dpad (dp) is an open source terminal UI and CLI for Docker: live container stats with sparklines, multi-container logs and Compose project controls. Anything else goes straight to docker.">
 <link rel="canonical" href="https://dpad.sh/">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="dpad">
 <meta property="og:url" content="https://dpad.sh/">
-<meta property="og:title" content="dpad: the docker CLI, in full color">
-<meta property="og:description" content="Live stats, multi-container logs, Compose project controls and a full-screen terminal UI for the docker CLI.">
+<meta property="og:title" content="dpad: stop juggling docker ps, stats and logs">
+<meta property="og:description" content="One screen to rule them all: live stats, multi-container logs, Compose project controls and a full-screen terminal UI for the docker CLI.">
 <meta property="og:image" content="https://dpad.sh/assets/og-image.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="dpad, a colorful terminal UI for the docker CLI">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0a0e1f">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
@@ -19,6 +23,24 @@
 <link rel="preload" href="/assets/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/site.css">
 <script src="/assets/site.js"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "dpad",
+  "alternateName": "dp",
+  "description": "An open source terminal UI and CLI for Docker: live container stats, multi-container logs and Compose project controls.",
+  "url": "https://dpad.sh/",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "macOS, Linux, Windows",
+  "downloadUrl": "https://github.com/spar/dpad/releases/latest",
+  "installUrl": "https://dpad.sh/#install",
+  "license": "https://opensource.org/licenses/MIT",
+  "image": "https://dpad.sh/assets/og-image.png",
+  "sameAs": ["https://github.com/spar/dpad"],
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
 </head>
 <body>
 
@@ -43,7 +65,8 @@
 <main>
 <div class="wrap hero">
   <span class="pill"><b>●</b> open source · macOS, Linux and Windows</span>
-  <h1>The <code>docker</code> CLI,<br>in <span class="acc">full color</span>.</h1>
+  <h1>Stop juggling<br><code>docker ps</code>, <code>stats</code> and <code>logs</code>.</h1>
+  <p class="tagline">One screen to rule them all.</p>
   <p class="lede"><code>dp</code> adds live stats with sparklines, multi-container logs, Compose project controls and a full-screen terminal UI. Anything it doesn't enhance goes straight to <code>docker</code>.</p>
 
   <div class="install" data-tabs>
@@ -95,7 +118,7 @@
         <div class="step"><span class="kicker"><kbd>3</kbd> stats tab</span><span class="num">02 / 04</span></div>
         <h2>Live stats you can read at a glance</h2>
         <ul>
-          <li>CPU and memory bars that turn <b>yellow and red</b> as usage climbs.</li>
+          <li>CPU and memory bars that <b>change color</b> as usage climbs.</li>
           <li>Network and disk as <b>rates per second</b>; <kbd>t</kbd> for totals.</li>
           <li>Sort by any column with <kbd>s</kbd>, reverse with <kbd>r</kbd>.</li>
           <li>Two-minute <b>sparklines</b> with average and peak.</li>
@@ -142,7 +165,7 @@
 
 <section id="themes" class="wrap">
   <span class="kicker k-magenta">themes</span>
-  <h2>Ten built-in themes, or bring your own</h2>
+  <h2>Eleven built-in themes, or bring your own</h2>
   <p class="intro">The default follows your terminal's own palette. Press <kbd>C</kbd> to switch, or <a class="link" href="https://github.com/spar/dpad/blob/main/docs/themes.md">add a theme</a> as one YAML file.</p>
   <div class="themes">
     <figure class="theme on"><img src="/assets/themes/default.svg" width="1348" height="634" loading="lazy" alt=""><figcaption>default</figcaption></figure>
@@ -153,6 +176,7 @@
     <figure class="theme"><img src="/assets/themes/amber.svg" width="1348" height="634" loading="lazy" alt=""><figcaption>amber</figcaption></figure>
     <figure class="theme"><img src="/assets/themes/matrix.svg" width="1348" height="634" loading="lazy" alt=""><figcaption>matrix</figcaption></figure>
     <figure class="theme"><img src="/assets/themes/paper.svg" width="1348" height="634" loading="lazy" alt=""><figcaption>paper</figcaption></figure>
+    <figure class="theme"><img src="/assets/themes/ink.svg" width="1348" height="634" loading="lazy" alt=""><figcaption>ink</figcaption></figure>
     <figure class="theme"><img src="/assets/themes/mono.svg" width="1348" height="634" loading="lazy" alt=""><figcaption>mono</figcaption></figure>
     <figure class="theme"><img src="/assets/themes/high-contrast.svg" width="1348" height="634" loading="lazy" alt=""><figcaption>high-contrast</figcaption></figure>
   </div>

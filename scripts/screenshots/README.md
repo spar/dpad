@@ -41,9 +41,12 @@ To write somewhere other than `docs/images`, run
 3. `font.py` embeds the JetBrains Mono glyphs each image uses, so the images
    look the same in every browser without the font installed.
 
+The TUI and settings scenarios run a second time with `DPAD_THEME=ink`, into
+`docs/images/light/`; the website shows those in its light mode.
+
 The TUI scenario waits about a minute on the Stats tab first so the history
 sparklines have data. To change what is captured, edit the scenario files;
 the step types are described at the top of `drive.py`.
 
 After a capture, run `make website` to copy the new images into the dpad.sh
-website (and remake its light-mode copies). `go test ./...` fails until you do.
+website. `go test ./...` fails until you do.
