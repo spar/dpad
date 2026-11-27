@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"dpad/internal/debuglog"
 )
 
 const defaultRemoteSocket = "/var/run/docker.sock"
@@ -144,17 +146,21 @@ func (t *sshTunnel) start(ctx context.Context, batch bool) (*sshProcess, error) 
 	_ = os.Remove(t.socket)
 	p := &sshProcess{cmd: sshCommand(t.args(batch)...), done: make(chan struct{})}
 	p.cmd.Stderr = &p.stderr
+	began := time.Now()
+	debuglog.Info("ssh tunnel starting", "host", t.target.host, "batch", batch)
 	if err := p.cmd.Start(); err != nil {
 		return nil, fmt.Errorf("ssh tunnel to %s: %w", t.target.host, err)
 	}
 	go func() {
-		_ = p.cmd.Wait()
+		err := p.cmd.Wait()
+		debuglog.Info("ssh tunnel exited", "host", t.target.host, "after", time.Since(began).Round(time.Millisecond), "err", err, "stderr", strings.TrimSpace(p.stderr.String()))
 		close(p.done)
 	}()
 	tick := time.NewTicker(20 * time.Millisecond)
 	defer tick.Stop()
 	for {
 		if _, err := os.Stat(t.socket); err == nil {
+			debuglog.Info("ssh tunnel ready", "host", t.target.host, "ms", time.Since(began).Milliseconds())
 			return p, nil
 		}
 		select {

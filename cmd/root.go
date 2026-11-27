@@ -2,11 +2,14 @@
 package cmd
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
+	"runtime"
 	"runtime/debug"
 	"strings"
 	"syscall"
@@ -14,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"dpad/internal/config"
+	"dpad/internal/debuglog"
 	"dpad/internal/docker"
 	"dpad/internal/passthrough"
 	"dpad/internal/render"
@@ -44,6 +48,9 @@ var (
 	// cfg is the config file, read once; the TUI reports cfgErr.
 	cfg    config.Config
 	cfgErr error
+	// debugLog names the opt-in diagnostic log file; logFile is it, open.
+	debugLog string
+	logFile  io.Closer
 )
 
 var (
@@ -64,6 +71,12 @@ func run(args []string) int {
 	}
 	root.SetArgs(args)
 	err := root.Execute()
+	if logFile != nil {
+		if err != nil {
+			debuglog.Warn("exit", "err", err)
+		}
+		_ = logFile.Close()
+	}
 	switch {
 	case err == nil:
 		return 0
@@ -90,8 +103,15 @@ so "dp network ls" or "dp ps --format ..." behave exactly like docker.`,
 		Args:          cobra.NoArgs,
 		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 			render.SetupColor(noColor)
+			openDebugLog(cmd)
 			cfg, cfgErr = config.Load()
 			themeErr = setupTheme(themeName, cfg.Theme)
+			if cfgErr != nil {
+				debuglog.Warn("config", "err", cfgErr)
+			}
+			if themeErr != nil {
+				debuglog.Warn("theme", "err", themeErr)
+			}
 			if themeErr != nil && cmd != cmd.Root() {
 				fmt.Fprintf(os.Stderr, "dp: %v; using the default theme\n", themeErr)
 			}
@@ -104,6 +124,7 @@ so "dp network ls" or "dp ps --format ..." behave exactly like docker.`,
 	}
 	root.PersistentFlags().BoolVar(&noColor, "no-color", false, "disable colored output (also honors NO_COLOR)")
 	root.PersistentFlags().StringVar(&themeName, "theme", "", "color theme, by name or path to a .yaml file (also $DPAD_THEME; dp themes lists them)")
+	root.PersistentFlags().StringVar(&debugLog, "debug-log", "", "append a diagnostic log to this file, for bug reports (also $DPAD_DEBUG_LOG); nothing is sent anywhere")
 	root.AddCommand(newPsCmd(), newImagesCmd(), newStatsCmd(), newLogsCmd(), newThemesCmd())
 
 	// Flags we don't implement (e.g. `ps --format`) mean the user wants docker's behavior.
@@ -159,12 +180,28 @@ func dockerArgs(args []string, anywhere bool) []string {
 // understands, together with its value: 0 when args[0] isn't one.
 func dpFlagArgs(args []string) int {
 	switch a := args[0]; {
-	case a == "--no-color" || strings.HasPrefix(a, "--no-color="), strings.HasPrefix(a, "--theme="):
+	case a == "--no-color" || strings.HasPrefix(a, "--no-color="), strings.HasPrefix(a, "--theme="), strings.HasPrefix(a, "--debug-log="):
 		return 1
-	case a == "--theme":
+	case a == "--theme", a == "--debug-log":
 		return min(2, len(args))
 	}
 	return 0
+}
+
+// openDebugLog opens the log named by --debug-log or $DPAD_DEBUG_LOG. A log
+// that can't be opened is reported and skipped rather than stopping dp.
+func openDebugLog(cmd *cobra.Command) {
+	path := cmp.Or(debugLog, os.Getenv("DPAD_DEBUG_LOG"))
+	if path == "" || logFile != nil {
+		return
+	}
+	f, err := debuglog.Open(path)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "dp: debug log:", err)
+		return
+	}
+	logFile = f
+	debuglog.Info("start", "version", buildVersion(), "go", runtime.Version(), "os", runtime.GOOS, "arch", runtime.GOARCH, "command", cmd.CommandPath())
 }
 
 func withClient(ctx context.Context, fn func(context.Context, *docker.Client) error) error {

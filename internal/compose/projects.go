@@ -23,6 +23,7 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 
+	"dpad/internal/debuglog"
 	"dpad/internal/docker"
 )
 
@@ -430,6 +431,7 @@ func command(ctx context.Context, env []string, p Project, args ...string) (*exe
 		cmd := exec.CommandContext(ctx, executable, append(slices.Clone(p.CLI[1:]), args...)...)
 		cmd.Env, cmd.Dir = append(slices.Clone(env), p.Env...), p.Directory
 		configureCommand(cmd)
+		debuglog.Info("compose command", "args", cmd.Args)
 		return cmd, nil
 	}
 	u, err := url.Parse(envValue(env, "DOCKER_HOST"))
@@ -474,6 +476,8 @@ func sshScript(ctx context.Context, env []string, script string, stdin bool) (*e
 	cmd := exec.CommandContext(ctx, executable, append(sshArgs, "--", u.Hostname(), script)...)
 	cmd.Env = slices.Clone(env)
 	configureCommand(cmd)
+	// The script can carry composeProjects env values, so only its size is logged.
+	debuglog.Info("ssh command", "args", cmd.Args[:len(cmd.Args)-1], "script bytes", len(script))
 	return cmd, nil
 }
 
