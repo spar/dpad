@@ -83,10 +83,7 @@ func TestRenderQuotesValuesSoTheyStayOneWord(t *testing.T) {
 		t.Fatal(err)
 	}
 	evil := `x'; touch pwned; echo '$(id)`
-	line, err := cfg.CustomCommands[0].Render(Vars{Service: evil})
-	if err != nil {
-		t.Fatal(err)
-	}
+	line := cfg.CustomCommands[0].Render(Vars{Service: evil})
 	args := Shell(line)
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = t.TempDir()
@@ -174,5 +171,36 @@ func TestSaveEditorQuotesWhenNeededAndRemoves(t *testing.T) {
 	}
 	if got, _ := os.ReadFile(path); string(got) != "theme: nord\n" {
 		t.Errorf("file = %q, want the editor line removed", got)
+	}
+}
+
+func TestPlaceholders(t *testing.T) {
+	for _, tc := range []struct{ command, want, err string }{
+		{command: "docker top {{.ID}}", want: "docker top 'abc'"},
+		{command: "cd {{ .WorkingDir }} && make {{.Service}}", want: "cd '/srv/shop' && make 'web'"},
+		{command: "echo {{.Name}}{{.Image}} {{.Project}}", want: "echo 'web''nginx' 'shop'"},
+		{command: "awk '{print $1}}' x", want: "awk '{print $1}}' x"},
+		{command: "echo {{.Names}}", err: "unknown placeholder {{.Names}}"},
+		{command: "echo {{if .ID}}x{{end}}", err: "only placeholders"},
+		{command: "docker inspect -f '{{.State.Status}}' {{.ID}}", err: "only placeholders"},
+		{command: "echo {{.ID}", err: "only placeholders"},
+	} {
+		parts, err := parsePlaceholders(tc.command)
+		if tc.err != "" {
+			if err == nil || !strings.Contains(err.Error(), tc.err) {
+				t.Errorf("%q: error %v, want %q", tc.command, err, tc.err)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("%q: %v", tc.command, err)
+		}
+		if runtime.GOOS == "windows" {
+			continue
+		}
+		got := CustomCommand{parts: parts}.Render(Vars{ID: "abc", Name: "web", Image: "nginx", Project: "shop", Service: "web", WorkingDir: "/srv/shop"})
+		if got != tc.want {
+			t.Errorf("%q rendered %q, want %q", tc.command, got, tc.want)
+		}
 	}
 }

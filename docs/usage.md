@@ -643,12 +643,14 @@ customCommands:
 | `attach` | `true` hands the terminal to the command, for interactive commands; `dp` comes back when it exits |
 | `confirm` | `true` asks `y/N` first |
 
-The command is a Go template. Container commands can use `{{.ID}}`,
-`{{.Name}}`, `{{.Image}}`, `{{.Project}}`, `{{.Service}}` and `{{.WorkingDir}}`
-(the Compose project directory); project commands can use `{{.Project}}` and
-`{{.WorkingDir}}`. Values are inserted already quoted as single words, so don't
-add quotes around them. A value `dp` doesn't know, such as the project of a
-container outside Compose, is an empty word.
+Placeholders in the command are filled in when it runs. Container commands can
+use `{{.ID}}`, `{{.Name}}`, `{{.Image}}`, `{{.Project}}`, `{{.Service}}` and
+`{{.WorkingDir}}` (the Compose project directory); project commands can use
+`{{.Project}}` and `{{.WorkingDir}}`. Values are inserted already quoted as
+single words, so don't add quotes around them. A value `dp` doesn't know, such
+as the project of a container outside Compose, is an empty word. Placeholders
+are the only thing `{{ }}` can hold: Go template actions such as `{{if}}`
+aren't supported.
 
 Commands run with the same daemon as the dashboard: `DOCKER_HOST` is set to its
 endpoint, as for shells. Without `attach`, a command runs in the background and
@@ -656,8 +658,8 @@ its last line of output, or its error, appears in the status line; use `attach`
 when you want to read all of it, for example `docker logs {{.ID}} | less`.
 Context switching waits for background commands to finish.
 
-Problems in the file, such as a key `dp` already uses, a duplicate key or a
-template error, are shown in the status line at startup; the other commands
+Problems in the file, such as a key `dp` already uses, a duplicate key or an
+unknown placeholder, are shown in the status line at startup; the other commands
 still load.
 
 ## Narrow terminals

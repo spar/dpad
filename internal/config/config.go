@@ -5,7 +5,6 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -13,7 +12,6 @@ import (
 	"runtime"
 	"slices"
 	"strings"
-	"text/template"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -57,7 +55,9 @@ type CustomCommand struct {
 	Attach  bool   `yaml:"attach"`
 	Confirm bool   `yaml:"confirm"`
 
-	Template *template.Template `yaml:"-"`
+	// parts is Command split at its placeholders: literal text at even
+	// indexes, a Vars field name at odd ones.
+	parts []string
 }
 
 const (
@@ -155,15 +155,12 @@ func Parse(data []byte) (Config, error) {
 			problems = append(problems, fmt.Errorf("%s: key %q is already used by %s", label, c.Key, seen[scopeKey]))
 			continue
 		}
-		t, err := template.New(c.Name).Parse(c.Command)
-		if err == nil {
-			err = t.Execute(io.Discard, Vars{})
-		}
+		parts, err := parsePlaceholders(c.Command)
 		if err != nil {
 			problems = append(problems, fmt.Errorf("%s: %w", label, err))
 			continue
 		}
-		c.Template = t
+		c.parts = parts
 		seen[scopeKey] = c.Name
 		valid = append(valid, c)
 	}
@@ -171,20 +168,71 @@ func Parse(data []byte) (Config, error) {
 	return cfg, errors.Join(problems...)
 }
 
-// Vars are the values a command template can use, e.g. {{.ID}}. Each is
-// inserted already quoted for the shell that runs the command.
+// Vars are the values a command can use, e.g. {{.ID}}. Each is inserted
+// already quoted for the shell that runs the command.
 type Vars struct {
 	ID, Name, Image, Project, Service, WorkingDir string
 }
 
-// Render fills in the command for the selected container or project.
-func (c CustomCommand) Render(v Vars) (string, error) {
-	q := Vars{quote(v.ID), quote(v.Name), quote(v.Image), quote(v.Project), quote(v.Service), quote(v.WorkingDir)}
-	var b strings.Builder
-	if err := c.Template.Execute(&b, q); err != nil {
-		return "", err
+func (v Vars) field(name string) string {
+	switch name {
+	case "ID":
+		return v.ID
+	case "Name":
+		return v.Name
+	case "Image":
+		return v.Image
+	case "Project":
+		return v.Project
+	case "Service":
+		return v.Service
 	}
-	return b.String(), nil
+	return v.WorkingDir
+}
+
+var placeholderNames = []string{"ID", "Name", "Image", "Project", "Service", "WorkingDir"}
+
+// placeholder matches {{.Field}}, with optional spaces inside the braces.
+var placeholder = regexp.MustCompile(`\{\{\s*\.([A-Za-z]+)\s*\}\}`)
+
+// parsePlaceholders splits command at its placeholders. Only the plain
+// {{.Field}} form is supported, not Go template actions: text/template's
+// method lookup keeps every exported method in the binary, about 3 MB.
+func parsePlaceholders(command string) ([]string, error) {
+	var parts []string
+	rest := command
+	for {
+		loc := placeholder.FindStringSubmatchIndex(rest)
+		if loc == nil {
+			break
+		}
+		name := rest[loc[2]:loc[3]]
+		if !slices.Contains(placeholderNames, name) {
+			return nil, fmt.Errorf("unknown placeholder {{.%s}}; use one of {{.%s}}", name, strings.Join(placeholderNames, "}}, {{."))
+		}
+		parts = append(parts, rest[:loc[0]], name)
+		rest = rest[loc[1]:]
+	}
+	parts = append(parts, rest)
+	for i := 0; i < len(parts); i += 2 {
+		if strings.Contains(parts[i], "{{") {
+			return nil, errors.New("only placeholders such as {{.ID}} can go inside {{ }}")
+		}
+	}
+	return parts, nil
+}
+
+// Render fills in the command for the selected container or project.
+func (c CustomCommand) Render(v Vars) string {
+	var b strings.Builder
+	for i, part := range c.parts {
+		if i%2 == 0 {
+			b.WriteString(part)
+		} else {
+			b.WriteString(quote(v.field(part)))
+		}
+	}
+	return b.String()
 }
 
 // Shell returns the program and arguments that run a rendered command:

@@ -328,7 +328,7 @@ while it sits open in a terminal tab.
 
 | | Result |
 |---|---|
-| Binary | 14.5 MiB, static and stripped (`CGO_ENABLED=0`) |
+| Binary | 11.7 MiB on linux/amd64, static and stripped (`CGO_ENABLED=0`) |
 | Memory | about 27 MB resident with the TUI open and live stats streaming |
 | CPU | about 2% of one core in the same state (30-second average) |
 | `dp ps -a` | 115 to 118 ms, against 141 to 147 ms for `docker ps -a` (mean of 50 runs) |
