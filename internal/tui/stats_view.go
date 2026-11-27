@@ -92,8 +92,8 @@ func (v *StatsView) Title() string { return "Stats" }
 
 func (v *StatsView) Init() tea.Cmd { return nil }
 
-// Focus starts watching stats the first time the tab is shown: that opens one
-// stream per running container, which isn't worth it if the tab never is.
+// Focus starts watching stats the first time this tab, or the Containers tab
+// with a CPU graph, is shown: that opens one stream per running container.
 func (v *StatsView) Focus() tea.Cmd {
 	v.requested = true
 	if v.grouped {

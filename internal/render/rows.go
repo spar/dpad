@@ -139,10 +139,10 @@ func UnavailableStatsRow(s docker.Stats) []string {
 func statsRow(s docker.Stats, net, block string) []string {
 	return []string{
 		Bold.Render(s.Name),
-		PercentStyle(s.CPUPercent).Render(fmt.Sprintf("%.2f%%", s.CPUPercent)),
+		percentPaint(s.CPUPercent).wrap(fmt.Sprintf("%.2f%%", s.CPUPercent)),
 		Bar(s.CPUPercent, barWidth),
 		fmt.Sprintf("%s / %s", BinSize(s.MemUsage), BinSize(s.MemLimit)),
-		PercentStyle(s.MemPercent).Render(fmt.Sprintf("%.2f%%", s.MemPercent)),
+		percentPaint(s.MemPercent).wrap(fmt.Sprintf("%.2f%%", s.MemPercent)),
 		Bar(s.MemPercent, barWidth),
 		net,
 		block,
