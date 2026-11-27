@@ -2,6 +2,7 @@ package config
 
 import (
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -21,14 +22,14 @@ func FuzzParse(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
 		cfg, _ := Parse(data)
 		for _, c := range cfg.CustomCommands {
-			if c.Name == "" || c.Key == "" || c.Template == nil || slices.Contains(ReservedKeys, c.Key) {
+			if c.Name == "" || c.Key == "" || c.parts == nil || slices.Contains(ReservedKeys, c.Key) {
 				t.Fatalf("invalid command kept: %+v", c)
 			}
 			if c.Scope != ScopeContainer && c.Scope != ScopeProject {
 				t.Fatalf("command %q kept with scope %q", c.Name, c.Scope)
 			}
-			if _, err := c.Render(Vars{ID: "abc'def", Name: "web", Project: "p q"}); err != nil {
-				t.Fatalf("command %q passed validation but failed to render: %v", c.Name, err)
+			if got := c.Render(Vars{}); strings.Contains(got, "{{") {
+				t.Fatalf("command %q rendered with a placeholder left: %q", c.Name, got)
 			}
 		}
 	})
