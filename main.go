@@ -1,4 +1,4 @@
-// Command dpad (dp) is a colorful, interactive companion to the docker CLI.
+// Command dpad (dp) stops you juggling docker ps, stats and logs: one screen to rule them all.
 package main
 
 import "dpad/cmd"

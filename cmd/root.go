@@ -91,7 +91,7 @@ func run(args []string) int {
 func newRoot() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "dp",
-		Short: "dpad: a colorful, interactive companion to the docker CLI",
+		Short: "dpad: stop juggling docker ps, stats and logs. One screen to rule them all.",
 		Long: `dpad enhances common docker commands with colors and sorting,
 and opens an interactive TUI when run without arguments.
 
