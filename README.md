@@ -4,7 +4,9 @@
 
 # dpad
 
-### A colorful, interactive companion to the `docker` CLI
+### Stop juggling `docker ps`, `stats` and `logs`.
+
+One screen to rule them all.
 
 `dp` adds live stats with sparklines, multi-container logs, Compose project controls<br>
 and a full-screen terminal UI. Anything it doesn't enhance goes straight to `docker`.
