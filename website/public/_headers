@@ -11,3 +11,12 @@
 
 /assets/*
   Cache-Control: public, max-age=86400
+
+# Keep preview builds out of search results: pull request previews on
+# <branch>.dpad.sh or <version>.dpad.sh, and every workers.dev address.
+# dpad.sh itself has no subdomain, so it doesn't match.
+https://:preview.dpad.sh/*
+  X-Robots-Tag: noindex
+
+https://:name.:account.workers.dev/*
+  X-Robots-Tag: noindex

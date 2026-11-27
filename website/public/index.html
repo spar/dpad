@@ -4,13 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>dpad: stop juggling docker ps, stats and logs</title>
-<meta name="description" content="dp adds live stats with sparklines, multi-container logs, Compose project controls and a full-screen terminal UI to the docker CLI. Anything it doesn't enhance goes straight to docker.">
+<meta name="description" content="dpad (dp) is an open source terminal UI and CLI for Docker: live container stats with sparklines, multi-container logs and Compose project controls. Anything else goes straight to docker.">
 <link rel="canonical" href="https://dpad.sh/">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="dpad">
 <meta property="og:url" content="https://dpad.sh/">
 <meta property="og:title" content="dpad: stop juggling docker ps, stats and logs">
 <meta property="og:description" content="One screen to rule them all: live stats, multi-container logs, Compose project controls and a full-screen terminal UI for the docker CLI.">
 <meta property="og:image" content="https://dpad.sh/assets/og-image.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="dpad, a colorful terminal UI for the docker CLI">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0a0e1f">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
@@ -19,6 +23,24 @@
 <link rel="preload" href="/assets/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/site.css">
 <script src="/assets/site.js"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "dpad",
+  "alternateName": "dp",
+  "description": "An open source terminal UI and CLI for Docker: live container stats, multi-container logs and Compose project controls.",
+  "url": "https://dpad.sh/",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "macOS, Linux, Windows",
+  "downloadUrl": "https://github.com/spar/dpad/releases/latest",
+  "installUrl": "https://dpad.sh/#install",
+  "license": "https://opensource.org/licenses/MIT",
+  "image": "https://dpad.sh/assets/og-image.png",
+  "sameAs": ["https://github.com/spar/dpad"],
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
 </head>
 <body>
 
