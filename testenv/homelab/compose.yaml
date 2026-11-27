@@ -1,0 +1,61 @@
+# Self-hosted apps. Part of dpad's demo environment; see testenv/README.md for
+# what each container exercises.
+name: homelab
+
+services:
+  # Stands in for a transcode: about 90% CPU (red), limited to 0.9 cores.
+  # The image's health check fails, but failures during start_period don't
+  # count, so it stays "starting".
+  jellyfin:
+    image: jellyfin/jellyfin:10.10.3
+    container_name: jellyfin
+    restart: unless-stopped
+    entrypoint: ["sh", "-c", "while :; do :; done"]
+    cpus: 0.9
+    ports:
+      - "8096:8096"
+    healthcheck:
+      start_period: 1h
+
+  vaultwarden:
+    image: vaultwarden/server:1.32.5
+    container_name: vaultwarden
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    volumes:
+      - vaultwarden-data:/data
+
+  # Paused by `make demo-up` after start. No health check, which would time
+  # out while paused.
+  uptime-kuma:
+    image: louislam/uptime-kuma:1.23.16
+    container_name: uptime-kuma
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+
+  # Writes and reads 64MB every 3s, for the BLOCK I/O column.
+  backup:
+    image: restic/restic:0.17.3
+    container_name: backup
+    entrypoint: ["sh", "/scripts/disk-io.sh"]
+    volumes:
+      - ../scripts:/scripts:ro
+      - backup-cache:/data
+
+  # Exits 3.
+  ddns:
+    image: alpine:3.20
+    container_name: ddns
+    command: ["sh", "-c", "echo 'INFO updating home.example.net'; echo 'ERROR dns update failed: invalid API token, exiting' >&2; exit 3"]
+    restart: "no"
+
+volumes:
+  vaultwarden-data:
+  uptime-kuma-data:
+  backup-cache:

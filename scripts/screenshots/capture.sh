@@ -13,7 +13,7 @@ for tool in python3 node npm docker; do
 	command -v "$tool" >/dev/null || { echo "capture: $tool is required" >&2; exit 1; }
 done
 python3 -c 'import fontTools, brotli' 2>/dev/null || { echo "capture: fonttools is required (pip install 'fonttools[woff]')" >&2; exit 1; }
-if [ -z "$(docker ps -q --filter label=dp-demo=true)" ]; then
+if [ -z "$(docker ps -q --filter label=com.docker.compose.project=bookshop)" ]; then
 	echo "capture: the demo environment isn't running; start it with make demo-up" >&2
 	exit 1
 fi
@@ -24,20 +24,23 @@ dp="$root/bin/dpad"
 mkdir -p "$out"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
+# Icons on, whatever the terminal: the images embed the Nerd Font glyphs.
+echo 'icons: nerd' > "$work/icons.yaml"
+mkdir -p "$work/home/.config/dpad"
+cp "$work/icons.yaml" "$work/home/.config/dpad/config.yaml"
 
 echo "capture: recording the TUI (about 100 seconds; restarts, pauses and stops a few demo containers)"
 # The stand-in editor gives the Compose edit review a diff; the scenario discards it.
-VISUAL="$here/editor.sh" python3 "$here/drive.py" "$work/raw" 150 30 "$here/tui.json" -- "$dp"
+DPAD_CONFIG="$work/icons.yaml" VISUAL="$here/editor.sh" python3 "$here/drive.py" "$work/raw" 150 30 "$here/tui.json" -- "$dp"
 echo "capture: recording the theme gallery"
-# No user config, so the picker lists only the built-in themes.
-DPAD_CONFIG="$work/none.yaml" DPAD_THEME=default python3 "$here/drive.py" "$work/raw" 150 30 "$here/themes.json" -- "$dp"
+# Not the user's config, so the picker lists only the built-in themes.
+DPAD_CONFIG="$work/icons.yaml" DPAD_THEME=default python3 "$here/drive.py" "$work/raw" 150 30 "$here/themes.json" -- "$dp"
 echo "capture: recording the settings screen"
 # A fresh HOME, so settings shows the default config path and a plain $EDITOR;
 # DOCKER_CONFIG keeps your Docker contexts.
-mkdir -p "$work/home"
 env -u DPAD_CONFIG -u XDG_CONFIG_HOME DOCKER_CONFIG="${DOCKER_CONFIG:-$HOME/.docker}" HOME="$work/home" EDITOR=vim VISUAL= DPAD_THEME=default python3 "$here/drive.py" "$work/raw" 120 14 "$here/settings.json" -- "$dp"
 echo "capture: recording the TUI and settings in the ink theme, for the website's light mode"
-VISUAL="$here/editor.sh" DPAD_THEME=ink python3 "$here/drive.py" "$work/ink" 150 30 "$here/tui.json" -- "$dp"
+DPAD_CONFIG="$work/icons.yaml" VISUAL="$here/editor.sh" DPAD_THEME=ink python3 "$here/drive.py" "$work/ink" 150 30 "$here/tui.json" -- "$dp"
 env -u DPAD_CONFIG -u XDG_CONFIG_HOME DOCKER_CONFIG="${DOCKER_CONFIG:-$HOME/.docker}" HOME="$work/home" EDITOR=vim VISUAL= DPAD_THEME=ink python3 "$here/drive.py" "$work/ink" 120 14 "$here/settings.json" -- "$dp"
 echo "capture: recording CLI commands"
 python3 "$here/drive.py" "$work/raw" 160 39 "$here/cli.json" -- bash "$here/cli.sh" "$dp"

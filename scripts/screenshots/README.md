@@ -20,8 +20,11 @@ To write somewhere other than `docs/images`, run
 - Node.js and npm. The first run installs the pinned headless xterm.js into
   `node_modules` here.
 - The [JetBrains Mono](https://www.jetbrains.com/lp/mono/) Regular and Bold
-  TTF files. `font.py` looks in the usual font folders; set `DP_FONT_DIR` if
-  they are elsewhere.
+  TTF files, and `SymbolsNerdFontMono-Regular.ttf` from Nerd Fonts'
+  [symbols-only font](https://github.com/ryanoasis/nerd-fonts/releases/latest)
+  (`NerdFontsSymbolsOnly.zip`, or `brew install --cask font-symbols-only-nerd-font`)
+  for the container icons. `font.py` looks in the usual font folders; set
+  `DP_FONT_DIR` if they are elsewhere.
 
 ## How it works
 
@@ -30,7 +33,7 @@ To write somewhere other than `docs/images`, run
    writes at each `snap` step and, while recording, ten times a second.
    The TUI scenario restarts, pauses and stops a few demo containers so the
    Events tab has something to show; they are running again afterwards. It
-   also opens the demo Compose file with `editor.sh` as the editor, which
+   also opens the bookshop's Compose file with `editor.sh` as the editor, which
    changes an image tag and a memory limit so the edit review has a diff,
    and then discards the edit.
 2. `svg.js` replays each saved stream in a headless
@@ -38,8 +41,10 @@ To write somewhere other than `docs/images`, run
    a window frame. Text stays text, and bars, box lines and braille graphs are drawn as shapes, so the
    images are sharp at any size or zoom. The recorded frames become
    `demo.svg`, a looping CSS animation that draws each distinct row once.
-3. `font.py` embeds the JetBrains Mono glyphs each image uses, so the images
-   look the same in every browser without the font installed.
+3. `font.py` embeds the JetBrains Mono and Nerd Font glyphs each image uses,
+   so the images look the same in every browser without the fonts installed.
+
+Every run uses `icons: nerd`, whatever terminal you run it from.
 
 The TUI and settings scenarios run a second time with `DPAD_THEME=ink`, into
 `docs/images/light/`; the website shows those in its light mode.

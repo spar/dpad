@@ -119,7 +119,8 @@ dp stats --sort mem   # live stats, biggest memory users first
 dp logs -f api worker # Compose services or containers, one stream
 ```
 
-Want something to look at? `make demo-up` starts about 20 demo containers that
+Want something to look at? `make demo-up` starts three demo Compose projects
+(a web shop, a monitoring stack and a homelab, about 20 containers) that
 exercise every feature (busy CPUs, memory near its limit, health checks,
 crash loops, JSON and logfmt logs). `make demo-down` removes them.
 

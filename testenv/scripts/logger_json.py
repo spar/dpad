@@ -1,12 +1,16 @@
 """JSON logger, as emitted by structured-logging libraries.
 
-Exercises: JSON "level" detection, multi-container log merging.
+Exercises: JSON "level" detection, multi-container log merging. With
+BALLAST_MB set it also holds that much memory.
 """
 import itertools
 import json
+import os
 import random
 import sys
 import time
+
+ballast = b"x" * (int(os.environ.get("BALLAST_MB", "0")) * 1024 * 1024)
 
 LEVELS = ["info", "info", "debug", "info", "warn", "info", "error"]
 

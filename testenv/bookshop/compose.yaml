@@ -1,0 +1,100 @@
+# An online bookshop: nginx in front of a Python API, a billing service and a
+# job worker, with Postgres and Redis. Part of dpad's demo environment; see
+# testenv/README.md for what each container exercises.
+name: bookshop
+
+x-python: &python
+  image: python:3.13-alpine
+  volumes:
+    - ../scripts:/scripts:ro
+
+services:
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    # A 5MB file so `loadgen` produces visible network I/O.
+    command: >-
+      sh -c "head -c 5000000 /dev/urandom > /usr/share/nginx/html/big.bin
+      && exec nginx -g 'daemon off;'"
+    ports:
+      - "8080:80"
+      - "8443:443"
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+
+  loadgen:
+    image: alpine:3.20
+    command: ["sh", "/scripts/traffic.sh"]
+    volumes:
+      - ../scripts:/scripts:ro
+    depends_on:
+      web:
+        condition: service_healthy
+
+  # Plain-text logs, and 60 idle workers for the PIDS column.
+  api:
+    <<: *python
+    command: ["sh", "-c", "for i in $$(seq 60); do sleep 1000000 & done; exec sh /scripts/logger-text.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # JSON logs, holding about 87% of its 64MiB limit (red).
+  billing:
+    <<: *python
+    command: ["python", "-u", "/scripts/logger_json.py"]
+    environment:
+      BALLAST_MB: "52"
+    mem_limit: 64m
+
+  # logfmt logs, about 60% CPU and 59% of its 64MiB limit (yellow).
+  worker:
+    <<: *python
+    command: ["sh", "-c", "sh /scripts/logger-logfmt.sh & exec python /scripts/busy.py 34"]
+    cpus: 0.6
+    mem_limit: 64m
+
+  # Crash-loops: restarting, with FATAL in its logs.
+  mailer:
+    <<: *python
+    command: ["sh", "-c", "echo 'INFO mailer starting'; sleep 2; echo 'FATAL SMTP_HOST is not set' >&2; exit 1"]
+    restart: always
+
+  # Exits 0 after its run.
+  migrate:
+    <<: *python
+    command: ["sh", "-c", "echo 'INFO applying migrations'; sleep 1; echo 'INFO applied 12 migrations, schema at 0042_order_refunds'"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bookshop
+      POSTGRES_PASSWORD: bookshop
+      POSTGRES_DB: bookshop
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "bookshop"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+
+volumes:
+  pgdata:

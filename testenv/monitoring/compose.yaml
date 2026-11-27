@@ -1,0 +1,43 @@
+# Prometheus, Grafana and friends. Part of dpad's demo environment; see
+# testenv/README.md for what each container exercises.
+name: monitoring
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus-data:/prometheus
+
+  # A TTY container sends a raw (non-multiplexed) log stream.
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: node-exporter
+    restart: unless-stopped
+
+  # The health check asks the wrong port, so it turns unhealthy.
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9094/-/healthy"]
+      interval: 3s
+      retries: 1
+
+volumes:
+  prometheus-data:
+  grafana-data:
