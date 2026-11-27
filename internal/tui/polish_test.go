@@ -11,6 +11,7 @@ import (
 
 	"dpad/internal/config"
 	"dpad/internal/render"
+	"dpad/internal/theme"
 )
 
 func TestFooterKeepsHelpAndQuitAtAnyWidth(t *testing.T) {
@@ -125,4 +126,33 @@ func TestStatusStaysDimAfterStyledText(t *testing.T) {
 	if !strings.Contains(got, "\x1b[m"+pre+" · following") {
 		t.Fatalf("text after the name is not dim: %q", got)
 	}
+}
+
+func TestTabLinesRedrawWhenTheirInputsChange(t *testing.T) {
+	t.Cleanup(func() { render.ApplyTheme(theme.Default()) })
+	a := newTestApp()
+	a.resize(140, 30)
+	bar, rule := a.tabLines()
+	if bar != a.tabBar() || rule != a.tabRule() {
+		t.Fatal("cached tab lines differ from a fresh draw")
+	}
+	check := func(what string) {
+		t.Helper()
+		if got, _ := a.tabLines(); got != a.tabBar() {
+			t.Fatalf("after %s the tab bar is stale", what)
+		}
+		if _, got := a.tabLines(); got != a.tabRule() {
+			t.Fatalf("after %s the tab rule is stale", what)
+		}
+	}
+	a.active = 2
+	check("switching tabs")
+	a.resize(60, 30)
+	check("resizing")
+	th, err := theme.Load("amber", t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	render.ApplyTheme(th)
+	check("changing the theme")
 }
