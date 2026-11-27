@@ -343,11 +343,31 @@ Return to the same filtered Projects view after completion to see refreshed stat
 For a quick change, such as bumping an image tag, press `e` on a project row in
 Projects. (On a container row `e` still opens a shell.) dpad finds the file from
 the same `project.config_files` label the update uses; when the project has
-several files, it asks which one. It then suspends the TUI and opens a copy of
-the file in your editor.
+several files, it asks which one. It then opens a copy of the file in dpad's
+built-in editor, or suspends the TUI and opens the copy in your own editor if
+you have one set.
 
-To choose the editor, open settings with `o` and press `enter` on Editor. The
-picker lists the editors it finds on your `PATH` (nano, vim, Neovim, vi, Emacs,
+The built-in editor needs nothing installed. It colors the YAML with the
+theme's colors, checks it as you type and marks the line the YAML parser
+rejects (sometimes the parser names the line that opens the block). It has no
+modes; the keys are:
+
+| Key | Action |
+|---|---|
+| arrows, `home`/`end`, `pgup`/`pgdown` | move (`ctrl+a`/`ctrl+e` also go to the start and end of the line) |
+| `ctrl+left`/`ctrl+right` (or `alt+`) | move by word |
+| `ctrl+home` / `ctrl+end` | first line / last line |
+| `ctrl+g` | go to a line; `$` is the last line |
+| `ctrl+f`, then `ctrl+n` / `ctrl+p` | find (ignores case), next match, previous match |
+| `tab` / `shift+tab` | indent / outdent by 2 spaces (YAML does not allow tabs) |
+| `enter` | new line, keeping the indent, one level deeper after a `key:` |
+| `ctrl+k` | delete the line |
+| `ctrl+z` / `ctrl+y` | undo / redo |
+| `ctrl+s` | save the copy and check it |
+| `esc` | close; with unsaved changes, press it twice |
+
+To choose another editor, open settings with `o` and press `enter` on Editor.
+The picker lists `built-in`, then the editors it finds on your `PATH` (nano, vim, Neovim, vi, Emacs,
 micro, Helix, VS Code, Cursor, Zed, Sublime Text and Notepad) and saves your
 choice as `editor:` in the [config file](#custom-commands). Any other command
 can be set there by hand, with flags, for example `editor: code --wait`. Editors
@@ -356,11 +376,11 @@ picker adds it for the editors it lists. VS Code only appears once its `code`
 command is on your `PATH` (in VS Code, run "Shell Command: Install 'code'
 command in PATH" on macOS).
 
-Without an `editor:` setting dpad uses `$VISUAL`, else `$EDITOR`, else `vi`
-(`notepad` on Windows). Choosing `$VISUAL / $EDITOR` in the picker removes the
-setting.
+Without an `editor:` setting dpad uses `$VISUAL`, else `$EDITOR`, else the
+built-in editor. `editor: builtin` picks the built-in editor even when those are
+set. Choosing `$VISUAL / $EDITOR` in the picker removes the setting.
 
-When the editor closes, dpad checks the copy with `docker compose config`, with
+When you save in the built-in editor, or your own editor closes, dpad checks the copy with `docker compose config`, with
 the copy standing in for the original and the project's other files and env
 files as they are. The original is not touched until you save:
 
@@ -378,7 +398,7 @@ disk while you were editing, dpad refuses to overwrite it.
 
 Projects on an `ssh://` context whose files are on the SSH host are edited the
 same way, over the SSH connection the update uses: dpad reads the file with
-`cat`, you edit it in your local editor, the check runs Compose on the SSH host
+`cat`, you edit it in dpad or your local editor, the check runs Compose on the SSH host
 with the copy beside the original, and saving renames a temporary file over it
 there. The title says `SSH host` when this happens. It needs the same key or
 agent authentication as remote updates, `sha256sum` or `shasum`, and write
@@ -630,7 +650,7 @@ customCommands:
 
 # mouse: false   # leave the mouse to the terminal
 # theme: matrix   # see docs/themes.md
-# editor: nano    # for Compose edits; see "Edit a Compose file"
+# editor: nano    # for Compose edits, or builtin; see "Edit a Compose file"
 # cpuGraph: bars  # braille, bars, meter or off; see "Live CPU and memory"
 # icons: nerd     # auto, nerd or off; see "Icons"
 ```

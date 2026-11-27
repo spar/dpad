@@ -13,6 +13,7 @@ import (
 // point where the editor would open.
 func openEdit(t *testing.T, a *App) *composeEditView {
 	t.Helper()
+	a.editor = "vi"
 	cmd := a.handleKey(key("e"))
 	v := a.composeEdit
 	if v == nil || cmd == nil {
@@ -154,6 +155,7 @@ func TestComposeEditChoosesAmongSeveralFiles(t *testing.T) {
 	for _, item := range c.containers {
 		item.Labels[composeProjectLabel+".config_files"] = first + "," + second
 	}
+	a.editor = "vi"
 	cmd := a.handleKey(key("e"))
 	v := a.composeEdit
 	a.Update(cmd())
@@ -178,23 +180,26 @@ func TestComposeEditOnContainerRowStillOpensShell(t *testing.T) {
 	}
 }
 
-func TestEditorCommandPrefersSettingThenVisualThenEditor(t *testing.T) {
+func TestResolveEditorPrefersSettingThenVisualThenEditorThenBuiltin(t *testing.T) {
 	t.Setenv("VISUAL", "")
 	t.Setenv("EDITOR", "code --wait")
-	if got := editorCommand("", "/x/compose.yaml").Args; strings.Join(got, " ") != "code --wait /x/compose.yaml" {
+	if got := resolveEditor(""); strings.Join(got, " ") != "code --wait" {
 		t.Fatal(got)
 	}
 	t.Setenv("VISUAL", "hx")
-	if got := editorCommand("", "/x/compose.yaml").Args; strings.Join(got, " ") != "hx /x/compose.yaml" {
+	if got := resolveEditor(""); strings.Join(got, " ") != "hx" {
 		t.Fatal(got)
 	}
-	if got := editorCommand("nano", "/x/compose.yaml").Args; strings.Join(got, " ") != "nano /x/compose.yaml" {
+	if got := resolveEditor("nano"); strings.Join(got, " ") != "nano" {
 		t.Fatal(got)
+	}
+	if got := resolveEditor(builtinEditor); !isBuiltinEditor(got) {
+		t.Fatal("editor: builtin did not win over $VISUAL", got)
 	}
 	t.Setenv("VISUAL", "")
 	t.Setenv("EDITOR", "")
-	if got := editorCommand(" ", "/x/compose.yaml").Args; got[0] != fallbackEditor() {
-		t.Fatal(got)
+	if got := resolveEditor(" "); !isBuiltinEditor(got) {
+		t.Fatal("no editor set did not fall back to the built-in one", got)
 	}
 }
 

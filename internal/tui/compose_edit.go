@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -41,6 +40,7 @@ type composeEditView struct {
 	edited   []byte
 	changes  []string
 	discard  bool
+	ed       *yamlEditor // the built-in editor while it is open
 	vp       viewport.Model
 	width    int
 	height   int
@@ -51,6 +51,7 @@ const (
 	editReading   = "reading"
 	editChoosing  = "choosing"
 	editEditing   = "editing"
+	editInDpad    = "editing in dpad"
 	editChecking  = "checking"
 	editReview    = "review"
 	editInvalid   = "invalid"
@@ -111,31 +112,26 @@ func (a *App) openComposeEdit(name string) tea.Cmd {
 	}
 }
 
-// editorCommand opens path in the editor chosen in settings, else $VISUAL,
-// else $EDITOR. Each may carry flags, such as "code --wait".
-func editorCommand(configured, path string) *exec.Cmd {
-	editor := resolveEditor(configured)
-	return exec.Command(editor[0], append(editor[1:], path)...)
-}
-
+// resolveEditor returns the editor chosen in settings, else $VISUAL, else
+// $EDITOR, else the built-in one. Each may carry flags, such as
+// "code --wait".
 func resolveEditor(configured string) []string {
 	for _, e := range []string{configured, os.Getenv("VISUAL"), os.Getenv("EDITOR")} {
 		if fields := strings.Fields(e); len(fields) > 0 {
 			return fields
 		}
 	}
-	return []string{fallbackEditor()}
+	return []string{builtinEditor}
 }
 
-func fallbackEditor() string {
-	if runtime.GOOS == "windows" {
-		return "notepad"
-	}
-	return "vi"
-}
+func isBuiltinEditor(editor []string) bool { return len(editor) == 1 && editor[0] == builtinEditor }
 
 func (v *composeEditView) Update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
+	case tea.PasteMsg:
+		if v.ed != nil {
+			v.ed.Paste(msg.Content)
+		}
 	case composeEditPreparedMsg:
 		if msg.view != v || v.ctx.Err() != nil {
 			return nil
@@ -230,9 +226,50 @@ func (v *composeEditView) choose(file string) tea.Cmd {
 
 func (v *composeEditView) edit() tea.Cmd {
 	v.stage, v.note, v.discard = editEditing, "", false
-	return tea.ExecProcess(editorCommand(v.editor, v.copyPath), func(err error) tea.Msg {
+	editor := resolveEditor(v.editor)
+	if isBuiltinEditor(editor) {
+		text, err := os.ReadFile(v.copyPath)
+		if err != nil {
+			v.stage, v.note = editBlocked, err.Error()
+			return nil
+		}
+		v.stage, v.ed = editInDpad, newYAMLEditor(string(text))
+		v.ed.SetSize(v.width, v.height-2)
+		return nil
+	}
+	return tea.ExecProcess(exec.Command(editor[0], append(editor[1:], v.copyPath)...), func(err error) tea.Msg {
 		return composeEditedMsg{view: v, err: err}
 	})
+}
+
+// closeBuiltin leaves the built-in editor, saving its text to the copy when
+// asked. Closing it on the first round without changes ends the edit.
+func (v *composeEditView) closeBuiltin(a *App, save bool) tea.Cmd {
+	if save {
+		if err := os.WriteFile(v.copyPath, []byte(v.ed.Value()), 0o600); err != nil {
+			v.ed.note = "not saved: " + oneLine(err.Error())
+			return nil
+		}
+	}
+	v.ed = nil
+	if !save {
+		if copied, err := os.ReadFile(v.copyPath); err == nil && bytes.Equal(copied, v.original) {
+			v.Close()
+			a.composeEdit = nil
+			return nil
+		}
+	}
+	return v.afterEdit(nil)
+}
+
+// holdQuit keeps ctrl+c from dropping unsaved text in the built-in editor
+// until it is pressed twice.
+func (v *composeEditView) holdQuit() bool {
+	if v.ed == nil || !v.ed.dirty || v.ed.quitArmed {
+		return false
+	}
+	v.ed.note, v.ed.quitArmed = "Unsaved changes: ctrl+c again quits without saving", true
+	return true
 }
 
 func (v *composeEditView) afterEdit(err error) tea.Cmd {
@@ -287,6 +324,9 @@ func (v *composeEditView) SetSize(width, height int) {
 	v.width, v.height = width, height
 	v.vp.SetWidth(width)
 	v.vp.SetHeight(max(height-3, 1))
+	if v.ed != nil {
+		v.ed.SetSize(width, height-2)
+	}
 }
 
 func (v *composeEditView) title() string {
@@ -328,6 +368,8 @@ func (v *composeEditView) View() string {
 		}
 	case editEditing:
 		lines = append(lines, render.Dim.Render("Waiting for the editor to close…"))
+	case editInDpad:
+		lines = append(lines, strings.Split(v.ed.View(), "\n")...)
 	case editChecking:
 		lines = append(lines, render.Dim.Render("Checking the edit with docker compose config…"))
 	case editSaving:
@@ -356,6 +398,8 @@ func (v *composeEditView) Status() string {
 
 func (v *composeEditView) Footer() string {
 	switch v.stage {
+	case editInDpad:
+		return fitHints(v.width, []string{"ctrl+s", "save", "esc", "close", "ctrl+f", "find", "ctrl+n/p", "next/previous", "ctrl+g", "go to line", "ctrl+home/end", "top/bottom", "ctrl+z/y", "undo/redo", "ctrl+k", "delete line"}, []string{"ctrl+k", "ctrl+n/p", "ctrl+z/y"}, 0)
 	case editChoosing:
 		return hints("↑↓", "choose file", "enter", "edit", "esc", "cancel")
 	case editReview:
@@ -372,6 +416,15 @@ func (v *composeEditView) Footer() string {
 
 func (v *composeEditView) handleKey(a *App, msg tea.KeyPressMsg) tea.Cmd {
 	key := msg.String()
+	if v.stage == editInDpad {
+		switch v.ed.HandleKey(msg) {
+		case editorSave:
+			return v.closeBuiltin(a, true)
+		case editorClose:
+			return v.closeBuiltin(a, false)
+		}
+		return nil
+	}
 	if v.stage == editEditing || v.stage == editSaving {
 		return nil
 	}

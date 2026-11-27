@@ -337,6 +337,9 @@ func (a *App) update(msg tea.Msg) tea.Cmd {
 func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 	key := msg.String()
 	if key == "ctrl+c" {
+		if a.composeEdit != nil && a.composeEdit.holdQuit() {
+			return nil
+		}
 		return tea.Quit
 	}
 	a.flash = ""

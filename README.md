@@ -216,7 +216,7 @@ saved current context.
     <td width="50%" valign="top">
       <img src="docs/images/compose-edit.svg" alt="Reviewing an edit to the demo Compose file: valid, the image change it makes, and a diff" width="100%"><br>
       <b>Edit Compose files</b><br>
-      <sub><code>e</code> on a project opens its Compose file in your editor. dpad checks the result with <code>docker compose config</code>, shows what changes and a diff, then saves it and can go straight on to an update. Works for projects on an SSH host too.</sub>
+      <sub><code>e</code> on a project opens its Compose file in the built-in editor, with YAML colors, find and go to line, or in your own editor. dpad checks the result with <code>docker compose config</code>, shows what changes and a diff, then saves it and can go straight on to an update. Works for projects on an SSH host too.</sub>
     </td>
   </tr>
   <tr>
@@ -304,7 +304,7 @@ would type `docker`:
 | `e` | open a shell in the container |
 | `S` / `x` / `R` | start / stop / restart, after a `y/N` confirmation |
 | `P` / `K` / `D` | pause / kill / remove (`S` resumes a paused container) |
-| `e` on a project | edit its Compose file in your editor, check it, then save and update (Projects tab) |
+| `e` on a project | edit its Compose file in the built-in editor or your own, check it, then save and update (Projects tab) |
 | `D` on a project | preview and run `docker compose down`, keeping volumes unless you press `v` (Projects tab) |
 | `u` / `U` | update the selected / all Compose projects: `pull`, then `up -d`, with live progress (Projects tab) |
 | `c` | choose a Docker context |

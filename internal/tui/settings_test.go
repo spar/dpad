@@ -128,6 +128,13 @@ func TestEditorPickerOffersInstalledEditorsAndSaves(t *testing.T) {
 		t.Errorf("an editor set by hand is not listed:\n%s", a.render())
 	}
 	press(a, "home", "enter")
+	if a.editor != builtinEditor || !strings.Contains(ansi.Strip(a.render()), "Editor") {
+		t.Fatal("choosing built-in did not apply it", a.editor)
+	}
+	if got, _ := os.ReadFile(path); string(got) != "editor: builtin\n" {
+		t.Fatalf("config = %q", got)
+	}
+	press(a, "enter", "home", "j", "enter")
 	if a.editor != "" {
 		t.Fatal("choosing $VISUAL / $EDITOR did not clear the setting")
 	}
