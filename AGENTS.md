@@ -92,6 +92,13 @@ the highest-impact Conventional Commit since the last release sets the version:
 | Any conventional type with `!` or a `BREAKING CHANGE:` footer | v1.0.0 |
 | Other types, including `docs:`, `chore:`, `ci:`, and `test:` | No release |
 
+Only commits that change what ships count: Go code outside tests (`main.go`,
+`cmd/`, `internal/`, `themes/`), `go.mod`, `go.sum` and the archive build
+(`scripts/release/build.sh`, `scripts/release/zip/`). A `feat:` or `fix:`
+that touches only docs, the README, `website/`, CI, tests or other scripts
+cuts no release; `shipsInRelease` in `scripts/release/version.cjs` holds the
+list, so add any new Go package directory there.
+
 Use a conventional PR title when squash-merging and preserve any breaking-change
 footer in the final commit. For regular merges, the commits on the branch count.
 GitHub generates the release notes from merged PRs. The release job cross-builds
