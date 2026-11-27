@@ -34,8 +34,11 @@ type editorItem struct {
 }
 
 func (a *App) openEditorPicker() tea.Cmd {
-	items := []editorItem{{name: "$VISUAL / $EDITOR", note: "now " + strings.Join(resolveEditor(""), " ") + " · " + envEditorSource()}}
-	configuredFound := a.editor == ""
+	items := []editorItem{
+		{command: builtinEditor, name: "built-in", note: "in dpad: YAML colors, find, go to line"},
+		{name: "$VISUAL / $EDITOR", note: "now " + editorLabel(resolveEditor("")) + " · " + envEditorSource()},
+	}
+	configuredFound := a.editor == "" || a.editor == builtinEditor
 	for _, command := range knownEditors {
 		path, err := lookPath(strings.Fields(command)[0])
 		if err != nil {
@@ -85,9 +88,16 @@ func envEditorSource() string {
 
 func (a *App) editorName() string {
 	if a.editor != "" {
-		return a.editor
+		return editorLabel(strings.Fields(a.editor))
 	}
-	return strings.Join(resolveEditor(""), " ") + " " + render.Dim.Render("· "+envEditorSource())
+	return editorLabel(resolveEditor("")) + " " + render.Dim.Render("· "+envEditorSource())
+}
+
+func editorLabel(editor []string) string {
+	if isBuiltinEditor(editor) {
+		return "built-in"
+	}
+	return strings.Join(editor, " ")
 }
 
 func (p *editorPicker) Status() string {
@@ -112,9 +122,9 @@ func (p *editorPicker) handleKey(a *App, msg tea.KeyPressMsg) tea.Cmd {
 			return nil
 		}
 		a.editor = it.command
-		label := it.command
-		if label == "" {
-			label = "$VISUAL / $EDITOR"
+		label := it.name
+		if it.command != "" {
+			label = editorLabel(strings.Fields(it.command))
 		}
 		if err := config.SaveEditor(it.command); err != nil {
 			a.flash, a.flashErr = "editor "+label+" for this session; not saved: "+oneLine(err.Error()), true

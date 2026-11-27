@@ -157,10 +157,10 @@ terminal:              # the terminal's own colors while the TUI runs
 ui:
   brand: green         # the ▍ mark before "dpad"
   dim: bright-black    # secondary text: IDs, hints, the status line
-  header: blue         # table headers in CLI output
+  header: blue         # table headers in CLI output, YAML keys in the editor
   accent: cyan         # names in status lines, work in progress, container icons
-  success: green       # connected, finished, ✓ marks
-  warning: yellow      # confirmations, reconnecting, warnings
+  success: green       # connected, finished, ✓ marks, YAML strings
+  warning: yellow      # confirmations, reconnecting, warnings, YAML numbers
   error: red           # errors (drawn bold)
   onAccent: black      # text on the active tab and the selected row
   matchText: black     # dp logs --grep and logs-view filter matches

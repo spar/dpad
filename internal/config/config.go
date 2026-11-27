@@ -25,7 +25,8 @@ type Config struct {
 	// Theme names the color theme; see docs/themes.md.
 	Theme string `yaml:"theme"`
 	// Editor is the command that edits Compose files, such as "nano" or
-	// "code --wait". Empty means $VISUAL, then $EDITOR.
+	// "code --wait", or "builtin" for dpad's own editor. Empty means
+	// $VISUAL, then $EDITOR, then the built-in editor.
 	Editor string `yaml:"editor"`
 	// CPUGraph is how the Containers tab draws CPU: braille, bars, meter, or
 	// off to hide the CPU and memory columns. Empty means braille.
