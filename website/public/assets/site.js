@@ -51,6 +51,38 @@
       });
     });
 
+    var dialog = document.querySelector('.zoom');
+    if (dialog) {
+      var links = Array.prototype.slice.call(document.querySelectorAll('[data-zoom]'));
+      var big = dialog.querySelector('img');
+      var name = dialog.querySelector('figcaption span');
+      var current = 0;
+      var show = function (i) {
+        current = (i + links.length) % links.length;
+        var label = links[current].parentNode.querySelector('figcaption').textContent;
+        big.setAttribute('src', links[current].getAttribute('href'));
+        big.setAttribute('alt', 'dpad with the ' + label + ' theme');
+        name.textContent = label + '  ' + (current + 1) + ' / ' + links.length;
+      };
+      links.forEach(function (link, i) {
+        link.addEventListener('click', function (e) {
+          e.preventDefault();
+          show(i);
+          dialog.showModal();
+        });
+      });
+      dialog.querySelector('.prev').addEventListener('click', function () { show(current - 1); });
+      dialog.querySelector('.next').addEventListener('click', function () { show(current + 1); });
+      dialog.querySelector('.close').addEventListener('click', function () { dialog.close(); });
+      dialog.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowLeft') show(current - 1);
+        if (e.key === 'ArrowRight') show(current + 1);
+      });
+      // A click on the backdrop lands on the dialog itself.
+      dialog.addEventListener('click', function (e) { if (e.target === dialog) dialog.close(); });
+      dialog.addEventListener('close', function () { links[current].focus(); });
+    }
+
     document.querySelectorAll('.copy').forEach(function (button) {
       button.addEventListener('click', function () {
         var code = button.parentNode.querySelector('code').cloneNode(true);

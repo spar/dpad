@@ -10,7 +10,7 @@ Setup steps: [docs/website.md](../docs/website.md).
 | `public/404.html` | shown for any address that does not exist |
 | `public/_headers` | security and cache headers Cloudflare adds; not served |
 | `public/_redirects` | `/install` and `/install.ps1` redirect to the scripts in `scripts/`; not served |
-| `public/assets/site.css`, `site.js` | styles, and the dark/light switch, install tabs and copy buttons |
+| `public/assets/site.css`, `site.js` | styles, and the dark/light switch, install tabs, copy buttons and theme preview dialog |
 | `public/assets/fonts/` | JetBrains Mono 400 and 700, Latin subset (SIL Open Font License) |
 | `public/assets/shots/`, `shots-light/`, `themes/`, `logo.svg`, `og-image.png` | written by `make website` from `docs/images`; do not edit by hand |
 | `public/assets/apple-touch-icon.png` | the logo at 180 px |
@@ -29,6 +29,8 @@ Setup steps: [docs/website.md](../docs/website.md).
   paper's colors on a white page. See [Changing the light look](#changing-the-light-look).
 - The page works without JavaScript: it shows dark mode and the Homebrew
   command, and hides the switch, tabs and copy buttons.
+- On screens wider than 1700px the page is scaled up with CSS `zoom` (the
+  steps are at the end of `site.css`), so it fills large and 4K displays.
 - Feature text comes from the README. Keep keys and claims in step with it.
 
 ## Screenshots
