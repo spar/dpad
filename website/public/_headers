@@ -1,0 +1,13 @@
+# Cloudflare reads this file and adds these headers. It is not served.
+# https://developers.cloudflare.com/workers/static-assets/headers/
+# The HTML pages set their Content-Security-Policy in a meta tag, so it doesn't
+# also apply to the SVG screenshots, which carry their own styles and fonts.
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+/assets/*
+  Cache-Control: public, max-age=86400

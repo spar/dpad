@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dpad.sh/sitemap.xml
