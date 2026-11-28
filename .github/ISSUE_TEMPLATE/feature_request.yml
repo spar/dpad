@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest a new feature or a change in behaviour
+labels: [enhancement, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        dpad stays small on purpose, so every feature is agreed in an issue before work starts. Please wait for the `approved` label before opening a pull request; a pull request without an approved issue can't be merged.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+      description: What should dpad do? Keys, views or commands, if you have them in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you use now, or other tools that do this.
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I'd like to build this myself once it's approved

@@ -1,0 +1,45 @@
+name: Bug report
+description: Something in dpad doesn't work as expected
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please search existing issues first. For security problems, use private reporting instead (see SECURITY.md).
+  - type: input
+    id: version
+    attributes:
+      label: dpad version
+      description: Output of `dp --version`
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS, Docker version and terminal
+      placeholder: macOS 26.1, Docker 29.0.1, Ghostty
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run `dp`
+        2. Open the Logs tab
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: Include error messages and a screenshot for TUI problems. `dp --debug-log <file>` writes a log you can attach.
+    validations:
+      required: true
