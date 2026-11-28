@@ -300,9 +300,10 @@ func memCell(used, total uint64) string {
 	return panelKey("MEM  ") + render.Gauge(p, panelBar) + " " + rpad(render.Bold.Render(render.CompactSize(used)), 5) + render.Dim.Render("/"+render.CompactSize(total))
 }
 
-// panelKey colors a label such as CPU or Load like the row names, so it
-// stands out from the dimmed units after the numbers.
-func panelKey(s string) string { return render.Header.UnsetBold().Render(s) }
+// panelKey styles a label such as CPU or Load like the row names, so it
+// stands out from the dimmed units after the numbers. Bold matters in
+// themes like ink and mono, where the accent is the text color.
+func panelKey(s string) string { return render.Header.Render(s) }
 
 func keyValue(k, v string) string { return panelKey(pad(k, max(5, len(k)+1))) + v }
 
