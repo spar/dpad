@@ -12,13 +12,13 @@ for os in linux darwin windows; do
     name="dpad-${os}-${arch}"
     dir="$stage/$name"
     mkdir "$dir"
-    cp LICENSE README.md "$dir/"
+    cp LICENSE NOTICE README.md "$dir/"
     if [[ $os == windows ]]; then
       GOOS="$os" GOARCH="$arch" make build VERSION="$version" BIN="$dir/dpad.exe"
-      go run ./scripts/release/zip "$out/$name.zip" "$dir/dpad.exe" "$dir/LICENSE" "$dir/README.md"
+      go run ./scripts/release/zip "$out/$name.zip" "$dir/dpad.exe" "$dir/LICENSE" "$dir/NOTICE" "$dir/README.md"
     else
       GOOS="$os" GOARCH="$arch" make build VERSION="$version" BIN="$dir/dpad"
-      tar -czf "$out/$name.tar.gz" -C "$dir" dpad LICENSE README.md
+      tar -czf "$out/$name.tar.gz" -C "$dir" dpad LICENSE NOTICE README.md
     fi
   done
 done
