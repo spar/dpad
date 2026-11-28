@@ -62,6 +62,22 @@ func TestCalcFirstSampleHasNoCPU(t *testing.T) {
 	}
 }
 
+func TestMemNoCacheLeavesOutActiveCache(t *testing.T) {
+	// A container that read a 1.5G file twice: the cache is active, so the
+	// docker stats figure keeps it while the host counts it as available.
+	v2 := container.MemoryStats{Usage: 1542, Stats: map[string]uint64{"file": 1501, "active_file": 1501, "inactive_file": 0}}
+	if got := Calc("", "", &container.StatsResponse{MemoryStats: v2}); got.MemUsage != 1542 || got.MemNoCache != 41 {
+		t.Errorf("cgroup v2: MemUsage %d MemNoCache %d, want 1542 and 41", got.MemUsage, got.MemNoCache)
+	}
+	v1 := container.MemoryStats{Usage: 500, Stats: map[string]uint64{"total_cache": 300, "total_inactive_file": 200}}
+	if got := memUsageNoFileCache(v1); got != 200 {
+		t.Errorf("cgroup v1: %d, want 200", got)
+	}
+	if got := memUsageNoFileCache(container.MemoryStats{Usage: 70}); got != 70 {
+		t.Errorf("no stats map: %d, want 70", got)
+	}
+}
+
 func TestMemUsageCgroupV1(t *testing.T) {
 	m := container.MemoryStats{Usage: 500, Stats: map[string]uint64{"total_inactive_file": 200, "inactive_file": 50}}
 	if got := memUsageNoCache(m); got != 300 {

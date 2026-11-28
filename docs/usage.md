@@ -125,7 +125,9 @@ locally for a local Linux daemon, and over a single `ssh` connection for an
 `ssh://` daemon. Docker Desktop runs Docker in a VM, and `tcp://` daemons give no
 shell, so there the System row says host usage isn't available and the Docker
 row still shows the containers. The Docker row comes from the same stats stream
-as the CPU graph, so it needs a CPU graph style other than `off`. Wider
+as the CPU graph, so it needs a CPU graph style other than `off`. Its memory
+leaves out page cache, as the System row does, so it can be lower than the sum
+of the MEM column, which follows `docker stats` and keeps recently used cache. Wider
 terminals add network rates, swap, the running count, the kernel and the
 architecture. Below 80 columns or 20 rows, or when the daemon is unreachable,
 the panel makes way for the usual daemon line.

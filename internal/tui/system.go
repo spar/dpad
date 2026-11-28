@@ -196,7 +196,7 @@ func (s *systemState) usage() hostUsage {
 type containersTotal struct {
 	ok             bool
 	cpu            float64 // percent of one core, as docker stats
-	mem            uint64
+	mem            uint64  // without page cache, to compare with the host
 	rx, tx         float64
 	running, total int
 }
@@ -216,7 +216,7 @@ func (v *ContainersView) usageTotals() containersTotal {
 	for id, s := range v.usage.data {
 		if v.usage.health[id].err == nil {
 			u.cpu += s.CPUPercent
-			u.mem += s.MemUsage
+			u.mem += s.MemNoCache
 			r := v.usage.rates[id]
 			if r.NetValid {
 				u.rx += r.NetRx

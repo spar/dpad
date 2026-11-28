@@ -24,6 +24,10 @@ type Stats struct {
 	Name       string
 	CPUPercent float64
 	MemUsage   uint64
+	// MemNoCache leaves out all page cache, not just the inactive part
+	// MemUsage drops, so it compares with the host's MemTotal - MemAvailable,
+	// which counts cache as available.
+	MemNoCache uint64
 	MemLimit   uint64
 	MemPercent float64
 	NetRx      uint64
@@ -63,6 +67,7 @@ func Calc(id, name string, s *container.StatsResponse) Stats {
 	}
 
 	st.MemUsage = memUsageNoCache(s.MemoryStats)
+	st.MemNoCache = memUsageNoFileCache(s.MemoryStats)
 	st.MemLimit = s.MemoryStats.Limit
 	if st.MemLimit != 0 {
 		st.MemPercent = float64(st.MemUsage) / float64(st.MemLimit) * 100
@@ -93,6 +98,17 @@ func memUsageNoCache(m container.MemoryStats) uint64 {
 		return m.Usage - v
 	}
 	return m.Usage
+}
+
+// memUsageNoFileCache subtracts all page cache: total_cache on cgroup v1,
+// file on cgroup v2.
+func memUsageNoFileCache(m container.MemoryStats) uint64 {
+	for _, k := range []string{"total_cache", "file"} {
+		if v, ok := m.Stats[k]; ok {
+			return m.Usage - min(v, m.Usage)
+		}
+	}
+	return memUsageNoCache(m)
 }
 
 // maxSnapshotRequests caps concurrent stats requests in StatsSnapshot, so a
