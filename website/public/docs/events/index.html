@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-light="ink">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,18 +11,26 @@
 <meta property="og:url" content="https://dpad.sh/docs/events/">
 <meta property="og:title" content="Watch Docker events live, filtered by project or service · dpad">
 <meta property="og:description" content="See container starts, stops, crashes, OOM kills and health changes as a live timeline in dpad, filtered by container, Compose project, service or event type.">
-<meta property="og:image" content="https://dpad.sh/assets/og-image.png">
+<meta property="og:image" content="https://dpad.sh/assets/og-image.png?v=b0fd7168eb">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="dpad, a colorful terminal UI for the docker CLI">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0a0e1f">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self' 'sha256-F3PTjDnyzEQ3PAtS&#43;GmScgTuEbTqUU2yriLJBfgp12o='; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="/assets/logo.svg?v=b0fd7168eb" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=b0fd7168eb">
 <link rel="preload" href="/assets/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css">
-<script src="/assets/site.js"></script>
+<link rel="stylesheet" href="/assets/site.css?v=b0fd7168eb">
+
+<script>(function () {
+  var root = document.documentElement;
+  root.classList.add('js');
+  try {
+    if (localStorage.getItem('dpad-theme') === 'light') root.setAttribute('data-theme', 'light');
+  } catch (e) {}
+})();</script>
+<script src="/assets/site.js?v=b0fd7168eb" defer></script>
 <script type="application/ld+json">
 [
   {
@@ -41,7 +49,7 @@
     "dateModified": "2026-11-28",
     "description": "See container starts, stops, crashes, OOM kills and health changes as a live timeline in dpad, filtered by container, Compose project, service or event type.",
     "headline": "Watch Docker events live",
-    "image": "https://dpad.sh/assets/og-image.png",
+    "image": "https://dpad.sh/assets/og-image.png?v=b0fd7168eb",
     "inLanguage": "en",
     "isPartOf": {
       "@type": "WebSite",
@@ -81,7 +89,7 @@
 <body>
 
 <header class="wrap nav">
-  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="34" height="34">dpad</a>
+  <a class="brand" href="/"><img src="/assets/logo.svg?v=b0fd7168eb" alt="" width="34" height="34">dpad</a>
   <ul>
     <li><a href="/#install">Install</a></li>
     <li><a href="/#features">Features</a></li>
@@ -133,7 +141,7 @@
 
 <h2>Open the timeline</h2>
 <p>In <code>dp</code>, press <kbd>5</kbd>. Recording starts when dp opens, so the tab fills as things happen.</p>
-<figure><img src="/assets/shots/events.svg" width="1348" height="634" loading="lazy" alt="Events tab showing kill, stop, start, pause and restart events"><figcaption>Kill, stop, start, pause and restart events, newest first.</figcaption></figure>
+<figure><img src="/assets/shots/events.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="Events tab showing kill, stop, start, pause and restart events"><figcaption>Kill, stop, start, pause and restart events, newest first.</figcaption></figure>
 <p>It records container lifecycle and health events: create, start, stop, restart, die, destroy, pause and unpause, rename, update, kill, OOM and health changes. Each row has the local time, the container, its Compose project and service, and the exit code, signal or image when Docker sends one. Noisy exec events are left out.</p>
 
 <h2>Find what happened</h2>

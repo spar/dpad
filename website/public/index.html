@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-light="ink">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,18 +11,26 @@
 <meta property="og:url" content="https://dpad.sh/">
 <meta property="og:title" content="dpad: stop juggling docker ps, stats and logs">
 <meta property="og:description" content="One screen to rule them all: live stats, multi-container logs, Compose project controls and a full-screen terminal UI for the docker CLI.">
-<meta property="og:image" content="https://dpad.sh/assets/og-image.png">
+<meta property="og:image" content="https://dpad.sh/assets/og-image.png?v=b0fd7168eb">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="dpad, a colorful terminal UI for the docker CLI">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0a0e1f">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self' 'sha256-F3PTjDnyzEQ3PAtS&#43;GmScgTuEbTqUU2yriLJBfgp12o='; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="/assets/logo.svg?v=b0fd7168eb" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=b0fd7168eb">
 <link rel="preload" href="/assets/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css">
-<script src="/assets/site.js"></script>
+<link rel="stylesheet" href="/assets/site.css?v=b0fd7168eb">
+
+<script>(function () {
+  var root = document.documentElement;
+  root.classList.add('js');
+  try {
+    if (localStorage.getItem('dpad-theme') === 'light') root.setAttribute('data-theme', 'light');
+  } catch (e) {}
+})();</script>
+<script src="/assets/site.js?v=b0fd7168eb" defer></script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -31,7 +39,7 @@
   "applicationCategory": "DeveloperApplication",
   "description": "An open source terminal UI and CLI for Docker: live container stats, multi-container logs and Compose project controls.",
   "downloadUrl": "https://github.com/spar/dpad/releases/latest",
-  "image": "https://dpad.sh/assets/og-image.png",
+  "image": "https://dpad.sh/assets/og-image.png?v=b0fd7168eb",
   "installUrl": "https://dpad.sh/#install",
   "license": "https://www.gnu.org/licenses/gpl-3.0.html",
   "name": "dpad",
@@ -51,7 +59,7 @@
 <body>
 
 <header class="wrap nav">
-  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="34" height="34">dpad</a>
+  <a class="brand" href="/"><img src="/assets/logo.svg?v=b0fd7168eb" alt="" width="34" height="34">dpad</a>
   <ul>
     <li><a href="/#install">Install</a></li>
     <li><a href="/#features">Features</a></li>
@@ -89,7 +97,7 @@
   </div>
   <p class="sub">Then run <code>dp</code>. Needs a running Docker engine and the Docker CLI.</p>
 
-  <div class="demo"><img src="/assets/shots/demo.svg" width="1348" height="634" alt="dp terminal UI: live CPU graphs on the Containers tab, the Stats and Projects tabs, reviewing a Compose file edit, then following a Compose project's logs and filtering them by regex"></div>
+  <div class="demo"><picture><source media="(min-width: 700px)" srcset="/assets/shots/demo.svg?v=b0fd7168eb"><img src="/assets/shots/demo-still.svg?v=b0fd7168eb" width="1348" height="634" alt="dp terminal UI: live CPU graphs on the Containers tab, the Stats and Projects tabs, reviewing a Compose file edit, then following a Compose project's logs and filtering them by regex"></picture></div>
 
   <div class="strip">
     <div><code><i>dp</i></code><p>Opens the full-screen terminal UI.</p></div>
@@ -118,7 +126,7 @@
         </ul>
         <a class="more" href="/docs/getting-started/">Getting started</a>
       </div>
-      <div class="shot"><img src="/assets/shots/containers.svg" width="1348" height="634" loading="lazy" alt="Containers tab with the host panel on top, then colored states, health, ports and a braille CPU graph and memory for each running container"></div>
+      <div class="shot"><img src="/assets/shots/containers.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="Containers tab with the host panel on top, then colored states, health, ports and a braille CPU graph and memory for each running container"></div>
     </div>
 
     <div class="feature panel flip k-yellow">
@@ -133,7 +141,7 @@
         </ul>
         <a class="more" href="/docs/docker-stats/">Read the stats guide</a>
       </div>
-      <div class="shot"><img src="/assets/shots/stats.svg" width="1348" height="634" loading="lazy" alt="Stats tab: containers sorted by CPU with usage bars, network rates, PIDs and a CPU and memory history panel"></div>
+      <div class="shot"><img src="/assets/shots/stats.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="Stats tab: containers sorted by CPU with usage bars, network rates, PIDs and a CPU and memory history panel"></div>
     </div>
 
     <div class="feature panel k-blue">
@@ -148,7 +156,7 @@
         </ul>
         <a class="more" href="/docs/compose-logs/">Read the logs guide</a>
       </div>
-      <div class="shot"><img src="/assets/shots/logs.svg" width="1348" height="634" loading="lazy" alt="Project log viewer following many containers, filtered by a regex with the matches highlighted"></div>
+      <div class="shot"><img src="/assets/shots/logs.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="Project log viewer following many containers, filtered by a regex with the matches highlighted"></div>
     </div>
 
     <div class="feature panel flip k-magenta">
@@ -162,16 +170,16 @@
         </ul>
         <a class="more" href="/docs/update-compose-images/">Update images</a> <a class="more" href="/docs/edit-compose-file/">Edit Compose files</a>
       </div>
-      <div class="shot"><img src="/assets/shots/compose-edit.svg" width="1348" height="634" loading="lazy" alt="Reviewing an edit to a Compose file: valid, the image change it makes, and a diff"></div>
+      <div class="shot"><img src="/assets/shots/compose-edit.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="Reviewing an edit to a Compose file: valid, the image change it makes, and a diff"></div>
     </div>
   </div>
 
   <div class="grid4">
-    <div class="card k-cyan"><img src="/assets/shots/details.svg" width="1348" height="634" loading="lazy" alt="Container details: state, configuration and health check results"><div><h3>Details <span>d</span></h3><p>State, exit code, OOM status, restart policy, health checks, ports, networks and mounts.</p></div></div>
-    <div class="card k-green"><img src="/assets/shots/events.svg" width="1348" height="634" loading="lazy" alt="Events tab showing kill, stop, start, pause and restart events"><div><h3>Events <span>5</span></h3><p>A live timeline of lifecycle and health events, filterable by container, project, service or type.</p></div></div>
-    <div class="card k-red"><img src="/assets/shots/prune.svg" width="1348" height="634" loading="lazy" alt="Prune preview listing the stopped containers that would be removed"><div><h3>Prune <span>X</span></h3><p>Lists exactly what a prune would remove, then removes only those after <kbd>y</kbd>.</p></div></div>
-    <div class="card k-yellow"><img src="/assets/shots/settings.svg" width="1348" height="634" loading="lazy" alt="Settings screen listing the theme, Docker context, editor, CPU graph style, host panel, icons, mouse setting and config file"><div><h3>Settings <span>o</span></h3><p>Theme, Docker context, editor, CPU graph style, host panel, icons and mouse, saved to <code>config.yaml</code>.</p></div></div>
-    <div class="card k-cyan"><img src="/assets/shots/system.svg" width="1348" height="634" loading="lazy" alt="System screen with host and engine details, CPU, memory and disk usage, and a docker system df table"><div><h3>System <span>I</span></h3><p>The host and engine at a glance: OS, kernel, cores, memory, versions, drivers, disk usage and reclaimable space. Over SSH, the server's.</p></div></div>
+    <div class="card k-cyan"><img src="/assets/shots/details.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="Container details: state, configuration and health check results"><div><h3>Details <span>d</span></h3><p>State, exit code, OOM status, restart policy, health checks, ports, networks and mounts.</p></div></div>
+    <div class="card k-green"><img src="/assets/shots/events.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="Events tab showing kill, stop, start, pause and restart events"><div><h3>Events <span>5</span></h3><p>A live timeline of lifecycle and health events, filterable by container, project, service or type.</p></div></div>
+    <div class="card k-red"><img src="/assets/shots/prune.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="Prune preview listing the stopped containers that would be removed"><div><h3>Prune <span>X</span></h3><p>Lists exactly what a prune would remove, then removes only those after <kbd>y</kbd>.</p></div></div>
+    <div class="card k-yellow"><img src="/assets/shots/settings.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="Settings screen listing the theme, Docker context, editor, CPU graph style, host panel, icons, mouse setting and config file"><div><h3>Settings <span>o</span></h3><p>Theme, Docker context, editor, CPU graph style, host panel, icons and mouse, saved to <code>config.yaml</code>.</p></div></div>
+    <div class="card k-cyan"><img src="/assets/shots/system.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="System screen with host and engine details, CPU, memory and disk usage, and a docker system df table"><div><h3>System <span>I</span></h3><p>The host and engine at a glance: OS, kernel, cores, memory, versions, drivers, disk usage and reclaimable space. Over SSH, the server's.</p></div></div>
   </div>
 </section>
 
@@ -180,17 +188,17 @@
   <h2>Eleven built-in themes, or bring your own</h2>
   <p class="intro">The default follows your terminal's own palette. Press <kbd>C</kbd> to switch, or <a class="link" href="/docs/themes/">add a theme</a> as one YAML file.</p>
   <div class="themes">
-    <figure class="theme on"><a href="/assets/themes/default.svg" data-zoom aria-label="Enlarge the default theme"><img src="/assets/themes/default.svg" width="1348" height="634" loading="lazy" alt="dpad with the default theme"></a><figcaption>default</figcaption></figure>
-    <figure class="theme"><a href="/assets/themes/catppuccin-mocha.svg" data-zoom aria-label="Enlarge the catppuccin-mocha theme"><img src="/assets/themes/catppuccin-mocha.svg" width="1348" height="634" loading="lazy" alt="dpad with the catppuccin-mocha theme"></a><figcaption>catppuccin-mocha</figcaption></figure>
-    <figure class="theme"><a href="/assets/themes/dracula.svg" data-zoom aria-label="Enlarge the dracula theme"><img src="/assets/themes/dracula.svg" width="1348" height="634" loading="lazy" alt="dpad with the dracula theme"></a><figcaption>dracula</figcaption></figure>
-    <figure class="theme"><a href="/assets/themes/nord.svg" data-zoom aria-label="Enlarge the nord theme"><img src="/assets/themes/nord.svg" width="1348" height="634" loading="lazy" alt="dpad with the nord theme"></a><figcaption>nord</figcaption></figure>
-    <figure class="theme"><a href="/assets/themes/gruvbox.svg" data-zoom aria-label="Enlarge the gruvbox theme"><img src="/assets/themes/gruvbox.svg" width="1348" height="634" loading="lazy" alt="dpad with the gruvbox theme"></a><figcaption>gruvbox</figcaption></figure>
-    <figure class="theme"><a href="/assets/themes/amber.svg" data-zoom aria-label="Enlarge the amber theme"><img src="/assets/themes/amber.svg" width="1348" height="634" loading="lazy" alt="dpad with the amber theme"></a><figcaption>amber</figcaption></figure>
-    <figure class="theme"><a href="/assets/themes/matrix.svg" data-zoom aria-label="Enlarge the matrix theme"><img src="/assets/themes/matrix.svg" width="1348" height="634" loading="lazy" alt="dpad with the matrix theme"></a><figcaption>matrix</figcaption></figure>
-    <figure class="theme"><a href="/assets/themes/paper.svg" data-zoom aria-label="Enlarge the paper theme"><img src="/assets/themes/paper.svg" width="1348" height="634" loading="lazy" alt="dpad with the paper theme"></a><figcaption>paper</figcaption></figure>
-    <figure class="theme"><a href="/assets/themes/ink.svg" data-zoom aria-label="Enlarge the ink theme"><img src="/assets/themes/ink.svg" width="1348" height="634" loading="lazy" alt="dpad with the ink theme"></a><figcaption>ink</figcaption></figure>
-    <figure class="theme"><a href="/assets/themes/mono.svg" data-zoom aria-label="Enlarge the mono theme"><img src="/assets/themes/mono.svg" width="1348" height="634" loading="lazy" alt="dpad with the mono theme"></a><figcaption>mono</figcaption></figure>
-    <figure class="theme"><a href="/assets/themes/high-contrast.svg" data-zoom aria-label="Enlarge the high-contrast theme"><img src="/assets/themes/high-contrast.svg" width="1348" height="634" loading="lazy" alt="dpad with the high-contrast theme"></a><figcaption>high-contrast</figcaption></figure>
+    <figure class="theme on"><a href="/assets/themes/default.svg?v=b0fd7168eb" data-zoom aria-label="Enlarge the default theme"><img src="/assets/themes/default.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="dpad with the default theme"></a><figcaption>default</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/catppuccin-mocha.svg?v=b0fd7168eb" data-zoom aria-label="Enlarge the catppuccin-mocha theme"><img src="/assets/themes/catppuccin-mocha.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="dpad with the catppuccin-mocha theme"></a><figcaption>catppuccin-mocha</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/dracula.svg?v=b0fd7168eb" data-zoom aria-label="Enlarge the dracula theme"><img src="/assets/themes/dracula.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="dpad with the dracula theme"></a><figcaption>dracula</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/nord.svg?v=b0fd7168eb" data-zoom aria-label="Enlarge the nord theme"><img src="/assets/themes/nord.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="dpad with the nord theme"></a><figcaption>nord</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/gruvbox.svg?v=b0fd7168eb" data-zoom aria-label="Enlarge the gruvbox theme"><img src="/assets/themes/gruvbox.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="dpad with the gruvbox theme"></a><figcaption>gruvbox</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/amber.svg?v=b0fd7168eb" data-zoom aria-label="Enlarge the amber theme"><img src="/assets/themes/amber.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="dpad with the amber theme"></a><figcaption>amber</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/matrix.svg?v=b0fd7168eb" data-zoom aria-label="Enlarge the matrix theme"><img src="/assets/themes/matrix.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="dpad with the matrix theme"></a><figcaption>matrix</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/paper.svg?v=b0fd7168eb" data-zoom aria-label="Enlarge the paper theme"><img src="/assets/themes/paper.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="dpad with the paper theme"></a><figcaption>paper</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/ink.svg?v=b0fd7168eb" data-zoom aria-label="Enlarge the ink theme"><img src="/assets/themes/ink.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="dpad with the ink theme"></a><figcaption>ink</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/mono.svg?v=b0fd7168eb" data-zoom aria-label="Enlarge the mono theme"><img src="/assets/themes/mono.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="dpad with the mono theme"></a><figcaption>mono</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/high-contrast.svg?v=b0fd7168eb" data-zoom aria-label="Enlarge the high-contrast theme"><img src="/assets/themes/high-contrast.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="dpad with the high-contrast theme"></a><figcaption>high-contrast</figcaption></figure>
   </div>
 </section>
 

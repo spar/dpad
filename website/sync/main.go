@@ -7,13 +7,17 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 // shots are the docs/images screenshots the site shows.
@@ -22,8 +26,8 @@ var shots = []string{
 	"logs.svg", "projects.svg", "prune.svg", "settings.svg", "stats.svg", "system.svg",
 }
 
-// lightShots picks the light copies of the screenshots. Keep it in step with
-// `light` in public/assets/site.js.
+// lightShots picks the light look: the copies of the screenshots, and the
+// data-light attribute the pages' <html> carries for site.css.
 //
 //	ink:   docs/images/light, captured with the ink theme
 //	paper: the dark screenshots recolored with the paper palette
@@ -86,6 +90,15 @@ func outputs(root string) (map[string][]byte, error) {
 		}
 		out[dst("shots/"+name)] = b
 		out[dst("shots-light/"+name)] = light
+		if name == "demo.svg" {
+			for dir, svg := range map[string][]byte{"shots/": b, "shots-light/": light} {
+				still, err := firstFrame(svg)
+				if err != nil {
+					return nil, fmt.Errorf("%s%s: %w", dir, name, err)
+				}
+				out[dst(dir+"demo-still.svg")] = still
+			}
+		}
 	}
 
 	themes, err := filepath.Glob(filepath.Join(root, "docs/images/themes/*.svg"))
@@ -108,7 +121,11 @@ func outputs(root string) (map[string][]byte, error) {
 		out[dst(name)] = b
 	}
 
-	pages, err := renderPages(filepath.Join(root, "website/pages"))
+	version, err := assetVersion(filepath.Join(root, "website/public/assets"), out)
+	if err != nil {
+		return nil, err
+	}
+	pages, err := renderPages(filepath.Join(root, "website/pages"), version)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +133,62 @@ func outputs(root string) (map[string][]byte, error) {
 		out[filepath.Join(root, "website/public", name)] = b
 	}
 	return out, nil
+}
+
+// assetVersion hashes every file under dir, taking new content from out, so
+// that the ?v= the pages add to asset addresses changes whenever any asset
+// does. _headers lets browsers cache /assets/ for a year.
+func assetVersion(dir string, out map[string][]byte) (string, error) {
+	files := map[string][]byte{}
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		b, err := os.ReadFile(path)
+		files[path] = b
+		return err
+	})
+	if err != nil {
+		return "", err
+	}
+	for path, b := range out {
+		if strings.HasPrefix(path, dir+string(filepath.Separator)) {
+			files[path] = b
+		}
+	}
+	h := sha256.New()
+	for _, path := range slices.Sorted(maps.Keys(files)) {
+		rel, _ := filepath.Rel(dir, path)
+		fmt.Fprintf(h, "%s %d\n", filepath.ToSlash(rel), len(files[path]))
+		h.Write(files[path])
+	}
+	return hex.EncodeToString(h.Sum(nil))[:10], nil
+}
+
+var (
+	stripAnimation = regexp.MustCompile(`#strip\{animation:[^}]*\}@keyframes play\{.*?\}\}`)
+	nextFrame      = regexp.MustCompile(`<g transform="translate\(0 [1-9]\d*\)">`)
+	rowDef         = regexp.MustCompile(`<g id="(r\w+)">.*?</g>\n?`)
+)
+
+// firstFrame turns the animated demo into a still of its first frame for
+// phones, where the animation's thousands of rows cost seconds of main-thread
+// work for text too small to read.
+func firstFrame(svg []byte) ([]byte, error) {
+	anim := stripAnimation.FindIndex(svg)
+	next := nextFrame.FindIndex(svg)
+	end := bytes.LastIndex(svg, []byte("</g></g></g>\n</g></svg>"))
+	if anim == nil || next == nil || end < next[0] {
+		return nil, fmt.Errorf("not an animated screenshot from svg.js")
+	}
+	s := slices.Concat(svg[:anim[0]], svg[anim[1]:next[0]], svg[end+len("</g>"):])
+	return rowDef.ReplaceAllFunc(s, func(def []byte) []byte {
+		id := rowDef.FindSubmatch(def)[1]
+		if bytes.Contains(s, []byte(`href="#`+string(id)+`"`)) {
+			return def
+		}
+		return nil
+	}), nil
 }
 
 func lightCopy(root, name string, dark []byte) ([]byte, error) {

@@ -2,16 +2,9 @@
 // browser only. Without JavaScript the page shows dark mode and the Homebrew tab.
 (function () {
   var root = document.documentElement;
+  // website/pages/_boot.js sets the js class and a saved light choice before
+  // the page paints; this file loads deferred.
   var key = 'dpad-theme';
-  // The light look: 'ink', 'paper' or 'white' (site.css). Change lightShots in
-  // website/sync/main.go to match and run `make website`.
-  var light = 'ink';
-  root.classList.add('js');
-  root.setAttribute('data-light', light);
-
-  try {
-    if (localStorage.getItem(key) === 'light') root.setAttribute('data-theme', 'light');
-  } catch (e) {}
 
   function isLight() {
     return root.getAttribute('data-theme') === 'light';
@@ -20,9 +13,10 @@
   // Screenshots have a light copy in shots-light/, written by `make website`.
   function swapShots() {
     var dir = isLight() ? '/assets/shots-light/' : '/assets/shots/';
-    document.querySelectorAll('img[src*="/assets/shots"]').forEach(function (img) {
-      var src = img.getAttribute('src').replace(/\/assets\/shots(-light)?\//, dir);
-      if (src !== img.getAttribute('src')) img.setAttribute('src', src);
+    document.querySelectorAll('img[src*="/assets/shots"], source[srcset*="/assets/shots"]').forEach(function (el) {
+      var attr = el.tagName === 'IMG' ? 'src' : 'srcset';
+      var src = el.getAttribute(attr).replace(/\/assets\/shots(-light)?\//, dir);
+      if (src !== el.getAttribute(attr)) el.setAttribute(attr, src);
     });
   }
 

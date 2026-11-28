@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-light="ink">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,18 +11,26 @@
 <meta property="og:url" content="https://dpad.sh/docs/docker-host-usage/">
 <meta property="og:title" content="See the Docker host&#39;s CPU, memory and disk, locally or over SSH · dpad">
 <meta property="og:description" content="See the Docker host&#39;s CPU, memory, load and disk next to your containers in dpad, plus engine versions and docker system df, locally or over SSH.">
-<meta property="og:image" content="https://dpad.sh/assets/og-image.png">
+<meta property="og:image" content="https://dpad.sh/assets/og-image.png?v=b0fd7168eb">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="dpad, a colorful terminal UI for the docker CLI">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0a0e1f">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self' 'sha256-F3PTjDnyzEQ3PAtS&#43;GmScgTuEbTqUU2yriLJBfgp12o='; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="/assets/logo.svg?v=b0fd7168eb" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=b0fd7168eb">
 <link rel="preload" href="/assets/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css">
-<script src="/assets/site.js"></script>
+<link rel="stylesheet" href="/assets/site.css?v=b0fd7168eb">
+
+<script>(function () {
+  var root = document.documentElement;
+  root.classList.add('js');
+  try {
+    if (localStorage.getItem('dpad-theme') === 'light') root.setAttribute('data-theme', 'light');
+  } catch (e) {}
+})();</script>
+<script src="/assets/site.js?v=b0fd7168eb" defer></script>
 <script type="application/ld+json">
 [
   {
@@ -41,7 +49,7 @@
     "dateModified": "2026-11-28",
     "description": "See the Docker host's CPU, memory, load and disk next to your containers in dpad, plus engine versions and docker system df, locally or over SSH.",
     "headline": "Watch the Docker host",
-    "image": "https://dpad.sh/assets/og-image.png",
+    "image": "https://dpad.sh/assets/og-image.png?v=b0fd7168eb",
     "inLanguage": "en",
     "isPartOf": {
       "@type": "WebSite",
@@ -81,7 +89,7 @@
 <body>
 
 <header class="wrap nav">
-  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="34" height="34">dpad</a>
+  <a class="brand" href="/"><img src="/assets/logo.svg?v=b0fd7168eb" alt="" width="34" height="34">dpad</a>
   <ul>
     <li><a href="/#install">Install</a></li>
     <li><a href="/#features">Features</a></li>
@@ -133,7 +141,7 @@
 
 <h2>The host panel</h2>
 <p>The Containers tab (<kbd>1</kbd>) starts with three rows:</p>
-<figure><img src="/assets/shots/containers.svg" width="1348" height="634" loading="lazy" alt="The Containers tab with the host panel above the list: System, Docker and Host rows with CPU and memory gauges"><figcaption>System, Docker and Host rows above the containers.</figcaption></figure>
+<figure><img src="/assets/shots/containers.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="The Containers tab with the host panel above the list: System, Docker and Host rows with CPU and memory gauges"><figcaption>System, Docker and Host rows above the containers.</figcaption></figure>
 <table>
   <thead><tr><th>Row</th><th>Shows</th></tr></thead>
   <tbody>
@@ -146,7 +154,7 @@
 
 <h2>The System screen</h2>
 <p>Press <kbd>I</kbd> on any tab for everything dp knows about the daemon and its host:</p>
-<figure><img src="/assets/shots/system.svg" width="1348" height="634" loading="lazy" alt="System screen with host and engine details, CPU, memory and disk usage, and a docker system df table"><figcaption>Host, engine, usage and disk usage on one screen.</figcaption></figure>
+<figure><img src="/assets/shots/system.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="System screen with host and engine details, CPU, memory and disk usage, and a docker system df table"><figcaption>Host, engine, usage and disk usage on one screen.</figcaption></figure>
 <ul>
   <li><b>Host:</b> name, OS, kernel, architecture, cores and memory, uptime and load.</li>
   <li><b>Engine:</b> Docker and API version, runtime, containerd, storage driver, cgroup version and driver, logging driver.</li>

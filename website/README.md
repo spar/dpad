@@ -6,7 +6,7 @@ Setup steps: [docs/website.md](../docs/website.md).
 
 | Path | What it is |
 | --- | --- |
-| `pages/` | the source of every page: `index.html`, `404.html`, `docs/`, `compare/` and `alternatives/`, plus `_layout.html`, the shared `<head>`, header and footer |
+| `pages/` | the source of every page: `index.html`, `404.html`, `docs/`, `compare/` and `alternatives/`, plus `_layout.html`, the shared `<head>`, header and footer, and `_boot.js`, the few lines inlined in the `<head>` that apply a saved light choice before the page paints |
 | `public/index.html`, `public/404.html`, `public/docs/`, `public/compare/`, `public/alternatives/`, `public/sitemap.xml` | written by `make website` from `pages/`; do not edit by hand |
 | `public/_headers` | security and cache headers Cloudflare adds; not served |
 | `public/_redirects` | `/install` and `/install.ps1` redirect to the scripts in `scripts/`; not served |
@@ -22,6 +22,11 @@ Setup steps: [docs/website.md](../docs/website.md).
   Content-Security-Policy in a meta tag that allows only this site's own
   files. It is a meta tag rather than a header so it doesn't apply to the SVG
   screenshots, which carry their own styles and fonts.
+- Every asset address in the pages carries `?v=` and a hash of all the assets,
+  so `_headers` can let browsers cache `/assets/` for a year. `make website`
+  adds it; a changed asset needs `make website` before it goes live. Fonts
+  are fetched without `?v=`, so a changed font needs a new file name.
+- `site.js` loads deferred, so it doesn't hold up the first paint.
 - Dark is the default. The visitor's choice is kept in their browser's local
   storage only. The tokens for each mode are at the top of `site.css`.
 - Light mode has three looks. `ink` (the default) is black on white like
@@ -81,9 +86,9 @@ copies are stale.
 
 ## Changing the light look
 
-1. Set `light` in `public/assets/site.js` to `ink`, `paper` or `white`.
-2. Set `lightShots` in `sync/main.go` to the same value.
-3. Run `make website` and commit `public/assets/`.
+1. Set `lightShots` in `sync/main.go` to `ink`, `paper` or `white`. It picks
+   the light screenshots and the `data-light` attribute on every page.
+2. Run `make website` and commit `public/`.
 
 ## Previewing
 
