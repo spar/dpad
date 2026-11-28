@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"dpad/internal/compose"
+	"github.com/spar/dpad/internal/compose"
 )
 
 func screenshotComposeOutput(t *testing.T) string {

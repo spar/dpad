@@ -12,8 +12,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"dpad/internal/debuglog"
-	"dpad/internal/render"
+	"github.com/spar/dpad/internal/debuglog"
+	"github.com/spar/dpad/internal/render"
 )
 
 type daemonConnection struct {

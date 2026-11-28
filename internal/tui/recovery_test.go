@@ -10,8 +10,8 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"dpad/internal/docker"
-	"dpad/internal/sortx"
+	"github.com/spar/dpad/internal/docker"
+	"github.com/spar/dpad/internal/sortx"
 )
 
 func TestStatsUnavailableRecoveryPreservesView(t *testing.T) {

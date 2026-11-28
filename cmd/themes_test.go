@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"dpad/internal/config"
-	"dpad/internal/render"
-	"dpad/internal/theme"
+	"github.com/spar/dpad/internal/config"
+	"github.com/spar/dpad/internal/render"
+	"github.com/spar/dpad/internal/theme"
 )
 
 func TestSetupThemePrecedence(t *testing.T) {

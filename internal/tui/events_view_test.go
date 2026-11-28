@@ -10,7 +10,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"dpad/internal/docker"
+	"github.com/spar/dpad/internal/docker"
 )
 
 func testEvent(i int) docker.EventUpdate {

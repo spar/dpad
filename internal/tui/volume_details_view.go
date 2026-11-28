@@ -7,7 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/moby/moby/api/types/volume"
 
-	"dpad/internal/render"
+	"github.com/spar/dpad/internal/render"
 )
 
 type volumeDetailsMsg struct {

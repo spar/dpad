@@ -10,8 +10,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/moby/moby/api/types/container"
 
-	"dpad/internal/docker"
-	"dpad/internal/render"
+	"github.com/spar/dpad/internal/docker"
+	"github.com/spar/dpad/internal/render"
 )
 
 type projectTarget struct {

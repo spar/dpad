@@ -12,7 +12,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/colorprofile"
 
-	"dpad/internal/theme"
+	"github.com/spar/dpad/internal/theme"
 )
 
 // Styles derived from the active theme; ApplyTheme sets them.

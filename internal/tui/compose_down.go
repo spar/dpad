@@ -10,9 +10,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"dpad/internal/compose"
-	"dpad/internal/docker"
-	"dpad/internal/render"
+	"github.com/spar/dpad/internal/compose"
+	"github.com/spar/dpad/internal/docker"
+	"github.com/spar/dpad/internal/render"
 )
 
 // downTarget is a container, network or volume that carries the project's label.

@@ -19,8 +19,8 @@ import (
 	"charm.land/lipgloss/v2"
 	"go.yaml.in/yaml/v3"
 
-	"dpad/internal/config"
-	"dpad/themes"
+	"github.com/spar/dpad/internal/config"
+	"github.com/spar/dpad/themes"
 )
 
 // DefaultName is the theme used when none is chosen.

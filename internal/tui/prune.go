@@ -8,8 +8,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"dpad/internal/docker"
-	"dpad/internal/render"
+	"github.com/spar/dpad/internal/docker"
+	"github.com/spar/dpad/internal/render"
 )
 
 type prunePlanMsg struct {

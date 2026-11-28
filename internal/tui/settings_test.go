@@ -9,8 +9,8 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"dpad/internal/render"
-	"dpad/internal/theme"
+	"github.com/spar/dpad/internal/render"
+	"github.com/spar/dpad/internal/theme"
 )
 
 func TestSettingsShowsValuesAndOpensPickers(t *testing.T) {

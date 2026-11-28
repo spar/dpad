@@ -7,9 +7,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"dpad/internal/config"
-	"dpad/internal/render"
-	"dpad/internal/sortx"
+	"github.com/spar/dpad/internal/config"
+	"github.com/spar/dpad/internal/render"
+	"github.com/spar/dpad/internal/sortx"
 )
 
 // knownEditors are offered in the editor picker when found on PATH. Editors

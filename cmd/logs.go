@@ -15,8 +15,8 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/spf13/cobra"
 
-	"dpad/internal/docker"
-	"dpad/internal/render"
+	"github.com/spar/dpad/internal/docker"
+	"github.com/spar/dpad/internal/render"
 )
 
 const (

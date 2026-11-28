@@ -15,11 +15,11 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"dpad/internal/config"
-	"dpad/internal/debuglog"
-	"dpad/internal/docker"
-	"dpad/internal/render"
-	"dpad/internal/sortx"
+	"github.com/spar/dpad/internal/config"
+	"github.com/spar/dpad/internal/debuglog"
+	"github.com/spar/dpad/internal/docker"
+	"github.com/spar/dpad/internal/render"
+	"github.com/spar/dpad/internal/sortx"
 )
 
 var keyStyle = lipgloss.NewStyle().Bold(true)

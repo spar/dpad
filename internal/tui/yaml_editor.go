@@ -12,7 +12,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"go.yaml.in/yaml/v3"
 
-	"dpad/internal/render"
+	"github.com/spar/dpad/internal/render"
 )
 
 // builtinEditor is the editor: value that picks the editor built into dpad.

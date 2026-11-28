@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
-	"dpad/internal/debuglog"
-	"dpad/internal/docker"
+	"github.com/spar/dpad/internal/debuglog"
+	"github.com/spar/dpad/internal/docker"
 )
 
 // DownArgs is the Compose command Down runs, for showing in a preview.

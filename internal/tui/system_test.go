@@ -13,8 +13,8 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/system"
 
-	"dpad/internal/config"
-	"dpad/internal/docker"
+	"github.com/spar/dpad/internal/config"
+	"github.com/spar/dpad/internal/docker"
 )
 
 func testSystemInfo() *docker.SystemInfo {

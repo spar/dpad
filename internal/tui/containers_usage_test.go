@@ -11,10 +11,10 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 
-	"dpad/internal/config"
-	"dpad/internal/docker"
-	"dpad/internal/render"
-	"dpad/internal/sortx"
+	"github.com/spar/dpad/internal/config"
+	"github.com/spar/dpad/internal/docker"
+	"github.com/spar/dpad/internal/render"
+	"github.com/spar/dpad/internal/sortx"
 )
 
 func TestStatsHistoryRecentFillsLoneMissingSeconds(t *testing.T) {

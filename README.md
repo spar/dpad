@@ -42,7 +42,7 @@ both `dpad` and the short `dp` command. Pick one line:
 | macOS, Linux, WSL2 | [Install script](#install-scripts) | `curl -fsSL https://dpad.sh/install \| sh` |
 | Windows | [Scoop](#scoop) | `scoop bucket add spar https://github.com/spar/scoop-bucket; scoop install spar/dpad` |
 | Windows | [PowerShell script](#install-scripts) | `irm https://dpad.sh/install.ps1 \| iex` |
-| Any | [Release archive](#release-archives) or [source](#from-source) | see below |
+| Any | [Release archive](#release-archives), [`go install`](#from-source) or [source](#from-source) | see below |
 
 Then run `dp`. To check the install, run `dp --version`.
 
@@ -107,6 +107,13 @@ To build from source with **Go 1.26.7+**, run:
 git clone https://github.com/spar/dpad.git
 cd dpad
 make install
+```
+
+Or install the latest release with Go. This puts only the `dpad` command in
+`$(go env GOPATH)/bin`, so add `alias dp=dpad` to your shell profile:
+
+```sh
+go install github.com/spar/dpad@latest
 ```
 
 Shell completion, other install locations and troubleshooting are covered in

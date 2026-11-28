@@ -10,7 +10,7 @@ import (
 
 	"github.com/moby/moby/api/types/network"
 
-	"dpad/internal/docker"
+	"github.com/spar/dpad/internal/docker"
 )
 
 func NetworkUsage(users []docker.NetworkUse, known bool) string {

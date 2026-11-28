@@ -15,7 +15,7 @@ import (
 	"github.com/moby/moby/api/types/events"
 	"github.com/moby/moby/client"
 
-	"dpad/internal/debuglog"
+	"github.com/spar/dpad/internal/debuglog"
 )
 
 // Stats is a computed resource-usage sample for one container.

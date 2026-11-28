@@ -1,7 +1,7 @@
 BIN     := bin/dpad
 PREFIX  ?= $(HOME)/.local
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-LDFLAGS := -s -w -X dpad/cmd.version=$(VERSION)
+LDFLAGS := -s -w -X github.com/spar/dpad/cmd.version=$(VERSION)
 
 # Prefer the compose plugin, fall back to standalone docker-compose.
 COMPOSE ?= $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo docker-compose)

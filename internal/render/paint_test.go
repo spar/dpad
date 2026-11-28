@@ -3,7 +3,7 @@ package render
 import (
 	"testing"
 
-	"dpad/internal/theme"
+	"github.com/spar/dpad/internal/theme"
 )
 
 func TestPaintMatchesRender(t *testing.T) {

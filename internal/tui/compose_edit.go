@@ -15,8 +15,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"dpad/internal/compose"
-	"dpad/internal/render"
+	"github.com/spar/dpad/internal/compose"
+	"github.com/spar/dpad/internal/render"
 )
 
 // composeEditView edits one of a project's Compose files in the person's

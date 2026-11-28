@@ -8,8 +8,8 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"dpad/internal/docker"
-	"dpad/internal/render"
+	"github.com/spar/dpad/internal/docker"
+	"github.com/spar/dpad/internal/render"
 )
 
 const statsHistorySeconds = 120

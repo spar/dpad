@@ -11,7 +11,7 @@ import (
 
 	"github.com/moby/moby/client"
 
-	"dpad/internal/debuglog"
+	"github.com/spar/dpad/internal/debuglog"
 )
 
 func TestDebugLogRecordsRequests(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/docker/go-units"
 
-	"dpad/internal/render"
+	"github.com/spar/dpad/internal/render"
 )
 
 const (

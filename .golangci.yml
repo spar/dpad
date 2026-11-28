@@ -22,4 +22,4 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - dpad
+        - github.com/spar/dpad

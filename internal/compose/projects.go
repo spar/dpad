@@ -22,8 +22,8 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 
-	"dpad/internal/debuglog"
-	"dpad/internal/docker"
+	"github.com/spar/dpad/internal/debuglog"
+	"github.com/spar/dpad/internal/docker"
 )
 
 const projectLabel = docker.ComposeProjectLabel
