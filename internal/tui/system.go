@@ -289,7 +289,7 @@ func panelRow(label, name, cpu, mem string) string {
 }
 
 func cpuCell(p float64, cores int) string {
-	return render.Dim.Render("CPU  ") + render.Gauge(p, panelBar) + " " + panelPercent(p) + render.Dim.Render(fmt.Sprintf(" of %d cores", cores))
+	return panelKey("CPU  ") + render.Gauge(p, panelBar) + " " + panelPercent(p) + render.Dim.Render(fmt.Sprintf(" of %d cores", cores))
 }
 
 func memCell(used, total uint64) string {
@@ -297,10 +297,14 @@ func memCell(used, total uint64) string {
 	if total > 0 {
 		p = float64(used) / float64(total) * 100
 	}
-	return render.Dim.Render("MEM  ") + render.Gauge(p, panelBar) + " " + rpad(render.Bold.Render(render.CompactSize(used)), 5) + render.Dim.Render("/"+render.CompactSize(total))
+	return panelKey("MEM  ") + render.Gauge(p, panelBar) + " " + rpad(render.Bold.Render(render.CompactSize(used)), 5) + render.Dim.Render("/"+render.CompactSize(total))
 }
 
-func keyValue(k, v string) string { return render.Dim.Render(pad(k, max(5, len(k)+1))) + v }
+// panelKey colors a label such as CPU or Load like the row names, so it
+// stands out from the dimmed units after the numbers.
+func panelKey(s string) string { return render.Header.UnsetBold().Render(s) }
+
+func keyValue(k, v string) string { return panelKey(pad(k, max(5, len(k)+1))) + v }
 
 func wideCols(cols ...string) string {
 	widths := []int{15, 15, 20}
@@ -313,7 +317,7 @@ func wideCols(cols ...string) string {
 }
 
 func rateCell(label string, rate float64) string {
-	return render.Dim.Render(label+" ") + render.Rate(rate)
+	return panelKey(label+" ") + render.Rate(rate)
 }
 
 // hostPanel draws the System, Docker and Host rows above the containers.
@@ -330,9 +334,9 @@ func (a *App) hostPanel() []string {
 		l := host.latest
 		system = panelRow("System", render.Bold.Render(info.Info.Name), cpuCell(host.cpu, cores), memCell(l.MemTotal-min(l.MemAvailable, l.MemTotal), l.MemTotal))
 		if wide {
-			swap := render.Dim.Render("Swap ") + "off"
+			swap := panelKey("Swap ") + "off"
 			if l.SwapTotal > 0 {
-				swap = render.Dim.Render("Swap ") + render.CompactSize(l.SwapTotal-min(l.SwapFree, l.SwapTotal)) + render.Dim.Render("/"+render.CompactSize(l.SwapTotal))
+				swap = panelKey("Swap ") + render.CompactSize(l.SwapTotal-min(l.SwapFree, l.SwapTotal)) + render.Dim.Render("/"+render.CompactSize(l.SwapTotal))
 			}
 			system = pad(system, panelWidth) + wideCols(rateCell("TX", host.tx), rateCell("RX", host.rx), swap)
 		}
