@@ -21,9 +21,9 @@ import (
 // DefaultRemoteSocket is the daemon socket of an ssh:// endpoint that names none.
 const DefaultRemoteSocket = "/var/run/docker.sock"
 
-// forwardTCP forwards a loopback TCP port instead of a Unix socket. The
-// Windows build of OpenSSH can't listen on a Unix socket, and its -L parser
-// splits a path like C:\\Users\\... at the drive letter's colon.
+// forwardTCP forwards a loopback TCP port instead of a Unix socket. OpenSSH's
+// -L parser splits a Windows path like C:\Users\... at the drive letter's
+// colon and has no escape for it.
 var forwardTCP = runtime.GOOS == "windows"
 
 // sshCommand builds the ssh process; tests replace it with a fake.
