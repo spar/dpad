@@ -9,6 +9,10 @@ merges every pull request.
 Docker on macOS, Linux and Windows, and [AGENTS.md](AGENTS.md) describes the
 code layout and conventions.
 
+Everyone taking part is expected to follow the
+[Code of Conduct](CODE_OF_CONDUCT.md). Report problems to
+[info@dpad.sh](mailto:info@dpad.sh).
+
 ## Issue first
 
 1. **Open an issue** with the Bug report or Feature request form. New issues
