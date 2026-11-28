@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -168,6 +169,9 @@ func starts(t *testing.T, log string) []string {
 
 func TestSSHTunnelServesAndRestarts(t *testing.T) {
 	for _, tcp := range []bool{false, true} {
+		if !tcp && runtime.GOOS == "windows" {
+			continue // Windows always forwards TCP
+		}
 		for _, socket := range []string{"", "/run/user/1000/docker.sock"} {
 			for _, fromContext := range []bool{false, true} {
 				t.Run(fmt.Sprintf("tcp=%t/socket=%s/context=%t", tcp, socket, fromContext), func(t *testing.T) {
