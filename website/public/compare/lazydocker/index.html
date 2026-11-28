@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dpad vs lazydocker: two terminal UIs for Docker compared · dpad</title>
+<meta name="description" content="An honest comparison of dpad and lazydocker, two open source terminal UIs for Docker and Compose: logs, stats, Compose, SSH, installs, and when to pick each.">
+<link rel="canonical" href="https://dpad.sh/compare/lazydocker/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="dpad">
+<meta property="og:url" content="https://dpad.sh/compare/lazydocker/">
+<meta property="og:title" content="dpad vs lazydocker: two terminal UIs for Docker compared · dpad">
+<meta property="og:description" content="Where dpad and lazydocker differ, checked against lazydocker&#39;s own docs, and when each one is the better pick.">
+<meta property="og:image" content="https://dpad.sh/assets/og-image.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="dpad, a colorful terminal UI for the docker CLI">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0a0e1f">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/site.css">
+<script src="/assets/site.js"></script>
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "about": {
+      "@type": "SoftwareApplication",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "dateModified": "2026-11-28",
+    "description": "An honest comparison of dpad and lazydocker, two open source terminal UIs for Docker and Compose: logs, stats, Compose, SSH, installs, and when to pick each.",
+    "headline": "dpad vs lazydocker",
+    "image": "https://dpad.sh/assets/og-image.png",
+    "inLanguage": "en",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "mainEntityOfPage": "https://dpad.sh/compare/lazydocker/",
+    "url": "https://dpad.sh/compare/lazydocker/"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/",
+        "name": "dpad",
+        "position": 1
+      },
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/compare/",
+        "name": "Compare",
+        "position": 2
+      },
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/compare/lazydocker/",
+        "name": "dpad vs lazydocker",
+        "position": 3
+      }
+    ]
+  }
+]
+</script>
+</head>
+<body>
+
+<header class="wrap nav">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="34" height="34">dpad</a>
+  <ul>
+    <li><a href="/#install">Install</a></li>
+    <li><a href="/#features">Features</a></li>
+    <li><a href="/docs/">Docs</a></li>
+    <li><a href="/compare/">Compare</a></li>
+    <li><a href="https://github.com/spar/dpad/releases">Releases</a></li>
+  </ul>
+  <div class="right">
+    <button class="mode" type="button" aria-label="Switch between dark and light" title="Switch between dark and light">
+      <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+    <a class="gh" href="https://github.com/spar/dpad"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+  </div>
+</header>
+
+<main class="wrap docs">
+<nav class="side" aria-label="Guides">
+  <p>Guides</p>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/getting-started/">Getting started</a></li>
+    <li><a href="/docs/remote-docker-ssh/">Remote Docker over SSH</a></li>
+    <li><a href="/docs/compose-logs/">Compose logs</a></li>
+    <li><a href="/docs/docker-stats/">Docker stats</a></li>
+    <li><a href="/docs/update-compose-images/">Update Compose images</a></li>
+    <li><a href="/docs/edit-compose-file/">Edit Compose files</a></li>
+    <li><a href="/docs/prune-preview/">Prune with a preview</a></li>
+    <li><a href="/docs/events/">Events</a></li>
+    <li><a href="/docs/contexts/">Docker contexts</a></li>
+    <li><a href="/docs/themes/">Themes</a></li>
+    <li><a href="/docs/config/">Config and custom commands</a></li>
+    <li><a href="/docs/keys/">Keyboard shortcuts</a></li>
+  </ul>
+  <p>Compare</p>
+  <ul>
+    <li><a href="/compare/">Overview</a></li>
+    <li><a href="/compare/lazydocker/" aria-current="page">dpad vs lazydocker</a></li>
+    <li><a href="/alternatives/lazydocker/">lazydocker alternatives</a></li>
+    <li><a href="/compare/ctop/">ctop alternative</a></li>
+  </ul>
+</nav>
+<article class="prose">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/compare/">Compare</a> <span>›</span> dpad vs lazydocker</nav>
+  <h1>dpad vs lazydocker</h1>
+  <p class="updated">Updated 28 November 2026</p>
+<p class="lead">Both are open source terminal UIs for Docker and Docker Compose, written in Go. lazydocker is the established one, with a large community. dpad is newer and also works as a drop-in for everyday <code>docker</code> commands. Many people will be happy with either; this page lays out where they differ so you can choose.</p>
+<p class="callout">Checked against lazydocker's <a href="https://github.com/jesseduffield/lazydocker">README</a>, <a href="https://github.com/jesseduffield/lazydocker/blob/master/docs/Config.md">Config.md</a>, <a href="https://github.com/jesseduffield/lazydocker/blob/master/docs/keybindings/Keybindings_en.md">keybindings</a> and <a href="https://github.com/jesseduffield/lazydocker/releases">release notes</a> on 28 November 2026, for lazydocker v0.25.2. "Not documented" means we couldn't find it there, not that it can't be done. Spotted a mistake? <a href="https://github.com/spar/dpad/issues">Open an issue</a> and we'll fix it.</p>
+
+<h2>Pick lazydocker if</h2>
+<ul>
+  <li><b>You want the tool most people already use.</b> lazydocker has about 53,000 GitHub stars and years of use, so answers, blog posts and dotfiles for it are easy to find.</li>
+  <li><b>You want to look inside images.</b> It shows the ancestor layers of an image.</li>
+  <li><b>You attach to containers often.</b> It has attach (<kbd>a</kbd>) next to exec (<kbd>E</kbd>), bulk commands (<kbd>b</kbd>) on each panel, and opens a container's first port in the browser (<kbd>w</kbd>).</li>
+  <li><b>You want to change how Compose is run.</b> Its <code>commandTemplates</code> let you replace the command behind each Compose action, and its stats graphs can chart any metric you point them at.</li>
+  <li><b>You install through Chocolatey, AUR, asdf or <code>go install</code>.</b> lazydocker is in all of them, plus Homebrew and Scoop. dpad has Homebrew, Scoop and install scripts today.</li>
+</ul>
+
+<h2>Pick dpad if</h2>
+<ul>
+  <li><b>You also want a better <code>docker</code> in the shell.</b> <code>dp ps</code>, <code>dp images</code>, <code>dp stats</code> and <code>dp logs</code> keep Docker's flags and add color and sorting, and every other command passes through to <code>docker</code>. lazydocker is a UI only.</li>
+  <li><b>You read logs across services.</b> dpad follows any mix of containers, services and projects in one stream, with a live regex filter that highlights matches (<a href="/docs/compose-logs/">guide</a>). lazydocker shows logs per container, per service, or for a whole project, and its keybindings list no log search.</li>
+  <li><b>You update Compose stacks on a server.</b> <kbd>U</kbd> previews and runs <code>pull</code> then <code>up -d</code> across every project on a host, one at a time, with a result for each (<a href="/docs/update-compose-images/">guide</a>).</li>
+  <li><b>You edit Compose files in place.</b> dpad checks an edit with <code>docker compose config</code> and shows the diff before saving, also on an SSH host (<a href="/docs/edit-compose-file/">guide</a>).</li>
+  <li><b>You want to know what a prune will delete.</b> dpad lists the exact resources and removes only those (<a href="/docs/prune-preview/">guide</a>).</li>
+  <li><b>You care how it looks.</b> Eleven built-in themes with a live picker, and your own as one YAML file (<a href="/docs/themes/">guide</a>).</li>
+</ul>
+
+<h2>Side by side</h2>
+<table>
+  <thead><tr><th></th><th>dpad</th><th>lazydocker</th></tr></thead>
+  <tbody>
+    <tr><td>License</td><td>GPL-3.0</td><td>MIT</td></tr>
+    <tr><td>Works as the <code>docker</code> command in the shell</td><td>yes: <code>ps</code>, <code>images</code>, <code>stats</code>, <code>logs</code> enhanced, the rest passed through</td><td>no, terminal UI only</td></tr>
+    <tr><td>Compose projects and services</td><td>yes: start, stop, restart, down, logs</td><td>yes: up, down, start, stop, restart, rebuild, recreate</td></tr>
+    <tr><td>Update images (<code>pull</code> + <code>up -d</code>)</td><td>one project or all, with a preview and per-project results</td><td>not a default action; possible as a custom command</td></tr>
+    <tr><td>Edit a Compose file</td><td>yes, validated with a diff, locally or over SSH</td><td>not documented</td></tr>
+    <tr><td>Logs from several containers</td><td>any mix of containers, services and projects</td><td>per container, per service, or a whole project</td></tr>
+    <tr><td>Search or filter logs</td><td>live regex filter with highlighting</td><td>not documented</td></tr>
+    <tr><td>Default log window</td><td>project logs start with the last 500 lines per container</td><td>last 60 minutes (configurable)</td></tr>
+    <tr><td>Stats</td><td>bars, per-second network and disk rates, two-minute sparklines, Compose project totals</td><td>ASCII graphs, configurable to any metric</td></tr>
+    <tr><td>Events timeline</td><td>yes, filterable</td><td>not documented</td></tr>
+    <tr><td>Prune</td><td>containers, images, volumes, networks, build cache, with a list of exactly what goes</td><td>containers, images and volumes</td></tr>
+    <tr><td>Image layer history</td><td>no</td><td>yes</td></tr>
+    <tr><td>Attach to a container</td><td>no (shell with <kbd>e</kbd>)</td><td>yes, plus exec shell</td></tr>
+    <tr><td>Custom commands</td><td>yes, per container or project</td><td>yes, plus replaceable command templates</td></tr>
+    <tr><td>Mouse</td><td>yes</td><td>yes</td></tr>
+    <tr><td>Themes</td><td>eleven built in, live picker, theme files</td><td>border, selection and option colors in the config</td></tr>
+    <tr><td>Docker contexts</td><td>follows the current context; switch inside the UI with <kbd>c</kbd></td><td>follows the current context (since v0.23.0)</td></tr>
+    <tr><td>Remote daemon over SSH</td><td>yes, with automatic reconnects and rootless socket paths</td><td>yes (fixed in v0.24.0)</td></tr>
+    <tr><td>Install</td><td>Homebrew, Scoop, install scripts, release archives</td><td>Homebrew, Scoop, Chocolatey, AUR, asdf, <code>go install</code>, Docker image, release archives</td></tr>
+  </tbody>
+</table>
+<p>We haven't compared speed or memory, because we haven't run the same test on both. dpad's <a href="https://github.com/spar/dpad#performance">published numbers</a> compare <code>dp</code> with <code>docker</code>, not with lazydocker.</p>
+
+<h2>The biggest difference: dp is also a CLI</h2>
+<p>lazydocker is something you open. dpad also replaces <code>docker</code> for everyday commands, so you can type <code>dp</code> wherever you would type <code>docker</code>.</p>
+<pre><span class="p">$</span> dp ps -a                <span class="c"># colored states and health</span>
+<span class="p">$</span> dp stats --sort mem     <span class="c"># sorted live stats</span>
+<span class="p">$</span> dp logs -f api worker   <span class="c"># two services, one stream</span>
+<span class="p">$</span> dp compose up -d        <span class="c"># passed straight to docker</span></pre>
+<p>Output stays plain when piped, so scripts that use <code>dp</code> behave like they would with <code>docker</code>.</p>
+
+<h2>Try dpad next to lazydocker</h2>
+<p>They don't conflict. Each has its own config file and neither changes your Docker setup, so you can install dpad and use both for a week.</p>
+<div class="install"><div class="cmd"><code><span class="p">$</span>brew install spar/tap/dpad &amp;&amp; dp</code><button type="button" class="copy">copy</button></div></div>
+<p>Other platforms: <a href="/docs/getting-started/">Getting started</a>. Keys you know from lazydocker map like this:</p>
+<table>
+  <thead><tr><th>To do this</th><th>lazydocker</th><th>dpad</th></tr></thead>
+  <tbody>
+    <tr><td>Switch panel or tab</td><td><kbd>1</kbd>–<kbd>6</kbd> focus a panel</td><td><kbd>1</kbd>–<kbd>7</kbd> switch tab</td></tr>
+    <tr><td>Filter the list</td><td><kbd>/</kbd></td><td><kbd>/</kbd></td></tr>
+    <tr><td>Logs</td><td><kbd>m</kbd></td><td><kbd>enter</kbd></td></tr>
+    <tr><td>Shell into a container</td><td><kbd>E</kbd></td><td><kbd>e</kbd></td></tr>
+    <tr><td>Restart</td><td><kbd>r</kbd></td><td><kbd>R</kbd></td></tr>
+    <tr><td>Custom command</td><td><kbd>c</kbd> then pick</td><td>the key you bind</td></tr>
+  </tbody>
+</table>
+
+<p>Looking at more tools than these two? See <a href="/alternatives/lazydocker/">lazydocker alternatives</a>.</p>
+
+  <aside class="related">
+    <h2>Related</h2>
+    <ul>
+      <li><a href="/alternatives/lazydocker/"><b>lazydocker alternatives</b><span>Five open source terminal tools for Docker besides lazydocker: dpad, dry, oxker, dtop and ctop, compared on Compose, logs, stats, remote hosts and maintenance.</span></a></li>
+      <li><a href="/docs/compose-logs/"><b>Follow logs from several Compose services</b><span>Stream logs from several containers, Compose services or whole projects in one view, with stable colors, log level highlighting and a live regex filter.</span></a></li>
+      <li><a href="/docs/remote-docker-ssh/"><b>Monitor Docker on a remote server over SSH</b><span>Watch and manage containers on a remote Docker host from your laptop with dpad and DOCKER_HOST=ssh://, including rootless Docker, saved contexts and reconnects.</span></a></li>
+    </ul>
+  </aside>
+</article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>dpad is open source under the GPL-3.0 license.</span>
+    <span><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="https://github.com/spar/dpad/releases">Releases</a><a href="https://github.com/spar/dpad/issues">Issues</a><a href="https://github.com/sponsors/spar">Sponsor</a><a href="https://github.com/spar/dpad">GitHub</a></span>
+  </div>
+</footer>
+</body>
+</html>

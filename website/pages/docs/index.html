@@ -1,0 +1,48 @@
+<!--
+title: dpad docs: guides for the Docker terminal UI
+heading: dpad guides
+nav: Overview
+description: Guides for dpad (dp), the terminal UI and CLI for Docker: install, remote servers over SSH, Compose logs, live stats, image updates, prune, themes and keys.
+updated: 2026-11-28
+order: 0
+-->
+<p class="lead">Each guide covers one job, start to finish. For every key and option, see the full reference, <a href="https://github.com/spar/dpad/blob/main/docs/usage.md">Using dpad</a>, on GitHub.</p>
+
+<h2>Start here</h2>
+<ul class="cards">
+  <li><a href="/docs/getting-started/"><b>Getting started</b><span>Install dp on macOS, Linux or Windows, open the TUI and learn the keys you need on day one.</span></a></li>
+  <li><a href="/docs/keys/"><b>Keyboard shortcuts</b><span>Every key in the TUI on one page.</span></a></li>
+</ul>
+
+<h2>Servers and contexts</h2>
+<ul class="cards">
+  <li><a href="/docs/remote-docker-ssh/"><b>Monitor Docker on a remote server over SSH</b><span>Point dp at a server's daemon with <code>DOCKER_HOST=ssh://</code> or a saved context.</span></a></li>
+  <li><a href="/docs/contexts/"><b>Docker contexts</b><span>Docker Desktop, colima and remote hosts, and switching between them inside dp.</span></a></li>
+</ul>
+
+<h2>Logs, stats and events</h2>
+<ul class="cards">
+  <li><a href="/docs/compose-logs/"><b>Follow logs from several Compose services</b><span>One stream for any mix of containers, services and projects, with a live regex filter.</span></a></li>
+  <li><a href="/docs/docker-stats/"><b>Readable docker stats</b><span>Sort by any column, per-second network and disk rates, sparklines and Compose rollups.</span></a></li>
+  <li><a href="/docs/events/"><b>Watch Docker events live</b><span>A timeline of starts, stops, crashes and health changes you can filter by project.</span></a></li>
+</ul>
+
+<h2>Compose projects</h2>
+<ul class="cards">
+  <li><a href="/docs/update-compose-images/"><b>Update Compose images safely</b><span><code>pull</code> then <code>up -d</code> for one project or all of them, with a preview first.</span></a></li>
+  <li><a href="/docs/edit-compose-file/"><b>Edit a Compose file, locally or over SSH</b><span>Validation and a diff before anything is saved.</span></a></li>
+</ul>
+
+<h2>Cleaning up</h2>
+<ul class="cards">
+  <li><a href="/docs/prune-preview/"><b>Preview a Docker prune before it deletes</b><span>See the exact containers, images, volumes and networks first.</span></a></li>
+</ul>
+
+<h2>Make it yours</h2>
+<ul class="cards">
+  <li><a href="/docs/themes/"><b>Themes</b><span>Eleven built-in color themes, a live picker, and your own theme in one YAML file.</span></a></li>
+  <li><a href="/docs/config/"><b>Config file and custom commands</b><span>Bind your own commands to keys and set the editor, mouse and CPU graph.</span></a></li>
+</ul>
+
+<h2>Coming from another tool?</h2>
+<p>See how dpad compares with <a href="/compare/lazydocker/">lazydocker</a>, with <a href="/alternatives/lazydocker/">other Docker terminal tools</a>, and with <a href="/compare/ctop/">ctop</a>.</p>

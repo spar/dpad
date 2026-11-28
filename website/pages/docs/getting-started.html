@@ -1,0 +1,84 @@
+<!--
+title: Get started with dpad, a terminal UI for Docker
+heading: Getting started
+description: Install dpad on macOS, Linux or Windows, open the Docker terminal UI with dp, and learn the tabs and keys you need on the first day.
+updated: 2026-11-28
+order: 1
+related: /docs/keys/, /docs/remote-docker-ssh/, /docs/compose-logs/
+-->
+<p class="lead">dpad installs one program with two names, <code>dpad</code> and the short <code>dp</code>. Run <code>dp</code> on its own for the full-screen terminal UI, or use it in place of <code>docker</code> for everyday commands.</p>
+
+<h2>What you need</h2>
+<ul>
+  <li>A running Docker engine: Docker Desktop, colima, Docker Engine on Linux, or a remote server.</li>
+  <li>The Docker CLI (<code>docker</code>) on your PATH. dp reads containers, stats and logs through the Docker Engine API, and hands every command it doesn't enhance to <code>docker</code>.</li>
+</ul>
+
+<h2>Install</h2>
+<h3>macOS and Linux with Homebrew</h3>
+<div class="install"><div class="cmd"><code><span class="p">$</span>brew install spar/tap/dpad</code><button type="button" class="copy">copy</button></div></div>
+<p>Upgrade later with <code>brew upgrade dpad</code>.</p>
+
+<h3>macOS, Linux or WSL2 without a package manager</h3>
+<div class="install"><div class="cmd"><code><span class="p">$</span>curl -fsSL https://dpad.sh/install | sh</code><button type="button" class="copy">copy</button></div></div>
+<p>The script picks amd64 or arm64, checks the download against the release's SHA-256 checksum and installs into <code>~/.local/bin</code> for your user. If your shell can't find <code>dp</code> afterwards, add <code>export PATH="$HOME/.local/bin:$PATH"</code> to your shell profile. Run the same command again to upgrade. <code>dpad.sh/install</code> redirects to <a href="https://github.com/spar/dpad/blob/main/scripts/install.sh">scripts/install.sh</a> on GitHub, so you can read it first.</p>
+
+<h3>Windows with Scoop</h3>
+<div class="install"><div class="cmd"><code><span class="p">&gt;</span>scoop bucket add spar https://github.com/spar/scoop-bucket; scoop install spar/dpad</code><button type="button" class="copy">copy</button></div></div>
+
+<h3>Windows with PowerShell</h3>
+<div class="install"><div class="cmd"><code><span class="p">&gt;</span>irm https://dpad.sh/install.ps1 | iex</code><button type="button" class="copy">copy</button></div></div>
+<p>This installs into <code>%LOCALAPPDATA%\Programs\dpad</code> and adds it to your PATH.</p>
+
+<p>Release archives for every platform, with checksums and signed build provenance, are on the <a href="https://github.com/spar/dpad/releases/latest">latest release</a> page. Check the install with <code>dp --version</code>.</p>
+
+<h2>Open the TUI</h2>
+<div class="install"><div class="cmd"><code><span class="p">$</span>dp</code><button type="button" class="copy">copy</button></div></div>
+<p>dp connects to the same daemon as <code>docker</code>: it follows <code>DOCKER_HOST</code>, <code>DOCKER_CONTEXT</code> and your current Docker context. There is nothing to configure.</p>
+<figure><img src="/assets/shots/containers.svg" width="1348" height="634" loading="lazy" alt="The Containers tab: colored states, health, ports, and a CPU graph and memory for each running container"><figcaption>The Containers tab, the first thing you see.</figcaption></figure>
+
+<h3>The tabs</h3>
+<table>
+  <thead><tr><th>Key</th><th>Tab</th><th>What it shows</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>1</kbd></td><td>Containers</td><td>Every container with state, health, ports and a live CPU graph and memory</td></tr>
+    <tr><td><kbd>2</kbd></td><td>Images</td><td>Images, their size and which containers use them</td></tr>
+    <tr><td><kbd>3</kbd></td><td>Stats</td><td>Live CPU, memory, network and disk, grouped by Compose project (<a href="/docs/docker-stats/">guide</a>)</td></tr>
+    <tr><td><kbd>4</kbd></td><td>Projects</td><td>Compose projects and services, with logs, updates, edits and <code>down</code></td></tr>
+    <tr><td><kbd>5</kbd></td><td>Events</td><td>A live timeline of lifecycle and health events (<a href="/docs/events/">guide</a>)</td></tr>
+    <tr><td><kbd>6</kbd></td><td>Volumes</td><td>Volumes and the containers that mount them</td></tr>
+    <tr><td><kbd>7</kbd></td><td>Networks</td><td>Networks, their endpoints and containers</td></tr>
+  </tbody>
+</table>
+
+<h3>Keys for the first day</h3>
+<table>
+  <thead><tr><th>Key</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>↑</kbd> <kbd>↓</kbd> or <kbd>j</kbd> <kbd>k</kbd></td><td>Move</td></tr>
+    <tr><td><kbd>/</kbd></td><td>Filter the current tab</td></tr>
+    <tr><td><kbd>enter</kbd></td><td>Follow the logs of the selected container, or of a whole Compose project</td></tr>
+    <tr><td><kbd>d</kbd></td><td>Details: state, exit code, health checks, ports, networks and mounts</td></tr>
+    <tr><td><kbd>e</kbd></td><td>Open a shell in the container</td></tr>
+    <tr><td><kbd>S</kbd> <kbd>x</kbd> <kbd>R</kbd></td><td>Start, stop or restart, after a <code>y/N</code> confirmation</td></tr>
+    <tr><td><kbd>esc</kbd></td><td>Back</td></tr>
+    <tr><td><kbd>?</kbd></td><td>Help for the current view</td></tr>
+    <tr><td><kbd>q</kbd></td><td>Quit</td></tr>
+  </tbody>
+</table>
+<p>The footer always lists the keys for the selected row, and the mouse works too: click a tab or row, double-click to open, scroll with the wheel. All keys are on <a href="/docs/keys/">Keyboard shortcuts</a>.</p>
+
+<h2>Use dp in place of docker</h2>
+<p>These commands keep Docker's flags and add color and sorting:</p>
+<pre><span class="p">$</span> dp ps -a                <span class="c"># colored states and a health column</span>
+<span class="p">$</span> dp images --sort size   <span class="c"># human sizes and a total</span>
+<span class="p">$</span> dp stats --sort mem     <span class="c"># live stats, biggest memory users first</span>
+<span class="p">$</span> dp logs -f api worker   <span class="c"># Compose services or containers in one stream</span></pre>
+<p>Any other command or flag goes to <code>docker</code> unchanged, so <code>dp exec -it web sh</code> and <code>dp ps --format '{{.Names}}'</code> work as you expect. Output stays plain when piped, when <code>NO_COLOR</code> is set, or with <code>--no-color</code>, so scripts keep working.</p>
+
+<h2>Next steps</h2>
+<ul>
+  <li>Watching a server? <a href="/docs/remote-docker-ssh/">Monitor Docker on a remote server over SSH</a>.</li>
+  <li>Running Compose? <a href="/docs/compose-logs/">Follow logs from several services</a> and <a href="/docs/update-compose-images/">update images safely</a>.</li>
+  <li>Want another look? Press <kbd>C</kbd> for the <a href="/docs/themes/">theme picker</a>.</li>
+</ul>

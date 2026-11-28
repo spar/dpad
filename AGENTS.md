@@ -29,7 +29,7 @@ Setup instructions for macOS, Linux and Windows are in
 | `themes/` | built-in color themes, one YAML file each, embedded in the binary |
 | `testenv/` | demo compose environment (`make demo-up`) |
 | `scripts/screenshots/` | regenerates `docs/images` from the demo (`make screenshots`) |
-| `website/` | the dpad.sh site: plain HTML and CSS in `public/`, served by Cloudflare ([docs/website.md](docs/website.md)) |
+| `website/` | the dpad.sh site: page sources in `pages/`, built into plain HTML in `public/` by `make website`, served by Cloudflare ([docs/website.md](docs/website.md)) |
 
 ## Commands
 
@@ -53,8 +53,11 @@ checks (`.github/workflows/`).
 - Take colors from the theme (`render` styles, `render.Theme()`), never
   hard-coded values; [docs/themes.md](docs/themes.md) lists the roles.
 - Website changes use `docs(website):` so they don't cut a release. Keep the
-  site free of analytics and third-party requests, and don't hand-edit files
-  under `website/public/assets/` that `make website` writes.
+  site free of analytics and third-party requests. Edit pages in
+  `website/pages/` and run `make website`; don't hand-edit the HTML, sitemap or
+  assets it writes under `website/public/`.
+- When a change alters behavior a guide in `website/pages/docs/` describes,
+  update that guide and its `updated:` date in the same pull request.
 - Add or update tests next to the code you change (`*_test.go`). Tests use fakes
   (`fake_test.go`) rather than a live Docker daemon.
 

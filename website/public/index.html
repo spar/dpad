@@ -27,18 +27,24 @@
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "dpad",
   "alternateName": "dp",
-  "description": "An open source terminal UI and CLI for Docker: live container stats, multi-container logs and Compose project controls.",
-  "url": "https://dpad.sh/",
   "applicationCategory": "DeveloperApplication",
-  "operatingSystem": "macOS, Linux, Windows",
+  "description": "An open source terminal UI and CLI for Docker: live container stats, multi-container logs and Compose project controls.",
   "downloadUrl": "https://github.com/spar/dpad/releases/latest",
+  "image": "https://dpad.sh/assets/og-image.png",
   "installUrl": "https://dpad.sh/#install",
   "license": "https://www.gnu.org/licenses/gpl-3.0.html",
-  "image": "https://dpad.sh/assets/og-image.png",
-  "sameAs": ["https://github.com/spar/dpad"],
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  "name": "dpad",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "operatingSystem": "macOS, Linux, Windows",
+  "sameAs": [
+    "https://github.com/spar/dpad"
+  ],
+  "url": "https://dpad.sh/"
 }
 </script>
 </head>
@@ -47,10 +53,10 @@
 <header class="wrap nav">
   <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="34" height="34">dpad</a>
   <ul>
-    <li><a href="#install">Install</a></li>
-    <li><a href="#features">Features</a></li>
-    <li><a href="#themes">Themes</a></li>
-    <li><a href="https://github.com/spar/dpad/blob/main/docs/usage.md">Docs</a></li>
+    <li><a href="/#install">Install</a></li>
+    <li><a href="/#features">Features</a></li>
+    <li><a href="/docs/">Docs</a></li>
+    <li><a href="/compare/">Compare</a></li>
     <li><a href="https://github.com/spar/dpad/releases">Releases</a></li>
   </ul>
   <div class="right">
@@ -109,6 +115,7 @@
           <li>Start, stop, restart, pause, kill and remove with a confirmation.</li>
           <li><kbd>e</kbd> opens a shell inside.</li>
         </ul>
+        <a class="more" href="/docs/getting-started/">Getting started</a>
       </div>
       <div class="shot"><img src="/assets/shots/containers.svg" width="1348" height="634" loading="lazy" alt="Containers tab with colored states, health, ports and a braille CPU graph and memory for each running container"></div>
     </div>
@@ -123,6 +130,7 @@
           <li>Sort by any column with <kbd>s</kbd>, reverse with <kbd>r</kbd>.</li>
           <li>Two-minute <b>sparklines</b> with average and peak.</li>
         </ul>
+        <a class="more" href="/docs/docker-stats/">Read the stats guide</a>
       </div>
       <div class="shot"><img src="/assets/shots/stats.svg" width="1348" height="634" loading="lazy" alt="Stats tab: containers sorted by CPU with usage bars, network rates, PIDs and a CPU and memory history panel"></div>
     </div>
@@ -137,6 +145,7 @@
           <li><kbd>/</kbd> filters by <b>regex</b>, including lines still arriving.</li>
           <li>Follows containers as they scale, restart or get recreated.</li>
         </ul>
+        <a class="more" href="/docs/compose-logs/">Read the logs guide</a>
       </div>
       <div class="shot"><img src="/assets/shots/logs.svg" width="1348" height="634" loading="lazy" alt="Project log viewer following many containers, filtered by a regex with the matches highlighted"></div>
     </div>
@@ -150,6 +159,7 @@
           <li><kbd>u</kbd> previews and runs <code>pull</code> + <code>up -d</code>.</li>
           <li><kbd>e</kbd> edits the Compose file, <b>checks it and shows the diff</b> before saving, also over SSH.</li>
         </ul>
+        <a class="more" href="/docs/update-compose-images/">Update images</a> <a class="more" href="/docs/edit-compose-file/">Edit Compose files</a>
       </div>
       <div class="shot"><img src="/assets/shots/compose-edit.svg" width="1348" height="634" loading="lazy" alt="Reviewing an edit to a Compose file: valid, the image change it makes, and a diff"></div>
     </div>
@@ -166,7 +176,7 @@
 <section id="themes" class="wrap">
   <span class="kicker k-magenta">themes</span>
   <h2>Eleven built-in themes, or bring your own</h2>
-  <p class="intro">The default follows your terminal's own palette. Press <kbd>C</kbd> to switch, or <a class="link" href="https://github.com/spar/dpad/blob/main/docs/themes.md">add a theme</a> as one YAML file.</p>
+  <p class="intro">The default follows your terminal's own palette. Press <kbd>C</kbd> to switch, or <a class="link" href="/docs/themes/">add a theme</a> as one YAML file.</p>
   <div class="themes">
     <figure class="theme on"><a href="/assets/themes/default.svg" data-zoom aria-label="Enlarge the default theme"><img src="/assets/themes/default.svg" width="1348" height="634" loading="lazy" alt="dpad with the default theme"></a><figcaption>default</figcaption></figure>
     <figure class="theme"><a href="/assets/themes/catppuccin-mocha.svg" data-zoom aria-label="Enlarge the catppuccin-mocha theme"><img src="/assets/themes/catppuccin-mocha.svg" width="1348" height="634" loading="lazy" alt="dpad with the catppuccin-mocha theme"></a><figcaption>catppuccin-mocha</figcaption></figure>
@@ -192,6 +202,7 @@
 <span class="p">&gt;</span> scoop install spar/dpad</pre></div>
     <div class="way"><h3>PowerShell script</h3><p>Windows, no package manager. Checks the SHA-256.</p><pre><span class="p">&gt;</span> irm https://dpad.sh/install.ps1 | iex</pre></div>
   </div>
+  <p class="note">Coming from lazydocker? <a class="link" href="/compare/lazydocker/">See how they compare</a>. Running Docker on a server? <a class="link" href="/docs/remote-docker-ssh/">Use dp over SSH</a>.</p>
   <p class="note">The scripts install <code>dpad</code> and <code>dp</code> for your user. Release archives for every platform carry SHA-256 checksums and signed build provenance: <a class="link" href="https://github.com/spar/dpad/releases/latest">latest release</a>.</p>
 </section>
 
@@ -212,10 +223,11 @@
   <button type="button" class="close" aria-label="Close">esc</button>
 </dialog>
 
+
 <footer>
   <div class="wrap">
     <span>dpad is open source under the GPL-3.0 license.</span>
-    <span><a href="https://github.com/spar/dpad/blob/main/docs/usage.md">Docs</a><a href="https://github.com/spar/dpad/releases">Releases</a><a href="https://github.com/spar/dpad/issues">Issues</a><a href="https://github.com/sponsors/spar">Sponsor</a><a href="https://github.com/spar/dpad">GitHub</a></span>
+    <span><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="https://github.com/spar/dpad/releases">Releases</a><a href="https://github.com/spar/dpad/issues">Issues</a><a href="https://github.com/sponsors/spar">Sponsor</a><a href="https://github.com/spar/dpad">GitHub</a></span>
   </div>
 </footer>
 </body>

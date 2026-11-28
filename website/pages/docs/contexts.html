@@ -1,0 +1,41 @@
+<!--
+title: Docker contexts in dpad: Desktop, colima and remote hosts
+heading: Docker contexts
+nav: Docker contexts
+description: dpad follows DOCKER_HOST, DOCKER_CONTEXT and your current Docker context, so it works with Docker Desktop, colima and remote servers, and switches in the UI.
+updated: 2026-11-28
+order: 9
+related: /docs/remote-docker-ssh/, /docs/getting-started/, /docs/config/
+-->
+<p class="lead">dp talks to the same daemon as <code>docker</code>. If <code>docker ps</code> shows your containers, <code>dp</code> does too, whether they run in Docker Desktop, colima, another local runtime or on a server.</p>
+
+<h2>Which daemon dp uses</h2>
+<ol>
+  <li><code>DOCKER_HOST</code>, when it is set.</li>
+  <li>Otherwise <code>DOCKER_CONTEXT</code>, when it is set.</li>
+  <li>Otherwise the current context you chose with <code>docker context use</code>.</li>
+  <li>The context named <code>default</code> uses the platform's default socket.</li>
+</ol>
+<p>If the selected context doesn't exist or is invalid, dp stops with an error instead of quietly connecting somewhere else.</p>
+<p>Local runtimes such as Docker Desktop and colima add their own context, so once <code>docker context ls</code> lists it and <code>docker</code> works, dp works too. Run <code>docker context ls</code> to see what you have; the current one has a <code>*</code>.</p>
+
+<h2>Switch inside dp</h2>
+<p>Press <kbd>c</kbd> on any list tab, or open settings with <kbd>o</kbd> and choose Docker context. Type <kbd>/</kbd> to filter by name or endpoint and <kbd>enter</kbd> to switch.</p>
+<figure><img src="/assets/shots/settings.svg" width="1348" height="634" loading="lazy" alt="Settings screen listing the theme, Docker context, editor, CPU graph style, icons, mouse setting and config file"><figcaption>Settings, where Docker context is one of the rows.</figcaption></figure>
+<ul>
+  <li>The choice lasts for this dp session. It overrides <code>DOCKER_HOST</code> and <code>DOCKER_CONTEXT</code> and does not change the Docker CLI's saved current context.</li>
+  <li>dp keeps the tab you are on. Filters, selections, stats history and the event timeline start fresh, because they belong to the old daemon.</li>
+  <li>If the new context can't be opened, dp goes back to the previous one and shows the error.</li>
+  <li>Finish pending actions and close details or logs before switching.</li>
+</ul>
+
+<h2>One-off commands against another context</h2>
+<p>Docker's global flags pass straight through, so this works without switching anything:</p>
+<pre><span class="p">$</span> dp --context prod ps</pre>
+<p>For a single run of the TUI, set the variable instead:</p>
+<pre><span class="p">$</span> DOCKER_CONTEXT=prod dp</pre>
+
+<h2>Connection status</h2>
+<p>Under the tabs, dp shows which context or endpoint it is bound to and whether it is connected. It checks the daemon every two seconds; when the daemon comes back after an outage, lists and open details refresh without losing your filters or selection. <kbd>ctrl+r</kbd> refreshes and checks right away. Changing the Docker CLI's current context in another terminal doesn't move a running dp.</p>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#daemon-connection">Daemon connection</a>.</p>

@@ -1,0 +1,161 @@
+<!--
+title: dpad: stop juggling docker ps, stats and logs
+description: dpad (dp) is an open source terminal UI and CLI for Docker: live container stats with sparklines, multi-container logs and Compose project controls. Anything else goes straight to docker.
+og: One screen to rule them all: live stats, multi-container logs, Compose project controls and a full-screen terminal UI for the docker CLI.
+updated: 2026-11-28
+layout: bare
+-->
+<main>
+<div class="wrap hero">
+  <span class="pill"><b>●</b> open source · macOS, Linux and Windows</span>
+  <h1>Stop juggling<br><code>docker ps</code>, <code>stats</code> and <code>logs</code>.</h1>
+  <p class="tagline">One screen to rule them all.</p>
+  <p class="lede"><code>dp</code> adds live stats with sparklines, multi-container logs, Compose project controls and a full-screen terminal UI. Anything it doesn't enhance goes straight to <code>docker</code>.</p>
+
+  <div class="install" data-tabs>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" class="on" aria-selected="true" data-tab="brew">Homebrew</button>
+      <button type="button" role="tab" aria-selected="false" data-tab="scoop">Scoop</button>
+      <button type="button" role="tab" aria-selected="false" data-tab="sh">Script</button>
+      <button type="button" role="tab" aria-selected="false" data-tab="ps">PowerShell</button>
+    </div>
+    <div class="cmd" data-panel="brew"><code><span class="p">$</span>brew install spar/tap/dpad</code><button type="button" class="copy">copy</button></div>
+    <div class="cmd" data-panel="scoop" hidden><code><span class="p">&gt;</span>scoop bucket add spar https://github.com/spar/scoop-bucket; scoop install spar/dpad</code><button type="button" class="copy">copy</button></div>
+    <div class="cmd" data-panel="sh" hidden><code><span class="p">$</span>curl -fsSL https://dpad.sh/install | sh</code><button type="button" class="copy">copy</button></div>
+    <div class="cmd" data-panel="ps" hidden><code><span class="p">&gt;</span>irm https://dpad.sh/install.ps1 | iex</code><button type="button" class="copy">copy</button></div>
+  </div>
+  <p class="sub">Then run <code>dp</code>. Needs a running Docker engine and the Docker CLI.</p>
+
+  <div class="demo"><img src="/assets/shots/demo.svg" width="1348" height="634" alt="dp terminal UI: live CPU graphs on the Containers tab, the Stats and Projects tabs, reviewing a Compose file edit, then following a Compose project's logs and filtering them by regex"></div>
+
+  <div class="strip">
+    <div><code><i>dp</i></code><p>Opens the full-screen terminal UI.</p></div>
+    <div><code><i>dp</i> ps -a</code><p>Colored, sortable <code>ps</code> with a health column.</p></div>
+    <div><code><i>dp</i> stats --sort mem</code><p>Live stats, biggest memory users first.</p></div>
+    <div><code><i>dp</i> logs -f api worker</code><p>Services or containers in one stream.</p></div>
+  </div>
+</div>
+
+<section id="features" class="wrap">
+  <span class="kicker k-green">why dp</span>
+  <h2>Keep the commands you know.<br>Lose the grep pipelines.</h2>
+  <p class="intro"><code>docker ps</code> and <code>docker stats</code> are fine for a quick look. Once you run more than a handful of containers, dp fills the gaps, and every other command and flag passes through unchanged.</p>
+
+  <div class="tour">
+    <div class="feature panel k-cyan">
+      <div class="text">
+        <div class="step"><span class="kicker"><kbd>1</kbd> containers tab</span><span class="num">01 / 04</span></div>
+        <h2>Every container, live</h2>
+        <ul>
+          <li>States, health and ports in color.</li>
+          <li>A <b>braille CPU graph</b> and memory on each running container.</li>
+          <li>Start, stop, restart, pause, kill and remove with a confirmation.</li>
+          <li><kbd>e</kbd> opens a shell inside.</li>
+        </ul>
+        <a class="more" href="/docs/getting-started/">Getting started</a>
+      </div>
+      <div class="shot"><img src="/assets/shots/containers.svg" width="1348" height="634" loading="lazy" alt="Containers tab with colored states, health, ports and a braille CPU graph and memory for each running container"></div>
+    </div>
+
+    <div class="feature panel flip k-yellow">
+      <div class="text">
+        <div class="step"><span class="kicker"><kbd>3</kbd> stats tab</span><span class="num">02 / 04</span></div>
+        <h2>Live stats you can read at a glance</h2>
+        <ul>
+          <li>CPU and memory bars that <b>change color</b> as usage climbs.</li>
+          <li>Network and disk as <b>rates per second</b>; <kbd>t</kbd> for totals.</li>
+          <li>Sort by any column with <kbd>s</kbd>, reverse with <kbd>r</kbd>.</li>
+          <li>Two-minute <b>sparklines</b> with average and peak.</li>
+        </ul>
+        <a class="more" href="/docs/docker-stats/">Read the stats guide</a>
+      </div>
+      <div class="shot"><img src="/assets/shots/stats.svg" width="1348" height="634" loading="lazy" alt="Stats tab: containers sorted by CPU with usage bars, network rates, PIDs and a CPU and memory history panel"></div>
+    </div>
+
+    <div class="feature panel k-blue">
+      <div class="text">
+        <div class="step"><span class="kicker"><kbd>enter</kbd> logs</span><span class="num">03 / 04</span></div>
+        <h2>A whole project's logs in one stream</h2>
+        <ul>
+          <li>Follow one container, several, or a <b>whole Compose project</b>.</li>
+          <li>Log levels highlighted in plain text, JSON, logfmt and nginx.</li>
+          <li><kbd>/</kbd> filters by <b>regex</b>, including lines still arriving.</li>
+          <li>Follows containers as they scale, restart or get recreated.</li>
+        </ul>
+        <a class="more" href="/docs/compose-logs/">Read the logs guide</a>
+      </div>
+      <div class="shot"><img src="/assets/shots/logs.svg" width="1348" height="634" loading="lazy" alt="Project log viewer following many containers, filtered by a regex with the matches highlighted"></div>
+    </div>
+
+    <div class="feature panel flip k-magenta">
+      <div class="text">
+        <div class="step"><span class="kicker"><kbd>4</kbd> projects tab</span><span class="num">04 / 04</span></div>
+        <h2>Compose projects, start to finish</h2>
+        <ul>
+          <li>Grouped by project and service, with running and unhealthy counts.</li>
+          <li><kbd>u</kbd> previews and runs <code>pull</code> + <code>up -d</code>.</li>
+          <li><kbd>e</kbd> edits the Compose file, <b>checks it and shows the diff</b> before saving, also over SSH.</li>
+        </ul>
+        <a class="more" href="/docs/update-compose-images/">Update images</a> <a class="more" href="/docs/edit-compose-file/">Edit Compose files</a>
+      </div>
+      <div class="shot"><img src="/assets/shots/compose-edit.svg" width="1348" height="634" loading="lazy" alt="Reviewing an edit to a Compose file: valid, the image change it makes, and a diff"></div>
+    </div>
+  </div>
+
+  <div class="grid4">
+    <div class="card k-cyan"><img src="/assets/shots/details.svg" width="1348" height="634" loading="lazy" alt="Container details: state, configuration and health check results"><div><h3>Details <span>d</span></h3><p>State, exit code, OOM status, restart policy, health checks, ports, networks and mounts.</p></div></div>
+    <div class="card k-green"><img src="/assets/shots/events.svg" width="1348" height="634" loading="lazy" alt="Events tab showing kill, stop, start, pause and restart events"><div><h3>Events <span>5</span></h3><p>A live timeline of lifecycle and health events, filterable by container, project, service or type.</p></div></div>
+    <div class="card k-red"><img src="/assets/shots/prune.svg" width="1348" height="634" loading="lazy" alt="Prune preview listing the stopped containers that would be removed"><div><h3>Prune <span>X</span></h3><p>Lists exactly what a prune would remove, then removes only those after <kbd>y</kbd>.</p></div></div>
+    <div class="card k-yellow"><img src="/assets/shots/settings.svg" width="1348" height="634" loading="lazy" alt="Settings screen listing the theme, Docker context, editor, CPU graph style, icons, mouse setting and config file"><div><h3>Settings <span>o</span></h3><p>Theme, Docker context, editor, CPU graph style, icons and mouse, saved to <code>config.yaml</code>.</p></div></div>
+  </div>
+</section>
+
+<section id="themes" class="wrap">
+  <span class="kicker k-magenta">themes</span>
+  <h2>Eleven built-in themes, or bring your own</h2>
+  <p class="intro">The default follows your terminal's own palette. Press <kbd>C</kbd> to switch, or <a class="link" href="/docs/themes/">add a theme</a> as one YAML file.</p>
+  <div class="themes">
+    <figure class="theme on"><a href="/assets/themes/default.svg" data-zoom aria-label="Enlarge the default theme"><img src="/assets/themes/default.svg" width="1348" height="634" loading="lazy" alt="dpad with the default theme"></a><figcaption>default</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/catppuccin-mocha.svg" data-zoom aria-label="Enlarge the catppuccin-mocha theme"><img src="/assets/themes/catppuccin-mocha.svg" width="1348" height="634" loading="lazy" alt="dpad with the catppuccin-mocha theme"></a><figcaption>catppuccin-mocha</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/dracula.svg" data-zoom aria-label="Enlarge the dracula theme"><img src="/assets/themes/dracula.svg" width="1348" height="634" loading="lazy" alt="dpad with the dracula theme"></a><figcaption>dracula</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/nord.svg" data-zoom aria-label="Enlarge the nord theme"><img src="/assets/themes/nord.svg" width="1348" height="634" loading="lazy" alt="dpad with the nord theme"></a><figcaption>nord</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/gruvbox.svg" data-zoom aria-label="Enlarge the gruvbox theme"><img src="/assets/themes/gruvbox.svg" width="1348" height="634" loading="lazy" alt="dpad with the gruvbox theme"></a><figcaption>gruvbox</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/amber.svg" data-zoom aria-label="Enlarge the amber theme"><img src="/assets/themes/amber.svg" width="1348" height="634" loading="lazy" alt="dpad with the amber theme"></a><figcaption>amber</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/matrix.svg" data-zoom aria-label="Enlarge the matrix theme"><img src="/assets/themes/matrix.svg" width="1348" height="634" loading="lazy" alt="dpad with the matrix theme"></a><figcaption>matrix</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/paper.svg" data-zoom aria-label="Enlarge the paper theme"><img src="/assets/themes/paper.svg" width="1348" height="634" loading="lazy" alt="dpad with the paper theme"></a><figcaption>paper</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/ink.svg" data-zoom aria-label="Enlarge the ink theme"><img src="/assets/themes/ink.svg" width="1348" height="634" loading="lazy" alt="dpad with the ink theme"></a><figcaption>ink</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/mono.svg" data-zoom aria-label="Enlarge the mono theme"><img src="/assets/themes/mono.svg" width="1348" height="634" loading="lazy" alt="dpad with the mono theme"></a><figcaption>mono</figcaption></figure>
+    <figure class="theme"><a href="/assets/themes/high-contrast.svg" data-zoom aria-label="Enlarge the high-contrast theme"><img src="/assets/themes/high-contrast.svg" width="1348" height="634" loading="lazy" alt="dpad with the high-contrast theme"></a><figcaption>high-contrast</figcaption></figure>
+  </div>
+</section>
+
+<section id="install" class="wrap">
+  <span class="kicker k-green">install</span>
+  <h2>One command on any platform</h2>
+  <div class="ways">
+    <div class="way"><h3>Homebrew</h3><p>macOS and Linux</p><pre><span class="p">$</span> brew install spar/tap/dpad</pre></div>
+    <div class="way"><h3>Install script</h3><p>macOS and Linux, no package manager. Checks the SHA-256.</p><pre><span class="p">$</span> curl -fsSL https://dpad.sh/install | sh</pre></div>
+    <div class="way"><h3>Scoop</h3><p>Windows</p><pre><span class="p">&gt;</span> scoop bucket add spar https://github.com/spar/scoop-bucket
+<span class="p">&gt;</span> scoop install spar/dpad</pre></div>
+    <div class="way"><h3>PowerShell script</h3><p>Windows, no package manager. Checks the SHA-256.</p><pre><span class="p">&gt;</span> irm https://dpad.sh/install.ps1 | iex</pre></div>
+  </div>
+  <p class="note">Coming from lazydocker? <a class="link" href="/compare/lazydocker/">See how they compare</a>. Running Docker on a server? <a class="link" href="/docs/remote-docker-ssh/">Use dp over SSH</a>.</p>
+  <p class="note">The scripts install <code>dpad</code> and <code>dp</code> for your user. Release archives for every platform carry SHA-256 checksums and signed build provenance: <a class="link" href="https://github.com/spar/dpad/releases/latest">latest release</a>.</p>
+</section>
+
+<div class="wrap">
+  <div class="cta">
+    <h2>Try it on your containers</h2>
+    <p class="intro">Nothing to configure. <code>dp</code> uses your existing Docker contexts and <code>DOCKER_HOST</code>.</p>
+    <div class="install"><div class="cmd"><code><span class="p">$</span>brew install spar/tap/dpad &amp;&amp; dp</code><button type="button" class="copy">copy</button></div></div>
+  </div>
+</div>
+</main>
+
+<dialog class="zoom" aria-label="Theme preview">
+  <figure>
+    <img src="" alt="">
+    <figcaption><button type="button" class="prev" aria-label="Previous theme">‹</button><span></span><button type="button" class="next" aria-label="Next theme">›</button></figcaption>
+  </figure>
+  <button type="button" class="close" aria-label="Close">esc</button>
+</dialog>

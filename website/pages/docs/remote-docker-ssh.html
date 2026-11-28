@@ -1,0 +1,63 @@
+<!--
+title: Monitor Docker containers on a remote server over SSH
+heading: Monitor Docker on a remote server over SSH
+nav: Remote Docker over SSH
+description: Watch and manage containers on a remote Docker host from your laptop with dpad and DOCKER_HOST=ssh://, including rootless Docker, saved contexts and reconnects.
+updated: 2026-11-28
+order: 2
+related: /docs/contexts/, /docs/edit-compose-file/, /docs/update-compose-images/
+-->
+<p class="lead">Run <code>dp</code> on your laptop and point it at the server. The terminal UI draws locally and only Docker data travels over SSH, so moving through lists never waits on the network.</p>
+
+<div class="install"><div class="cmd"><code><span class="p">$</span>DOCKER_HOST=ssh://me@server dp</code><button type="button" class="copy">copy</button></div></div>
+
+<p>That is all it takes when you can already <code>ssh me@server</code> and your user on the server can reach the Docker socket.</p>
+
+<h2>Why not run dp inside an SSH session?</h2>
+<p>You can: install dp on the server and run it there. But then every keypress makes a round trip over SSH before the screen changes. With <code>DOCKER_HOST=ssh://</code> the UI runs on your machine, list navigation is instant, and data loads happen in the background. dp also batches event and log redraws when it detects it is running inside SSH, but running it locally is still smoother.</p>
+
+<h2>Before you start</h2>
+<ul>
+  <li><b>SSH access.</b> Your <code>~/.ssh/config</code>, agent and known hosts all apply, so a host alias like <code>ssh://prod</code> works. Password and host-key prompts appear before the UI opens.</li>
+  <li><b>Socket access on the server.</b> For a normal (rootful) daemon your server user needs access to <code>/var/run/docker.sock</code>, usually by being in the <code>docker</code> group.</li>
+  <li><b>Key or agent authentication</b> if you want dp to reconnect by itself after a dropped connection. It never prompts again once the UI is open.</li>
+  <li><b>The <code>docker</code> CLI on your laptop</b> for shells (<kbd>e</kbd>) and passthrough commands such as <code>dp exec</code>. On macOS, <code>brew install docker</code> is enough; you don't need Docker Desktop for a remote daemon.</li>
+</ul>
+
+<h2>Save the server as a Docker context</h2>
+<p>Typing <code>DOCKER_HOST</code> every time gets old. A Docker context remembers the endpoint for both <code>docker</code> and <code>dp</code>:</p>
+<pre><span class="p">$</span> docker context create home --docker host=ssh://me@server
+<span class="p">$</span> docker context use home
+<span class="p">$</span> dp</pre>
+<p>With several servers saved, press <kbd>c</kbd> inside dp to switch between them without leaving the UI. That choice lasts for the session and doesn't change the Docker CLI's current context. See <a href="/docs/contexts/">Docker contexts</a>.</p>
+
+<h2>Rootless Docker or another socket path</h2>
+<p>Append the absolute socket path to the SSH address:</p>
+<pre><span class="p">$</span> DOCKER_HOST=ssh://me@server/run/user/1000/docker.sock dp</pre>
+<p>Replace <code>1000</code> with the remote user's UID (<code>ssh me@server id -u</code>) and make sure their rootless daemon is running. Rootless Docker doesn't need the <code>docker</code> group. Use the real path: <code>~</code> and shell variables are not expanded on the remote side. The same address works in <code>docker context create</code>.</p>
+
+<h2>What happens on the wire</h2>
+<p>dp starts one <code>ssh</code> process that forwards a private local socket to the server's Docker socket, then talks to the Docker Engine API through it. Nothing is installed on the server. If the connection drops, dp starts a new tunnel in the background and the UI shows the connection state below the tabs; lists and open details refresh when it comes back, without losing your filters or selection.</p>
+
+<h2>What works over SSH</h2>
+<table>
+  <thead><tr><th>Feature</th><th>Over SSH</th></tr></thead>
+  <tbody>
+    <tr><td>Containers, images, volumes, networks, details</td><td>Yes</td></tr>
+    <tr><td>Live stats, sparklines, Compose rollups</td><td>Yes, one stats stream per running container</td></tr>
+    <tr><td>Logs, project logs, regex filter</td><td>Yes</td></tr>
+    <tr><td>Events timeline</td><td>Yes</td></tr>
+    <tr><td>Start, stop, restart, pause, kill, remove, prune</td><td>Yes</td></tr>
+    <tr><td>Shell into a container (<kbd>e</kbd>)</td><td>Yes, through your local <code>docker</code> CLI</td></tr>
+    <tr><td>Update Compose images (<kbd>u</kbd>)</td><td>Yes. Compose runs on the server in the project's folder when the files are there (<a href="/docs/update-compose-images/">guide</a>)</td></tr>
+    <tr><td>Edit a Compose file (<kbd>e</kbd> on a project)</td><td>Yes. dp reads and writes the file on the server (<a href="/docs/edit-compose-file/">guide</a>)</td></tr>
+  </tbody>
+</table>
+<p>Compose updates and edits over SSH need a POSIX shell and Compose v2 on the server, and key or agent authentication without prompts.</p>
+
+<h2>When something is slow</h2>
+<p>Run dp with a debug log and attach it to a bug report:</p>
+<pre><span class="p">$</span> dp --debug-log ~/dp-debug.log</pre>
+<p>It records each Engine API request with its timing, the SSH tunnel starting and restarting with ssh's error output, and stats streams that retry. It doesn't record container environment, log lines or file contents. Host and container names do appear, so look it over before sharing.</p>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#remote-daemons-over-ssh">Remote daemons over SSH</a> and <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#debug-log">Debug log</a>.</p>

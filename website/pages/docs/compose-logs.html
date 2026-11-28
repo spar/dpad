@@ -1,0 +1,60 @@
+<!--
+title: Follow logs from several Docker Compose services at once
+heading: Follow logs from several Compose services
+nav: Compose logs
+description: Stream logs from several containers, Compose services or whole projects in one view, with stable colors, log level highlighting and a live regex filter.
+updated: 2026-11-28
+order: 3
+related: /docs/docker-stats/, /docs/events/, /docs/remote-docker-ssh/
+-->
+<p class="lead"><code>docker compose logs</code> covers one project, from its folder, and filtering means piping to <code>grep --line-buffered</code>. dp follows any mix of containers, services and projects in one stream, from anywhere, and filters while lines arrive.</p>
+
+<h2>From the shell</h2>
+<div class="install"><div class="cmd"><code><span class="p">$</span>dp logs -f api worker</code><button type="button" class="copy">copy</button></div></div>
+<p>Each argument can be:</p>
+<ul>
+  <li>a container name or ID,</li>
+  <li>a Compose <b>service</b> name, which means all of that service's containers,</li>
+  <li>a Compose <b>project</b> name, which means every container in it,</li>
+  <li>or a unique prefix of a container name, so <code>dp logs web</code> finds <code>shop-web-1</code>.</li>
+</ul>
+<p>An exact container name or ID wins, then a service, then a project, then a prefix. Mix them freely: <code>dp logs -f shop postgres</code> follows a whole project and one extra container.</p>
+
+<pre><span class="p">$</span> dp logs -f shop                      <span class="c"># every container in the shop project</span>
+<span class="p">$</span> dp logs -n 100 api                   <span class="c"># last 100 lines from each api container</span>
+<span class="p">$</span> dp logs --since 15m -t api worker     <span class="c"># last 15 minutes, with timestamps</span>
+<span class="p">$</span> dp logs -f --grep '(?i)error|timeout' shop</pre>
+<p>With several containers, every line starts with the container name in a stable color, and stderr lines are marked with <code>┃</code>. <code>--grep</code> keeps only matching lines and highlights the match. Log levels are colored in plain text, JSON (<code>"level"</code> fields), logfmt (<code>level=</code>) and nginx formats.</p>
+<figure><img src="/assets/cli.svg" width="1348" height="634" loading="lazy" alt="dp ps -a sorted by status, and dp logs interleaving three containers with highlighted log levels"><figcaption><code>dp logs</code> interleaving three containers.</figcaption></figure>
+
+<h2>In the TUI</h2>
+<p>Open <code>dp</code>, go to the Projects tab with <kbd>4</kbd>, select a project row and press <kbd>enter</kbd>. You get every container in the project in one viewer, each with its last 500 lines to start. <kbd>enter</kbd> on a single container, in any tab, follows just that one.</p>
+<figure><img src="/assets/shots/logs.svg" width="1348" height="634" loading="lazy" alt="Project log viewer following many containers, filtered by a regex with the matches highlighted"><figcaption>A project's logs filtered with <code>(?i)error|warn</code>.</figcaption></figure>
+
+<h3>Filter with a regular expression</h3>
+<p>Press <kbd>/</kbd> and type a pattern. Only matching lines stay on screen, matches are highlighted, and new lines are filtered as they arrive.</p>
+<table>
+  <thead><tr><th>Pattern</th><th>Shows</th></tr></thead>
+  <tbody>
+    <tr><td><code>(?i)error|timeout</code></td><td>errors and timeouts, any case</td></tr>
+    <tr><td><code>status=5\d\d</code></td><td>logfmt lines with a 5xx status</td></tr>
+    <tr><td><code>"level":"(warn|error)"</code></td><td>JSON warnings and errors</td></tr>
+  </tbody>
+</table>
+<p>Patterns use Go's regular expression syntax, which has no lookahead, so filter for the lines you want rather than against the ones you don't. <kbd>enter</kbd> keeps the filter, <kbd>esc</kbd> while typing cancels the change, and <kbd>ctrl+l</kbd> clears it. An invalid pattern shows an error and keeps the last valid results. The filter searches the viewer's buffer, up to 5,000 lines; it doesn't fetch older logs.</p>
+
+<h3>Other keys in the log viewer</h3>
+<table>
+  <thead><tr><th>Key</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>w</kbd></td><td>Wrap long lines (otherwise <kbd>←</kbd> <kbd>→</kbd> pans)</td></tr>
+    <tr><td><kbd>t</kbd></td><td>Show each line's timestamp in local time</td></tr>
+    <tr><td><kbd>?</kbd></td><td>All log viewer keys</td></tr>
+    <tr><td><kbd>esc</kbd> or <kbd>q</kbd></td><td>Back to the list</td></tr>
+  </tbody>
+</table>
+
+<h2>Containers that come and go</h2>
+<p>Project logs follow the project, not a fixed list of containers. When you scale a service, recreate it with <code>docker compose up -d</code>, or a container restarts, the new containers join the stream and keep the same color by name. If a source is interrupted, dp reconnects with a short backoff and resumes from the last timestamp, skipping lines it already showed. A project with no containers yet stays open and waits for them.</p>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#logs">Logs</a> and <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#project-logs">Project logs</a>.</p>

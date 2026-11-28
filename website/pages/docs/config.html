@@ -1,0 +1,76 @@
+<!--
+title: dpad config file and custom commands
+heading: Config file and custom commands
+nav: Config and custom commands
+description: Bind your own commands to keys in dpad's config.yaml, run them on the selected container or Compose project, and set the theme, editor, mouse and icons.
+updated: 2026-11-28
+order: 11
+related: /docs/themes/, /docs/edit-compose-file/, /docs/keys/
+-->
+<p class="lead">dpad works without a config file. Add one when you want your own commands on a key, or to keep settings such as the theme and editor.</p>
+
+<h2>Where it lives</h2>
+<table>
+  <thead><tr><th>System</th><th>Path</th></tr></thead>
+  <tbody>
+    <tr><td>macOS and Linux</td><td><code>~/.config/dpad/config.yaml</code>, or <code>$XDG_CONFIG_HOME/dpad/config.yaml</code> when that is set</td></tr>
+    <tr><td>Windows</td><td><code>%AppData%\dpad\config.yaml</code></td></tr>
+    <tr><td>Anywhere</td><td>the path in <code>DPAD_CONFIG</code></td></tr>
+  </tbody>
+</table>
+<p>The settings screen (<kbd>o</kbd>) shows which file dp is using. dp reads it at startup.</p>
+
+<h2>Settings</h2>
+<pre>theme: matrix      <span class="c"># see Themes</span>
+editor: nano       <span class="c"># for Compose edits; builtin for the built-in editor</span>
+cpuGraph: bars     <span class="c"># braille (default), bars, meter or off</span>
+icons: nerd        <span class="c"># auto (default), nerd or off</span>
+mouse: false       <span class="c"># leave the mouse to the terminal</span></pre>
+<p>You rarely need to type these. The theme picker (<kbd>C</kbd>) and the settings screen (<kbd>o</kbd>) write <code>theme</code>, <code>editor</code>, <code>cpuGraph</code> and <code>icons</code> for you, changing only that line and leaving the rest of the file as you wrote it.</p>
+<p><code>icons</code> puts a <a href="https://www.nerdfonts.com/">Nerd Font</a> logo for the image before each container name, such as the PostgreSQL elephant. <code>auto</code> turns them on in terminals that ship the symbols themselves (Ghostty, WezTerm and kitty 0.36 or later); choose <code>nerd</code> if your terminal font is a Nerd Font.</p>
+
+<h2>Custom commands</h2>
+<pre>customCommands:
+  - name: top
+    key: T
+    command: docker top {{.ID}}
+  - name: bash
+    key: b
+    attach: true
+    command: docker exec -it {{.ID}} bash
+  - name: compose down
+    key: O
+    scope: project
+    confirm: true
+    command: docker compose -p {{.Project}} down</pre>
+<table>
+  <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>name</code></td><td>shown in help, confirmations and the status line</td></tr>
+    <tr><td><code>key</code></td><td>a key dp doesn't already use, such as <code>b</code>, <code>T</code> or <code>ctrl+o</code></td></tr>
+    <tr><td><code>scope</code></td><td><code>container</code> (default): a container row in Containers, Stats, Projects or Events. <code>project</code>: a project row in Projects</td></tr>
+    <tr><td><code>command</code></td><td>run by <code>/bin/sh -c</code>, or PowerShell on Windows</td></tr>
+    <tr><td><code>attach</code></td><td><code>true</code> hands the terminal to the command, for interactive commands; dp comes back when it exits</td></tr>
+    <tr><td><code>confirm</code></td><td><code>true</code> asks <code>y/N</code> first</td></tr>
+  </tbody>
+</table>
+
+<h3>Placeholders</h3>
+<p>Container commands can use <code>{{.ID}}</code>, <code>{{.Name}}</code>, <code>{{.Image}}</code>, <code>{{.Project}}</code>, <code>{{.Service}}</code> and <code>{{.WorkingDir}}</code> (the Compose project folder). Project commands can use <code>{{.Project}}</code> and <code>{{.WorkingDir}}</code>. Values are inserted already quoted as single words, so don't add quotes around them. Only placeholders are allowed between <code>{{ }}</code>; Go template actions such as <code>{{if}}</code> are not.</p>
+
+<h3>How they run</h3>
+<ul>
+  <li>Commands talk to the same daemon as the dashboard: dp sets <code>DOCKER_HOST</code> to its endpoint, so they work on an SSH context too.</li>
+  <li>Without <code>attach</code>, a command runs in the background and its last line of output, or its error, appears in the status line. Use <code>attach</code> to read all of it, for example <code>docker logs {{.ID}} | less</code>.</li>
+  <li>Your keys appear in <kbd>?</kbd> help on the tabs they apply to.</li>
+  <li>A problem in the file, such as a key dp already uses, a duplicate key or an unknown placeholder, shows in the status line at startup. The other commands still load.</li>
+</ul>
+
+<h2>Compose project variables</h2>
+<p><code>composeProjects</code> supplies variables a project's Compose files need when dpad <a href="/docs/update-compose-images/">updates</a> it and can't recover them from the containers:</p>
+<pre>composeProjects:
+  my-project:
+    env:
+      STACK_NAME: production</pre>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#custom-commands">Custom commands</a>.</p>

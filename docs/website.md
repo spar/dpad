@@ -154,8 +154,10 @@ Keep the TXT record: Google checks it again from time to time.
 
 ## Changing the website later
 
-- **Text or layout:** edit `website/public/`, open a pull request with a
-  `docs(website):` title, check the preview, merge.
+- **Text or layout:** edit `website/pages/` (or `site.css`), run
+  `make website`, open a pull request with a `docs(website):` title, check the
+  preview, merge. [website/README.md](../website/README.md#pages) explains the
+  page format.
 - **New screenshots:** after `make screenshots`, run `make website` and commit
   `website/public/assets/` with the new images. `go test ./...` fails until
   you do.

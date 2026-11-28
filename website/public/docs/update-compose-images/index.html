@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Update Docker Compose containers to the latest images · dpad</title>
+<meta name="description" content="Pull new images and recreate Docker Compose services for one project or every project on a host, with a preview first and live progress, using dpad.">
+<link rel="canonical" href="https://dpad.sh/docs/update-compose-images/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="dpad">
+<meta property="og:url" content="https://dpad.sh/docs/update-compose-images/">
+<meta property="og:title" content="Update Docker Compose containers to the latest images · dpad">
+<meta property="og:description" content="Pull new images and recreate Docker Compose services for one project or every project on a host, with a preview first and live progress, using dpad.">
+<meta property="og:image" content="https://dpad.sh/assets/og-image.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="dpad, a colorful terminal UI for the docker CLI">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0a0e1f">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/site.css">
+<script src="/assets/site.js"></script>
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "about": {
+      "@type": "SoftwareApplication",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "dateModified": "2026-11-28",
+    "description": "Pull new images and recreate Docker Compose services for one project or every project on a host, with a preview first and live progress, using dpad.",
+    "headline": "Update Compose images safely",
+    "image": "https://dpad.sh/assets/og-image.png",
+    "inLanguage": "en",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "mainEntityOfPage": "https://dpad.sh/docs/update-compose-images/",
+    "url": "https://dpad.sh/docs/update-compose-images/"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/",
+        "name": "dpad",
+        "position": 1
+      },
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/docs/",
+        "name": "Docs",
+        "position": 2
+      },
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/docs/update-compose-images/",
+        "name": "Update Compose images safely",
+        "position": 3
+      }
+    ]
+  }
+]
+</script>
+</head>
+<body>
+
+<header class="wrap nav">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="34" height="34">dpad</a>
+  <ul>
+    <li><a href="/#install">Install</a></li>
+    <li><a href="/#features">Features</a></li>
+    <li><a href="/docs/">Docs</a></li>
+    <li><a href="/compare/">Compare</a></li>
+    <li><a href="https://github.com/spar/dpad/releases">Releases</a></li>
+  </ul>
+  <div class="right">
+    <button class="mode" type="button" aria-label="Switch between dark and light" title="Switch between dark and light">
+      <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+    <a class="gh" href="https://github.com/spar/dpad"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+  </div>
+</header>
+
+<main class="wrap docs">
+<nav class="side" aria-label="Guides">
+  <p>Guides</p>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/getting-started/">Getting started</a></li>
+    <li><a href="/docs/remote-docker-ssh/">Remote Docker over SSH</a></li>
+    <li><a href="/docs/compose-logs/">Compose logs</a></li>
+    <li><a href="/docs/docker-stats/">Docker stats</a></li>
+    <li><a href="/docs/update-compose-images/" aria-current="page">Update Compose images</a></li>
+    <li><a href="/docs/edit-compose-file/">Edit Compose files</a></li>
+    <li><a href="/docs/prune-preview/">Prune with a preview</a></li>
+    <li><a href="/docs/events/">Events</a></li>
+    <li><a href="/docs/contexts/">Docker contexts</a></li>
+    <li><a href="/docs/themes/">Themes</a></li>
+    <li><a href="/docs/config/">Config and custom commands</a></li>
+    <li><a href="/docs/keys/">Keyboard shortcuts</a></li>
+  </ul>
+  <p>Compare</p>
+  <ul>
+    <li><a href="/compare/">Overview</a></li>
+    <li><a href="/compare/lazydocker/">dpad vs lazydocker</a></li>
+    <li><a href="/alternatives/lazydocker/">lazydocker alternatives</a></li>
+    <li><a href="/compare/ctop/">ctop alternative</a></li>
+  </ul>
+</nav>
+<article class="prose">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/docs/">Docs</a> <span>›</span> Update Compose images</nav>
+  <h1>Update Compose images safely</h1>
+  <p class="updated">Updated 28 November 2026</p>
+<p class="lead">The usual way to update a Compose project is two commands in its folder. dpad runs the same two commands for one project or all of them, shows you what it will do first, and tells you what changed.</p>
+
+<h2>The manual way</h2>
+<pre><span class="p">$</span> cd ~/stacks/shop
+<span class="p">$</span> docker compose pull
+<span class="p">$</span> docker compose up -d</pre>
+<p><code>pull</code> downloads newer images for the tags in your Compose file. <code>up -d</code> then recreates only the services whose image changed and leaves the rest running. Repeat for every project, and read the output to see which ones actually changed.</p>
+
+<h2>With dpad</h2>
+<ol>
+  <li>Open <code>dp</code> and press <kbd>4</kbd> for Projects.</li>
+  <li>Press <kbd>u</kbd> on a project to update it, or <kbd>U</kbd> to update every project on this daemon, including stopped ones and ones hidden by your filter.</li>
+  <li>Read the preview. Each project says <code>ready</code> or why it is blocked. <kbd>enter</kbd> on a row shows the host it will run on, the working directory, Compose files, env files, services and image tags.</li>
+  <li>Press <kbd>y</kbd>.</li>
+</ol>
+<figure><img src="/assets/shots/projects.svg" width="1348" height="634" loading="lazy" alt="Projects tab grouping containers by Compose project and service with running and unhealthy counts"><figcaption>The Projects tab, where <kbd>u</kbd> and <kbd>U</kbd> start an update.</figcaption></figure>
+
+<p>Each project runs <code>docker compose pull --include-deps</code>, then <code>up -d --no-build --pull never</code> only if the pull worked. Projects run one at a time, and dpad reads each project's configuration again before every step: if it no longer matches the preview, that project stops with a message and nothing is pulled or recreated for it. A failed project doesn't stop the others.</p>
+
+<h2>Watching it run</h2>
+<p>Progress opens straight away. With several projects, the top half lists each one with its step and elapsed time, and the bottom half shows the active project like <code>docker compose pull</code> does: one row per image with its layers and bytes. <kbd>l</kbd> switches to the raw log, <kbd>[</kbd> and <kbd>]</kbd> look at another project, and <kbd>tab</kbd> shows the summary.</p>
+<p>When it finishes, every project has a result: <code>updated, N recreated</code>, <code>already up to date</code>, or <code>failed:</code> with Compose's error. <kbd>esc</kbd> during the run cancels the remaining work.</p>
+
+<h2>What it doesn't do</h2>
+<ul>
+  <li>It uses the tags already in your Compose files. To move from <code>postgres:16</code> to <code>postgres:17</code>, <a href="/docs/edit-compose-file/">edit the file</a> first; <kbd>enter</kbd> after an edit goes straight to this preview.</li>
+  <li>It doesn't build images, run <code>down</code>, remove volumes or prune old images. Use <a href="/docs/prune-preview/">prune</a> afterwards to clean up.</li>
+</ul>
+
+<h2>Where Compose runs</h2>
+<p>dpad finds each project's folder and files from the labels Compose puts on its containers, so a project needs at least one container, running or stopped. When the files are on this machine, Compose runs here against the current daemon. On an <code>ssh://</code> daemon whose files are on the server, Compose runs on the server in the project's folder; the preview says which, and <kbd>h</kbd> switches when both machines have the files. Remote runs need a POSIX shell, Compose v2 and key or agent SSH authentication.</p>
+
+<h3>Projects started by a wrapper script</h3>
+<p>If a project's Compose file needs a variable that a script exported when it first ran Compose, Docker didn't record it. dpad looks for the value in the project's containers and uses it when they all agree, and the preview says so. When it can't, the project is blocked with Compose's hint, and you can set the value in <code>config.yaml</code>:</p>
+<pre>composeProjects:
+  my-project:          <span class="c"># Compose project name</span>
+    env:
+      STACK_NAME: production</pre>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#update-compose-projects">Update Compose projects</a>.</p>
+
+  <aside class="related">
+    <h2>Related</h2>
+    <ul>
+      <li><a href="/docs/edit-compose-file/"><b>Edit a Compose file, locally or over SSH</b><span>Edit a running project&#39;s Compose file from dpad, in the built-in editor or your own, with validation and a diff before saving, even on a remote host.</span></a></li>
+      <li><a href="/docs/remote-docker-ssh/"><b>Monitor Docker on a remote server over SSH</b><span>Watch and manage containers on a remote Docker host from your laptop with dpad and DOCKER_HOST=ssh://, including rootless Docker, saved contexts and reconnects.</span></a></li>
+      <li><a href="/docs/prune-preview/"><b>Preview a Docker prune before it deletes</b><span>docker system prune has no dry-run flag. dpad lists the exact containers, images, volumes, networks and build cache a prune would remove, then removes those.</span></a></li>
+    </ul>
+  </aside>
+</article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>dpad is open source under the GPL-3.0 license.</span>
+    <span><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="https://github.com/spar/dpad/releases">Releases</a><a href="https://github.com/spar/dpad/issues">Issues</a><a href="https://github.com/sponsors/spar">Sponsor</a><a href="https://github.com/spar/dpad">GitHub</a></span>
+  </div>
+</footer>
+</body>
+</html>

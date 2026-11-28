@@ -81,7 +81,8 @@ demo-status:
 screenshots:
 	scripts/screenshots/capture.sh
 
-# Copies docs/images into the dpad.sh website and makes the light-mode copies;
-# see website/README.md. Run it after `make screenshots`.
+# Builds the dpad.sh pages and sitemap from website/pages, copies docs/images
+# into the website and makes the light-mode copies; see website/README.md.
+# Run it after `make screenshots` or a change to website/pages.
 website:
 	go run ./website/sync

@@ -1,0 +1,62 @@
+<!--
+title: lazydocker alternatives: Docker terminal UIs compared
+heading: lazydocker alternatives
+nav: lazydocker alternatives
+description: Five open source terminal tools for Docker besides lazydocker: dpad, dry, oxker, dtop and ctop, compared on Compose, logs, stats, remote hosts and maintenance.
+og: dpad, dry, oxker, dtop and ctop compared with lazydocker on facts from each project's own docs.
+updated: 2026-11-28
+order: 2
+related: /compare/lazydocker/, /compare/ctop/, /docs/remote-docker-ssh/
+-->
+<p class="lead">lazydocker is the best known terminal UI for Docker, and for many people it is the right one. If you are looking for something else, these are the open source terminal tools worth a look, with what each does best. This page is written by the dpad project, so we've tried hard to be fair to the others.</p>
+<p class="callout">Facts come from each project's own README and release notes, checked on 28 November 2026. "Not documented" means we couldn't find it there, not that it can't be done. Corrections are welcome as <a href="https://github.com/spar/dpad/issues">issues</a>.</p>
+
+<h2>At a glance</h2>
+<table>
+  <thead><tr><th>Tool</th><th>Best for</th><th>Language</th><th>Latest release</th><th>License</th></tr></thead>
+  <tbody>
+    <tr><td><a href="https://github.com/jesseduffield/lazydocker">lazydocker</a></td><td>an all-round Docker and Compose UI with a large community</td><td>Go</td><td>v0.25.2, April 2026</td><td>MIT</td></tr>
+    <tr><td><a href="/">dpad</a></td><td>a TUI that also replaces everyday <code>docker</code> commands; logs and stats across Compose projects</td><td>Go</td><td><a href="https://github.com/spar/dpad/releases/latest">see releases</a></td><td>GPL-3.0</td></tr>
+    <tr><td><a href="https://github.com/moncho/dry">dry</a></td><td>Swarm, and Compose drift detection</td><td>Go</td><td>v0.13.0, March 2026</td><td>MIT</td></tr>
+    <tr><td><a href="https://github.com/mrjackwills/oxker">oxker</a></td><td>a light container viewer with log search and saving logs to a file</td><td>Rust</td><td>v0.13.4, August 2026</td><td>MIT</td></tr>
+    <tr><td><a href="https://github.com/amir20/dtop">dtop</a></td><td>watching containers on several hosts at once</td><td>Rust</td><td>0.11.4, November 2026</td><td>MIT</td></tr>
+    <tr><td><a href="https://github.com/bcicen/ctop">ctop</a></td><td>a minimal <code>top</code> for containers</td><td>Go</td><td>v0.7.7, March 2022</td><td>MIT</td></tr>
+  </tbody>
+</table>
+
+<h2>Features compared</h2>
+<table>
+  <thead><tr><th></th><th>lazydocker</th><th>dpad</th><th>dry</th><th>oxker</th><th>dtop</th><th>ctop</th></tr></thead>
+  <tbody>
+    <tr><td>Compose projects</td><td>✓ up, down, restart, rebuild</td><td>✓ start, stop, down, update, edit</td><td>✓ up, down, drift</td><td>not documented</td><td>column only</td><td>not documented</td></tr>
+    <tr><td>Logs from several containers</td><td>per service or project</td><td>any mix of containers, services, projects</td><td>per service or project</td><td>one container</td><td>one container</td><td>one container</td></tr>
+    <tr><td>Log search or filter</td><td>not documented</td><td>live regex filter</td><td>search</td><td>search</td><td>not documented</td><td>not documented</td></tr>
+    <tr><td>Stats</td><td>ASCII graphs</td><td>bars, rates, sparklines, project totals</td><td>per container</td><td>not documented</td><td>CPU, memory, network</td><td>top-style grid</td></tr>
+    <tr><td>Events</td><td>not documented</td><td>live, filterable</td><td>last 10</td><td>not documented</td><td>not documented</td><td>not documented</td></tr>
+    <tr><td>Prune</td><td>✓</td><td>✓ with a preview</td><td>✓</td><td>not documented</td><td>not documented</td><td>not documented</td></tr>
+    <tr><td>Remote over SSH</td><td>✓</td><td>✓</td><td>✓ via <code>DOCKER_HOST</code></td><td>via <code>DOCKER_HOST</code> or <code>--host</code></td><td>✓, several hosts at once</td><td>not documented</td></tr>
+    <tr><td>Follows Docker contexts</td><td>✓</td><td>✓, switch in the UI</td><td>no, per its README</td><td>not documented</td><td>✓</td><td>not documented</td></tr>
+    <tr><td>Swarm</td><td>not documented</td><td>no</td><td>✓ nodes, services, stacks</td><td>not documented</td><td>not documented</td><td>not documented</td></tr>
+    <tr><td>Also a <code>docker</code> CLI replacement</td><td>no</td><td>✓</td><td>no</td><td>no</td><td>no</td><td>no</td></tr>
+    <tr><td>Windows</td><td>✓</td><td>✓</td><td>✓</td><td>not documented (exec "not available on Windows")</td><td>no build in the latest release</td><td>✓</td></tr>
+  </tbody>
+</table>
+
+<h2>dpad</h2>
+<p>Our own project, so read this one with that in mind. dpad is a full-screen TUI that is also a better <code>docker</code> for everyday commands: <code>dp ps</code>, <code>dp stats</code> and <code>dp logs</code> keep Docker's flags and add color and sorting, and anything else passes through. Its strengths are logs across any mix of services with a live regex filter, stats with per-second rates and two-minute sparklines, and Compose image updates across every project on a host with a preview. It is new (started in November 2026), it has a small community, and it has no Swarm support or image layer view.</p>
+<p><a href="/compare/lazydocker/">dpad vs lazydocker in detail</a> · <a href="/docs/getting-started/">Get started</a></p>
+
+<h2>dry</h2>
+<p><a href="https://github.com/moncho/dry">dry</a> is the most complete alternative for Docker Swarm, with views for nodes, services and stacks. Its Compose view marks services whose Compose file changed since their containers were created, so you can recreate just those. It has log search, a disk usage view and image and volume cleanup. Its README says it does not read Docker contexts; set <code>DOCKER_HOST</code> or <code>-H</code> instead, including <code>ssh://</code> addresses.</p>
+
+<h2>oxker</h2>
+<p><a href="https://github.com/mrjackwills/oxker">oxker</a> is a small, fast Rust viewer for containers: start, stop, pause, restart and delete, log search, and saving a container's logs to a file. Its keymap and colors are configurable. It doesn't document Compose support, and its README says exec is not available on Windows.</p>
+
+<h2>dtop</h2>
+<p><a href="https://github.com/amir20/dtop">dtop</a>, from the author of the Dozzle log viewer, is built for monitoring several hosts in one table: pass <code>--host</code> more than once, over SSH, TCP or TLS. It streams a container's logs, links to Dozzle, has bulk actions and updates itself. It shows the Compose project of each container but doesn't document Compose actions. The latest release ships for macOS and Linux.</p>
+
+<h2>ctop</h2>
+<p><a href="https://github.com/bcicen/ctop">ctop</a> is a <code>top</code>-style grid of container metrics, with a single-container view and support for runC as well as Docker. It is simple and still widely installed. Its last release was v0.7.7 in March 2022 and the last commit on its main branch was in August 2022. See <a href="/compare/ctop/">ctop alternative</a>.</p>
+
+<h2>Web UIs instead</h2>
+<p>If you'd rather use a browser than a terminal, Portainer and Dockge are the usual choices. They run as a container on the host and give you a web dashboard, which suits shared servers and people who don't live in a terminal. That is a different kind of tool, so we haven't compared them here.</p>

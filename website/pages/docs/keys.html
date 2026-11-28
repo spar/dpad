@@ -1,0 +1,92 @@
+<!--
+title: dpad keyboard shortcuts
+heading: Keyboard shortcuts
+nav: Keyboard shortcuts
+description: Every key in the dpad Docker terminal UI: navigation, container actions, logs, stats, Compose projects, prune, contexts, themes and settings.
+updated: 2026-11-28
+order: 12
+related: /docs/getting-started/, /docs/config/, /docs/compose-logs/
+-->
+<p class="lead">Press <kbd>?</kbd> in any view for the keys that apply there. The footer also lists the keys for the selected row.</p>
+
+<h2>Everywhere</h2>
+<table>
+  <thead><tr><th>Key</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>tab</kbd> / <kbd>shift+tab</kbd> / <kbd>1</kbd>–<kbd>7</kbd></td><td>Switch tab: Containers, Images, Stats, Projects, Events, Volumes, Networks</td></tr>
+    <tr><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>pgup</kbd> <kbd>pgdn</kbd> <kbd>g</kbd> <kbd>G</kbd></td><td>Move</td></tr>
+    <tr><td><kbd>/</kbd></td><td>Filter the current tab (<kbd>enter</kbd> keeps it, <kbd>esc</kbd> clears it)</td></tr>
+    <tr><td><kbd>s</kbd> / <kbd>r</kbd></td><td>Next sort key / reverse</td></tr>
+    <tr><td><kbd>ctrl+r</kbd></td><td>Refresh and check the connection</td></tr>
+    <tr><td><kbd>c</kbd></td><td>Choose a Docker context for this session (list tabs)</td></tr>
+    <tr><td><kbd>C</kbd></td><td>Choose a color theme, previewed live</td></tr>
+    <tr><td><kbd>o</kbd></td><td>Settings: theme, context, editor, CPU graph, icons, mouse, config file</td></tr>
+    <tr><td><kbd>X</kbd></td><td>Preview a prune (<a href="/docs/prune-preview/">guide</a>)</td></tr>
+    <tr><td><kbd>?</kbd></td><td>Help</td></tr>
+    <tr><td><kbd>q</kbd></td><td>Quit</td></tr>
+  </tbody>
+</table>
+
+<h2>Containers</h2>
+<table>
+  <thead><tr><th>Key</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>enter</kbd></td><td>Follow logs</td></tr>
+    <tr><td><kbd>d</kbd></td><td>Details (<kbd>esc</kbd> back)</td></tr>
+    <tr><td><kbd>e</kbd></td><td>Open a shell; type the executable, such as <code>/bin/bash</code></td></tr>
+    <tr><td><kbd>S</kbd> / <kbd>x</kbd> / <kbd>R</kbd></td><td>Start (or unpause) / stop / restart, after <code>y/N</code></td></tr>
+    <tr><td><kbd>P</kbd> / <kbd>K</kbd> / <kbd>D</kbd></td><td>Pause / kill (SIGKILL) / remove, after <code>y/N</code></td></tr>
+  </tbody>
+</table>
+
+<h2>Log viewer</h2>
+<table>
+  <thead><tr><th>Key</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>/</kbd></td><td>Filter by regular expression (<a href="/docs/compose-logs/">guide</a>)</td></tr>
+    <tr><td><kbd>ctrl+l</kbd></td><td>Clear the filter</td></tr>
+    <tr><td><kbd>w</kbd></td><td>Wrap long lines</td></tr>
+    <tr><td><kbd>t</kbd></td><td>Timestamps</td></tr>
+    <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Pan long lines</td></tr>
+    <tr><td><kbd>esc</kbd> / <kbd>q</kbd></td><td>Back</td></tr>
+  </tbody>
+</table>
+
+<h2>Stats</h2>
+<table>
+  <thead><tr><th>Key</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>t</kbd></td><td>Rates or cumulative totals for network and disk</td></tr>
+    <tr><td><kbd>v</kbd></td><td>Compose projects or a flat list</td></tr>
+    <tr><td><kbd>space</kbd> / <kbd>enter</kbd> on a project</td><td>Expand or collapse it</td></tr>
+  </tbody>
+</table>
+
+<h2>Projects</h2>
+<table>
+  <thead><tr><th>Key</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>space</kbd></td><td>Expand or collapse a project</td></tr>
+    <tr><td><kbd>enter</kbd> on a project</td><td>Follow the logs of every container in it</td></tr>
+    <tr><td><kbd>S</kbd> / <kbd>x</kbd> / <kbd>R</kbd> on a project</td><td>Preview, then start / stop / restart its containers</td></tr>
+    <tr><td><kbd>u</kbd> / <kbd>U</kbd></td><td>Update images for this project / all projects (<a href="/docs/update-compose-images/">guide</a>)</td></tr>
+    <tr><td><kbd>e</kbd> on a project</td><td>Edit its Compose file (<a href="/docs/edit-compose-file/">guide</a>)</td></tr>
+    <tr><td><kbd>D</kbd> on a project</td><td>Preview <code>docker compose down</code>; <kbd>v</kbd> also deletes its volumes</td></tr>
+  </tbody>
+</table>
+
+<h2>Images, events, volumes, networks</h2>
+<table>
+  <thead><tr><th>Key</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>d</kbd> / <kbd>enter</kbd></td><td>Details of the selected image, volume or network, or the event's container</td></tr>
+    <tr><td><kbd>x</kbd> on an image</td><td>Remove the selected tag or image, after <code>y</code></td></tr>
+    <tr><td><kbd>r</kbd> / <kbd>g</kbd> on Events</td><td>Reverse the order / back to the newest and follow</td></tr>
+    <tr><td><kbd>tab</kbd> in network details</td><td>Switch between metadata and endpoints</td></tr>
+  </tbody>
+</table>
+
+<h2>Mouse</h2>
+<p>Click a tab or a row to select it, double-click a row to do what <kbd>enter</kbd> does, and scroll lists, logs and details with the wheel. While dp has the mouse, selecting text in most terminals needs a modifier: <kbd>shift</kbd> on most Linux and Windows terminals, <kbd>option</kbd> in iTerm2. Set <code>mouse: false</code> in <a href="/docs/config/">config.yaml</a> to leave the mouse to the terminal.</p>
+
+<p>Your own keys: <a href="/docs/config/">custom commands</a>. Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#keys">Keys</a>.</p>

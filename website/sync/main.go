@@ -1,6 +1,6 @@
 // Command sync copies the screenshots, theme previews and logo from docs/images
 // into website/public/assets, with a light copy of each screenshot for the
-// site's light mode.
+// site's light mode, and builds the pages in website/pages and the sitemap.
 //
 // Run it from the repository root with `make website` after `make screenshots`.
 package main
@@ -65,7 +65,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	fmt.Printf("website sync: wrote %d files to website/public/assets\n", len(files))
+	fmt.Printf("website sync: wrote %d files to website/public\n", len(files))
 }
 
 // outputs returns every file the site copies or derives, keyed by its path
@@ -100,12 +100,20 @@ func outputs(root string) (map[string][]byte, error) {
 		out[dst("themes/"+filepath.Base(path))] = b
 	}
 
-	for src, name := range map[string]string{"docs/images/logo.svg": "logo.svg", "docs/images/social-preview.png": "og-image.png"} {
+	for src, name := range map[string]string{"docs/images/logo.svg": "logo.svg", "docs/images/social-preview.png": "og-image.png", "docs/images/cli.svg": "cli.svg"} {
 		b, err := read(src)
 		if err != nil {
 			return nil, err
 		}
 		out[dst(name)] = b
+	}
+
+	pages, err := renderPages(filepath.Join(root, "website/pages"))
+	if err != nil {
+		return nil, err
+	}
+	for name, b := range pages {
+		out[filepath.Join(root, "website/public", name)] = b
 	}
 	return out, nil
 }
