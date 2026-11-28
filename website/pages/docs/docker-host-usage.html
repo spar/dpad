@@ -41,6 +41,6 @@ related: /docs/docker-stats/, /docs/remote-docker-ssh/, /docs/keys/
   <li><b>Remote daemon over <code>ssh://</code>:</b> the loop runs on the server over one extra SSH connection, so the panel describes the server, not your laptop. Nothing is installed there. See <a href="/docs/remote-docker-ssh/">remote Docker over SSH</a>.</li>
   <li><b>Docker Desktop and <code>tcp://</code>:</b> Docker runs in a VM, or there is no shell to reach, so the System row says host usage isn't available and the Docker row still shows the containers.</li>
 </ul>
-<p>The Docker row adds up the same per-container stats as the CPU graph, so it needs a CPU graph style other than <code>off</code> (<kbd>o</kbd> → CPU graph).</p>
+<p>The Docker row adds up the same per-container stats as the CPU graph, so it needs a CPU graph style other than <code>off</code> (<kbd>o</kbd> → CPU graph). Its memory leaves out page cache, as the System row does, so it can be lower than the sum of the MEM column, which follows <code>docker stats</code> and keeps recently used cache.</p>
 
 <p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#host-panel-and-system-screen">Host panel and System screen</a>.</p>
