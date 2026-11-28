@@ -1,0 +1,46 @@
+<!--
+title: See the Docker host's CPU, memory and disk, locally or over SSH
+heading: Watch the Docker host
+nav: Host and system info
+description: See the Docker host's CPU, memory, load and disk next to your containers in dpad, plus engine versions and docker system df, locally or over SSH.
+updated: 2026-11-28
+order: 13
+related: /docs/docker-stats/, /docs/remote-docker-ssh/, /docs/keys/
+-->
+<p class="lead"><code>docker stats</code> tells you what each container uses, but not how busy the machine is. dpad puts the host next to its containers: how many cores and how much memory it has, how much is in use, and how much of that is Docker.</p>
+
+<h2>The host panel</h2>
+<p>The Containers tab (<kbd>1</kbd>) starts with three rows:</p>
+<figure><img src="/assets/shots/containers.svg" width="1348" height="634" loading="lazy" alt="The Containers tab with the host panel above the list: System, Docker and Host rows with CPU and memory gauges"><figcaption>System, Docker and Host rows above the containers.</figcaption></figure>
+<table>
+  <thead><tr><th>Row</th><th>Shows</th></tr></thead>
+  <tbody>
+    <tr><td>System</td><td>The host's name, CPU use across all its cores, and memory in use out of the total</td></tr>
+    <tr><td>Docker</td><td>The Docker version, and the CPU and memory all containers use together</td></tr>
+    <tr><td>Host</td><td>The OS, the load average and the uptime</td></tr>
+  </tbody>
+</table>
+<p>The gauges turn yellow and red as usage climbs, like the Stats bars. A wide terminal adds network rates, swap, the running count, the kernel and the architecture. Press <kbd>t</kbd> to hide the panel and give its rows back to the list; dp remembers the choice as <code>hostPanel: off</code> in the <a href="/docs/config/">config file</a>.</p>
+
+<h2>The System screen</h2>
+<p>Press <kbd>I</kbd> on any tab for everything dp knows about the daemon and its host:</p>
+<figure><img src="/assets/shots/system.svg" width="1348" height="634" loading="lazy" alt="System screen with host and engine details, CPU, memory and disk usage, and a docker system df table"><figcaption>Host, engine, usage and disk usage on one screen.</figcaption></figure>
+<ul>
+  <li><b>Host:</b> name, OS, kernel, architecture, cores and memory, uptime and load.</li>
+  <li><b>Engine:</b> Docker and API version, runtime, containerd, storage driver, cgroup version and driver, logging driver.</li>
+  <li><b>Usage:</b> CPU, memory and the disk that holds Docker's data, for the host and its containers.</li>
+  <li><b>Disk usage:</b> what <code>docker system df</code> reports for images, containers, volumes and build cache, with how much is reclaimable.</li>
+  <li><b>Warnings</b> the daemon reports, such as missing swap limit support.</li>
+</ul>
+<p>Disk usage can take a while on a busy host, so dp reads it when the screen opens and again when you press <kbd>r</kbd>.</p>
+
+<h2>Where the numbers come from</h2>
+<p>Names, cores, memory, OS, versions and drivers come from the daemon's <code>/info</code> and <code>/version</code>, read every 30 seconds. The host's own CPU, memory, load, uptime and disk come from its <code>/proc</code> and <code>df</code>, read every two seconds by one long-running shell loop:</p>
+<ul>
+  <li><b>Local Linux daemon:</b> the loop runs on your machine.</li>
+  <li><b>Remote daemon over <code>ssh://</code>:</b> the loop runs on the server over one extra SSH connection, so the panel describes the server, not your laptop. Nothing is installed there. See <a href="/docs/remote-docker-ssh/">remote Docker over SSH</a>.</li>
+  <li><b>Docker Desktop and <code>tcp://</code>:</b> Docker runs in a VM, or there is no shell to reach, so the System row says host usage isn't available and the Docker row still shows the containers.</li>
+</ul>
+<p>The Docker row adds up the same per-container stats as the CPU graph, so it needs a CPU graph style other than <code>off</code> (<kbd>o</kbd> → CPU graph). Its memory leaves out page cache, as the System row does, so it can be lower than the sum of the MEM column, which follows <code>docker stats</code> and keeps recently used cache.</p>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#host-panel-and-system-screen">Host panel and System screen</a>.</p>

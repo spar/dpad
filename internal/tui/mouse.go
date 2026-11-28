@@ -50,7 +50,7 @@ func (a *App) handleMouse(msg tea.MouseMsg) tea.Cmd {
 			}
 			return nil
 		}
-		line := m.Y - bodyTop
+		line := m.Y - (bodyTop - 1 + a.headerRows())
 		if line < 0 || !a.tabs[a.active].clickRow(line) {
 			return nil
 		}

@@ -115,6 +115,7 @@
     <li><a href="/docs/themes/">Themes</a></li>
     <li><a href="/docs/config/">Config and custom commands</a></li>
     <li><a href="/docs/keys/">Keyboard shortcuts</a></li>
+    <li><a href="/docs/docker-host-usage/">Host and system info</a></li>
   </ul>
   <p>Compare</p>
   <ul>
@@ -159,7 +160,7 @@
 <p>Replace <code>1000</code> with the remote user's UID (<code>ssh me@server id -u</code>) and make sure their rootless daemon is running. Rootless Docker doesn't need the <code>docker</code> group. Use the real path: <code>~</code> and shell variables are not expanded on the remote side. The same address works in <code>docker context create</code>.</p>
 
 <h2>What happens on the wire</h2>
-<p>dp starts one <code>ssh</code> process that forwards a private local socket to the server's Docker socket, then talks to the Docker Engine API through it. On Windows, where OpenSSH can't take a <code>C:\...</code> socket path, dp forwards a random port on <code>127.0.0.1</code> instead; other users signed in to the same Windows machine could reach it while dp runs. Nothing is installed on the server. If the connection drops, dp starts a new tunnel in the background and the UI shows the connection state below the tabs; lists and open details refresh when it comes back, without losing your filters or selection.</p>
+<p>dp starts one <code>ssh</code> process that forwards a private local socket to the server's Docker socket, then talks to the Docker Engine API through it. On Windows, where OpenSSH can't take a <code>C:\...</code> socket path, dp forwards a random port on <code>127.0.0.1</code> instead; other users signed in to the same Windows machine could reach it while dp runs. Nothing is installed on the server. If the connection drops, dp starts a new tunnel in the background and the UI shows the connection state below the tabs (on the Containers tab, the host panel takes that row while the server is reachable); lists and open details refresh when it comes back, without losing your filters or selection.</p>
 
 <h2>What works over SSH</h2>
 <table>
@@ -173,9 +174,10 @@
     <tr><td>Shell into a container (<kbd>e</kbd>)</td><td>Yes, through your local <code>docker</code> CLI</td></tr>
     <tr><td>Update Compose images (<kbd>u</kbd>)</td><td>Yes. Compose runs on the server in the project's folder when the files are there (<a href="/docs/update-compose-images/">guide</a>)</td></tr>
     <tr><td>Edit a Compose file (<kbd>e</kbd> on a project)</td><td>Yes. dp reads and writes the file on the server (<a href="/docs/edit-compose-file/">guide</a>)</td></tr>
+    <tr><td>Host panel and System screen (<kbd>I</kbd>)</td><td>Yes. The server's CPU, memory, load and disk, read from its <code>/proc</code> over one more SSH connection (<a href="/docs/docker-host-usage/">guide</a>)</td></tr>
   </tbody>
 </table>
-<p>Compose updates and edits over SSH need a POSIX shell and Compose v2 on the server, and key or agent authentication without prompts.</p>
+<p>Compose updates and edits, and the host's own usage, need a POSIX shell on the server and key or agent authentication without prompts. Compose updates and edits also need Compose v2 there.</p>
 
 <h2>When something is slow</h2>
 <p>Run dp with a debug log and attach it to a bug report:</p>

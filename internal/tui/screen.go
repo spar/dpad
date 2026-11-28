@@ -38,6 +38,9 @@ func (a *App) screens() []screen {
 	if a.settings != nil {
 		open = append(open, a.settings)
 	}
+	if a.systemView != nil {
+		open = append(open, a.systemView)
+	}
 	if a.projectAction != nil {
 		open = append(open, a.projectAction)
 	}

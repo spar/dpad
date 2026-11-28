@@ -180,3 +180,17 @@ func CompactSize(b uint64) string {
 	}
 	return fmt.Sprintf("%dG", b/(k*k*k))
 }
+
+// Gauge draws a 0–100 percentage as width squares: lit ones in the usage
+// color, the rest in the track color. Any usage above zero lights one.
+func Gauge(p float64, width int) string {
+	n := int(min(max(p, 0), 100)/100*float64(width) + 0.5)
+	if p > 0 && n == 0 {
+		n = 1
+	}
+	track := "■"
+	if ColorDisabled() {
+		track = "·"
+	}
+	return percentPaint(p).wrap(strings.Repeat("■", n)) + usagePaint().track.wrap(strings.Repeat(track, width-n))
+}

@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -88,6 +89,73 @@ func DimLine(s string) string {
 		s = strings.ReplaceAll(s, "\x1b[m", "\x1b[m"+pre)
 	}
 	return Dim.Render(s)
+}
+
+// StatusLine dims s like DimLine, but sets its numbers in bold, so counts
+// and totals stand out from the words around them. Numbers inside text
+// that is already styled keep that style.
+func StatusLine(s string) string {
+	pre := sgrPrefix(Dim)
+	if pre != "" {
+		s = strings.ReplaceAll(s, "\x1b[m", "\x1b[m"+pre)
+	}
+	var b strings.Builder
+	styled := false
+	for s != "" {
+		if loc := sgrSeq.FindStringIndex(s); loc != nil && loc[0] == 0 {
+			seq := s[:loc[1]]
+			switch seq {
+			case "\x1b[m", "\x1b[0m":
+				styled = false
+			case pre:
+			default:
+				styled = true
+			}
+			b.WriteString(seq)
+			s = s[loc[1]:]
+			continue
+		}
+		text := s
+		if loc := sgrSeq.FindStringIndex(s); loc != nil {
+			text = s[:loc[0]]
+		}
+		if styled {
+			b.WriteString(text)
+		} else {
+			b.WriteString(boldNumbers(text, pre))
+		}
+		s = s[len(text):]
+	}
+	return Dim.Render(b.String())
+}
+
+var (
+	sgrSeq     = regexp.MustCompile(`\x1b\[[0-9;:]*m`)
+	statusNums = regexp.MustCompile(`[0-9]+(?:\.[0-9]+)*(?:%|[KMGTP]?i?B|[kKMGT])?`)
+)
+
+// boldNumbers bolds the numbers in text that stand alone, such as 55, 9.5%,
+// 3.8GiB or each side of 3/55, but not the digits in v29, a1b2 or 05:14.
+func boldNumbers(text, dim string) string {
+	var b strings.Builder
+	last := 0
+	for _, m := range statusNums.FindAllStringIndex(text, -1) {
+		if !standsAlone(text, m[0], m[1]) {
+			continue
+		}
+		b.WriteString(text[last:m[0]])
+		b.WriteString("\x1b[m" + Bold.Render(text[m[0]:m[1]]) + dim)
+		last = m[1]
+	}
+	b.WriteString(text[last:])
+	return b.String()
+}
+
+func standsAlone(text string, start, end int) bool {
+	if start > 0 && !strings.ContainsRune(" (/", rune(text[start-1])) {
+		return false
+	}
+	return end == len(text) || strings.ContainsRune(" )/,", rune(text[end]))
 }
 
 // OnAccent is text on a filled accent background, as in the active tab.

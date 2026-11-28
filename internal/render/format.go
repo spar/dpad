@@ -20,6 +20,9 @@ func byteRatePair(a, b float64) string {
 	return units.HumanSizeWithPrecision(a, 3) + "/s / " + units.HumanSizeWithPrecision(b, 3) + "/s"
 }
 
+// Rate formats a byte rate in decimal units, such as "1.29MB/s".
+func Rate(bytesPerSec float64) string { return units.HumanSizeWithPrecision(bytesPerSec, 3) + "/s" }
+
 // BinSize formats bytes in binary units, as docker does for memory (e.g. "512MiB").
 func BinSize(b uint64) string { return units.BytesSize(float64(b)) }
 

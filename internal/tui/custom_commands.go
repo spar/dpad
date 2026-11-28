@@ -41,6 +41,13 @@ func (a *App) configure(cfg config.Config, err error) {
 		a.icons = render.IconsAuto
 	}
 	a.applyIcons()
+	switch cfg.HostPanel {
+	case "", "on":
+	case "off":
+		a.system.hidden = true
+	default:
+		err = errors.Join(err, fmt.Errorf("hostPanel: %q is not on or off", cfg.HostPanel))
+	}
 	if err != nil && a.flash == "" {
 		a.flash, a.flashErr = "config: "+strings.Join(strings.Fields(err.Error()), " "), true
 	}

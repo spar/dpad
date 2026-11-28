@@ -83,7 +83,7 @@ func (a *App) applyDaemonProbe(msg daemonProbeMsg) tea.Cmd {
 	gen := a.daemon.generation
 	cmds := []tea.Cmd{tea.Tick(delay, func(time.Time) tea.Msg { return daemonProbeTickMsg{generation: gen} })}
 	if msg.err == nil && recovered {
-		cmds = append(cmds, func() tea.Msg { return refreshMsg{} })
+		cmds = append(cmds, func() tea.Msg { return refreshMsg{} }, a.loadSystemInfo())
 		if a.details != nil {
 			cmds = append(cmds, a.details.load())
 		}

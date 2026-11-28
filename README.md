@@ -185,9 +185,9 @@ saved current context.
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/containers.svg" alt="Containers tab with colored states, health, ports and a braille CPU graph and memory for each running container" width="100%"><br>
+      <img src="docs/images/containers.svg" alt="Containers tab with the host panel above the list, then colored states, health, ports and a braille CPU graph and memory for each running container" width="100%"><br>
       <b>Containers</b><br>
-      <sub>States, health and ports in color, with a live CPU graph and memory for each running container. Start, stop, restart, pause, kill and remove with a confirmation; <code>e</code> opens a shell.</sub>
+      <sub>The host panel on top shows the machine's CPU, memory, load and uptime next to what Docker uses (<code>t</code> hides it). Below it, states, health and ports in color, with a live CPU graph and memory for each running container. Start, stop, restart, pause, kill and remove with a confirmation; <code>e</code> opens a shell.</sub>
     </td>
     <td width="50%" valign="top">
       <img src="docs/images/projects.svg" alt="Projects tab grouping containers by Compose project and service" width="100%"><br>
@@ -221,11 +221,18 @@ saved current context.
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/settings.svg" alt="Settings screen listing the theme, Docker context, editor, CPU graph style, icons, mouse setting and config file" width="100%"><br>
+      <img src="docs/images/settings.svg" alt="Settings screen listing the theme, Docker context, editor, CPU graph style, host panel, icons, mouse setting and config file" width="100%"><br>
       <b>Settings</b><br>
-      <sub><code>o</code> lists the theme, Docker context, editor, CPU graph style (braille, bars, meter or off), icons, mouse setting and config file. <code>enter</code> on a row opens its picker or cycles the graph style or icon mode. Theme, editor, graph style and icons are saved to <code>config.yaml</code>; a context choice lasts for the session.</sub>
+      <sub><code>o</code> lists the theme, Docker context, editor, CPU graph style (braille, bars, meter or off), host panel, icons, mouse setting and config file. <code>enter</code> on a row opens its picker or cycles the graph style, host panel or icon mode. Theme, editor, graph style, host panel and icons are saved to <code>config.yaml</code>; a context choice lasts for the session.</sub>
     </td>
     <td width="50%" valign="top">
+      <img src="docs/images/system.svg" alt="System screen with host and engine details, CPU, memory and disk usage, and a docker system df table" width="100%"><br>
+      <b>System</b><br>
+      <sub><code>I</code> shows the daemon's host and engine: OS, kernel, cores, memory, uptime and load, Docker and API versions, runtime, storage and cgroup drivers, CPU, memory and disk usage, and what <code>docker system df</code> reports, with reclaimable space. Over SSH it describes the server.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" valign="top">
       <b>Custom commands and mouse</b><br>
       <sub>Bind your own commands to keys in <code>~/.config/dpad/config.yaml</code>, run against the selected container or Compose project. Click tabs and rows, double-click to open, scroll with the wheel. See <a href="docs/usage.md#custom-commands">Custom commands</a>.</sub>
     </td>
@@ -253,7 +260,9 @@ DOCKER_HOST=ssh://me@server dp
 moving through lists doesn't wait on the network. Your `~/.ssh/config`, agent and
 known hosts apply, rootless sockets work (`ssh://me@server/run/user/1000/docker.sock`),
 dropped connections reconnect in the background, and `e` edits a project's
-Compose file on the server through the same connection. Details are in
+Compose file on the server through the same connection. The host panel and
+System screen read the server's `/proc` over SSH, so they show the server's CPU,
+memory, load and disk, not your laptop's. Details are in
 [Daemon connection](docs/usage.md#daemon-connection).
 
 ### Themes

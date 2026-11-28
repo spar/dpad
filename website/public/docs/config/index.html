@@ -115,6 +115,7 @@
     <li><a href="/docs/themes/">Themes</a></li>
     <li><a href="/docs/config/" aria-current="page">Config and custom commands</a></li>
     <li><a href="/docs/keys/">Keyboard shortcuts</a></li>
+    <li><a href="/docs/docker-host-usage/">Host and system info</a></li>
   </ul>
   <p>Compare</p>
   <ul>
@@ -146,8 +147,9 @@
 editor: nano       <span class="c"># for Compose edits; builtin for the built-in editor</span>
 cpuGraph: bars     <span class="c"># braille (default), bars, meter or off</span>
 icons: nerd        <span class="c"># auto (default), nerd or off</span>
+hostPanel: off     <span class="c"># hide the host panel on the Containers tab</span>
 mouse: false       <span class="c"># leave the mouse to the terminal</span></pre>
-<p>You rarely need to type these. The theme picker (<kbd>C</kbd>) and the settings screen (<kbd>o</kbd>) write <code>theme</code>, <code>editor</code>, <code>cpuGraph</code> and <code>icons</code> for you, changing only that line and leaving the rest of the file as you wrote it.</p>
+<p>You rarely need to type these. The theme picker (<kbd>C</kbd>) and the settings screen (<kbd>o</kbd>) write <code>theme</code>, <code>editor</code>, <code>cpuGraph</code>, <code>hostPanel</code> and <code>icons</code> for you, changing only that line and leaving the rest of the file as you wrote it.</p>
 <p><code>icons</code> puts a <a href="https://www.nerdfonts.com/">Nerd Font</a> logo for the image before each container name, such as the PostgreSQL elephant. <code>auto</code> turns them on in terminals that ship the symbols themselves (Ghostty, WezTerm and kitty 0.36 or later); choose <code>nerd</code> if your terminal font is a Nerd Font.</p>
 
 <h2>Custom commands</h2>

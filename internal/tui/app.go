@@ -76,6 +76,7 @@ type App struct {
 	themePicker     *themePicker
 	editorPicker    *editorPicker
 	settings        *settingsMenu
+	systemView      *systemView
 	nextContext     string
 	actionsInFlight int
 	help            bool
@@ -92,6 +93,10 @@ type App struct {
 	icons           string // the icons: setting
 	terminal        string // the terminal's name and version, for icons: auto
 	tabCache        tabBarCache
+	system          systemState
+	// containersHeight and containersWidth are the size last given to the
+	// Containers tab, which loses rows to the host panel.
+	containersHeight, containersWidth int
 }
 
 // Run starts the TUI and blocks until the user quits. cfgErr and themeErr,
@@ -191,11 +196,13 @@ func (a *App) Init() tea.Cmd {
 	for _, t := range a.tabs {
 		cmds = append(cmds, t.Init())
 	}
-	cmds = append(cmds, a.probeDaemon(), tea.RequestTerminalVersion)
+	cmds = append(cmds, a.probeDaemon(), a.loadSystemInfo(), tea.RequestTerminalVersion)
 	return tea.Batch(append(cmds, a.tabs[a.active].Focus())...)
 }
 
-func (a *App) bodyHeight() int { return max(a.height-5, 1) }
+// bodyHeight leaves rows for the tab bar, its rule, the daemon line, the rule
+// above the status line, the status line and the footer.
+func (a *App) bodyHeight() int { return max(a.height-6, 1) }
 
 func (a *App) resize(width, height int) {
 	a.width, a.height = width, height
@@ -208,6 +215,8 @@ func (a *App) resize(width, height int) {
 	if a.shell != nil {
 		a.shell.input.SetWidth(max(width-38, 1))
 	}
+	a.containersHeight = 0
+	a.layout()
 }
 
 // setFilter sets the active tab's filter and the input showing it.
@@ -231,6 +240,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	previous := a.flash
 	cmd := a.update(msg)
+	a.layout()
 	// A flash for work in flight is replaced by its result, which starts the timer.
 	if a.flash == "" || a.flash == previous || a.flashErr || a.actionsInFlight > 0 {
 		return a, cmd
@@ -254,6 +264,8 @@ func (a *App) update(msg tea.Msg) tea.Cmd {
 		return nil
 	case daemonProbeMsg:
 		return a.applyDaemonProbe(msg)
+	case systemInfoMsg, systemInfoTickMsg, hostStartedMsg, hostUpdateMsg, hostRetryMsg:
+		return a.updateSystem(msg)
 	case daemonProbeTickMsg:
 		if msg.generation != a.daemon.generation {
 			return nil
@@ -427,6 +439,13 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 		return a.chooseTheme()
 	case "o":
 		a.openSettings()
+	case "I":
+		return a.openSystemView()
+	case "t":
+		if _, ok := a.tabs[a.active].(*ContainersView); ok {
+			return a.toggleHostPanel()
+		}
+		return a.tabs[a.active].HandleKey(key)
 	case "q":
 		return tea.Quit
 	case "tab", "right", "l":
@@ -527,7 +546,8 @@ func (a *App) handleKey(msg tea.KeyPressMsg) tea.Cmd {
 func (a *App) switchTab(i int) tea.Cmd {
 	a.active = i
 	a.filter.SetValue(a.tabs[i].Filter())
-	return a.tabs[i].Focus()
+	a.layout()
+	return tea.Batch(a.tabs[i].Focus(), a.watchHost())
 }
 
 // slowFrame is how long a frame may take before the debug log notes it.
@@ -573,12 +593,17 @@ func (a *App) render() string {
 		status += "  " + st.Render(a.flash)
 	}
 
+	header, bodyHeight := a.connectionBar(), a.bodyHeight()
+	if a.panelShown() {
+		header, bodyHeight = strings.Join(a.hostPanel(), "\n"), a.bodyHeight()+1-panelRows
+	}
 	// Pad the body so the status and footer stay pinned to the bottom.
-	if n := a.bodyHeight() - lipgloss.Height(body); n > 0 {
+	if n := bodyHeight - lipgloss.Height(body); n > 0 {
 		body += strings.Repeat("\n", n)
 	}
 	bar, rule := a.tabLines()
-	return strings.Join([]string{bar, rule, a.connectionBar(), body, render.DimLine(status), ansi.Truncate(a.footer(), a.width, "…")}, "\n")
+	statusRule := render.Dim.Render(strings.Repeat("─", a.width))
+	return strings.Join([]string{bar, rule, header, body, statusRule, render.StatusLine(status), ansi.Truncate(a.footer(), a.width, "…")}, "\n")
 }
 
 // tabBarCache holds the tab bar and the rule under it, which only change
@@ -715,6 +740,9 @@ func (a *App) footer() string {
 		}
 		keys = append(keys, "t", mode)
 	}
+	if _, ok := a.tabs[a.active].(*ContainersView); ok {
+		keys = append(keys, "I", "system")
+	}
 	if _, _, ok := a.tabs[a.active].Selected(); ok {
 		keys = append(keys, "d", "details", "enter", "logs", "e", "shell", "S/x/R", "start/stop/restart", "P/K/D", "pause/kill/remove")
 	} else if stats, ok := a.tabs[a.active].(*StatsView); ok && stats.selectedStatsProject() != nil {
@@ -831,6 +859,7 @@ func (a *App) helpRows() (string, [][2]string) {
 		{"X", "prune: preview, then remove stopped containers or unused images, volumes, networks, build cache"},
 		{"C", "choose a color theme, previewed as you move"},
 		{"o", "settings: theme, Docker context, editor, mouse, config file location"},
+		{"I", "system: the daemon's host, engine versions, usage and docker system df"},
 		{"ctrl+r", "refresh now"},
 		{"q, ctrl+c", "quit"},
 	}

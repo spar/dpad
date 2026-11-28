@@ -38,6 +38,10 @@ type fakeClient struct {
 	pruneOneErr       map[string]error
 	buildCacheDeleted []string
 
+	systemInfo *docker.SystemInfo
+	diskUsage  docker.DiskUsage
+	host       chan docker.HostUpdate
+
 	mu      sync.Mutex
 	actions []string // "verb id"
 }
@@ -125,4 +129,20 @@ func (f *fakeClient) PruneOne(_ context.Context, kind docker.PruneKind, t docker
 func (f *fakeClient) PruneBuildCache(context.Context) ([]string, uint64, error) {
 	_ = f.record("prune build cache", "")
 	return f.buildCacheDeleted, 1024, f.pruneErr
+}
+
+func (f *fakeClient) SystemInfo(context.Context) (docker.SystemInfo, error) {
+	if f.systemInfo == nil {
+		return docker.SystemInfo{}, fmt.Errorf("no system info")
+	}
+	return *f.systemInfo, nil
+}
+
+func (f *fakeClient) DiskUsage(context.Context) (docker.DiskUsage, error) { return f.diskUsage, nil }
+
+func (f *fakeClient) WatchHost(context.Context, string, string) (<-chan docker.HostUpdate, error) {
+	if f.host == nil {
+		return nil, docker.ErrNoHostStats
+	}
+	return f.host, nil
 }

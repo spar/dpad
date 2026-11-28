@@ -366,3 +366,21 @@ func TestLogLineWidthMatchesRenderedLine(t *testing.T) {
 		}
 	}
 }
+
+func TestStatusLineBoldsNumbers(t *testing.T) {
+	ApplyTheme(theme.Default())
+	got := StatusLine("55 containers · 3/55 running · CPU 8.7% · MEM 20.88GiB · v29.9.3 at 05:14:18 · " + Error.Render("disk 7 failed"))
+	if ansi.Strip(got) != "55 containers · 3/55 running · CPU 8.7% · MEM 20.88GiB · v29.9.3 at 05:14:18 · disk 7 failed" {
+		t.Fatalf("text changed: %q", ansi.Strip(got))
+	}
+	for _, n := range []string{"55", "3", "8.7%", "20.88GiB"} {
+		if !strings.Contains(got, Bold.Render(n)) {
+			t.Errorf("%s not bold in %q", n, got)
+		}
+	}
+	for _, n := range []string{"29", "05", "7"} {
+		if strings.Contains(got, Bold.Render(n)) {
+			t.Errorf("%s should not be bold in %q", n, got)
+		}
+	}
+}

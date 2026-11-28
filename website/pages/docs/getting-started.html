@@ -35,13 +35,13 @@ related: /docs/keys/, /docs/remote-docker-ssh/, /docs/compose-logs/
 <h2>Open the TUI</h2>
 <div class="install"><div class="cmd"><code><span class="p">$</span>dp</code><button type="button" class="copy">copy</button></div></div>
 <p>dp connects to the same daemon as <code>docker</code>: it follows <code>DOCKER_HOST</code>, <code>DOCKER_CONTEXT</code> and your current Docker context. There is nothing to configure.</p>
-<figure><img src="/assets/shots/containers.svg" width="1348" height="634" loading="lazy" alt="The Containers tab: colored states, health, ports, and a CPU graph and memory for each running container"><figcaption>The Containers tab, the first thing you see.</figcaption></figure>
+<figure><img src="/assets/shots/containers.svg" width="1348" height="634" loading="lazy" alt="The Containers tab: the host panel, then colored states, health, ports, and a CPU graph and memory for each running container"><figcaption>The Containers tab, the first thing you see. The host panel on top shows the machine Docker runs on.</figcaption></figure>
 
 <h3>The tabs</h3>
 <table>
   <thead><tr><th>Key</th><th>Tab</th><th>What it shows</th></tr></thead>
   <tbody>
-    <tr><td><kbd>1</kbd></td><td>Containers</td><td>Every container with state, health, ports and a live CPU graph and memory</td></tr>
+    <tr><td><kbd>1</kbd></td><td>Containers</td><td>Every container with state, health, ports and a live CPU graph and memory, under the host's CPU and memory (<a href="/docs/docker-host-usage/">guide</a>)</td></tr>
     <tr><td><kbd>2</kbd></td><td>Images</td><td>Images, their size and which containers use them</td></tr>
     <tr><td><kbd>3</kbd></td><td>Stats</td><td>Live CPU, memory, network and disk, grouped by Compose project (<a href="/docs/docker-stats/">guide</a>)</td></tr>
     <tr><td><kbd>4</kbd></td><td>Projects</td><td>Compose projects and services, with logs, updates, edits and <code>down</code></td></tr>

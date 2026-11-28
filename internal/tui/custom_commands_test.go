@@ -3,6 +3,7 @@ package tui
 import (
 	"errors"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -71,7 +72,7 @@ func TestProjectCommandsApplyOnlyToProjectRows(t *testing.T) {
 	if target, vars, ok := a.customCommandTarget(config.ScopeProject); !ok || target != "project shop" || vars.Project != "shop" {
 		t.Fatalf("target %q vars %+v", target, vars)
 	}
-	if help := a.helpView(); !strings.Contains(help, "compose ps (custom)") {
+	if _, help := a.helpRows(); !slices.ContainsFunc(help, func(h [2]string) bool { return strings.Contains(h[1], "compose ps (custom)") }) {
 		t.Fatal("help should list the custom command")
 	}
 }
