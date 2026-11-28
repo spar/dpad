@@ -15,7 +15,7 @@ and a full-screen terminal UI. Anything it doesn't enhance goes straight to `doc
 [![CI](https://github.com/spar/dpad/actions/workflows/ci.yml/badge.svg)](https://github.com/spar/dpad/actions/workflows/ci.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/spar/dpad/badge)](https://scorecard.dev/viewer/?uri=github.com/spar/dpad)
 ![macOS, Linux and Windows](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-informational)
-[![MIT license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![GPL-3.0 license](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 [![Built with Bubble Tea](https://img.shields.io/badge/built%20with-Bubble%20Tea-ff5f87)](https://github.com/charmbracelet/bubbletea)
 [![Sponsor](https://img.shields.io/github/sponsors/spar?label=sponsor&logo=githubsponsors&color=ea4aaa)](https://github.com/sponsors/spar)
 
@@ -428,4 +428,9 @@ If dpad saves you time, you can support its development through
 
 ## License
 
-dpad is released under the [MIT License](LICENSE).
+dpad is free software under the [GNU General Public License v3.0](LICENSE)
+(GPL-3.0-only), with the attribution and naming terms in [NOTICE](NOTICE). You
+can use, modify, fork and sell it, but anything you distribute that is based on
+dpad must be released under the same license with its source, keep the
+attribution, and use a different name. Earlier versions were published under
+the MIT License.

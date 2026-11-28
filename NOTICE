@@ -1,0 +1,31 @@
+dpad
+Copyright (C) 2026 Sandeep Parekh
+https://github.com/spar/dpad
+
+dpad is free software: you can redistribute it and/or modify it under the
+terms of version 3 of the GNU General Public License as published by the Free
+Software Foundation (GPL-3.0-only), with the additional terms below. dpad is
+distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the LICENSE file for the full license text.
+
+Earlier versions of dpad were published under the MIT License and remain
+available under that license.
+
+
+Additional terms under section 7 of the GNU General Public License version 3
+
+1. Attribution (section 7(b)). Any covered work, modified or not, must
+   preserve this attribution in its source code, in its documentation, and in
+   the Appropriate Legal Notices it displays, if any:
+
+       Based on dpad by Sandeep Parekh (https://github.com/spar/dpad)
+
+2. Origin (section 7(c)). Modified versions must be marked as changed from the
+   original and must not be presented as the original dpad or as endorsed by
+   its author.
+
+3. Name and logo (section 7(e)). This license grants no rights to use the name
+   "dpad" or the dpad logo, except as needed to describe the origin of the
+   work as required above. Modified versions that are distributed must use a
+   different name.

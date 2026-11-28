@@ -37,7 +37,7 @@ class Dpad < Formula
   desc "${desc}"
   homepage "${homepage}"
   version "${versionOf(tag)}"
-  license "MIT"
+  license "GPL-3.0-only"
 
   on_macos do
     on_arm do
@@ -79,7 +79,7 @@ function scoop(tag, sums) {
     version: versionOf(tag),
     description: desc,
     homepage,
-    license: 'MIT',
+    license: 'GPL-3.0-only',
     architecture: {
       '64bit': arch('dpad-windows-amd64.zip'),
       arm64: arch('dpad-windows-arm64.zip'),
@@ -120,7 +120,7 @@ pkgrel=1
 pkgdesc="${desc}"
 arch=('x86_64' 'aarch64')
 url="${homepage}"
-license=('MIT')
+license=('GPL-3.0-only')
 optdepends=('docker: runs the commands dp passes through')
 provides=('dpad')
 conflicts=('dpad')
@@ -130,6 +130,7 @@ package() {
   install -Dm755 dpad "$pkgdir/usr/bin/dpad"
   ln -s dpad "$pkgdir/usr/bin/dp"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 NOTICE "$pkgdir/usr/share/licenses/$pkgname/NOTICE"
 }
 `;
 }
@@ -147,7 +148,7 @@ function srcinfo(tag, sums) {
 \turl = ${homepage}
 \tarch = x86_64
 \tarch = aarch64
-\tlicense = MIT
+\tlicense = GPL-3.0-only
 \toptdepends = docker: runs the commands dp passes through
 \tprovides = dpad
 \tconflicts = dpad
@@ -222,7 +223,7 @@ PublisherUrl: https://github.com/spar
 PublisherSupportUrl: ${homepage}/issues
 PackageName: dpad
 PackageUrl: ${homepage}
-License: MIT
+License: GPL-3.0-only
 LicenseUrl: ${homepage}/blob/HEAD/LICENSE
 ShortDescription: ${desc}
 Description: dp adds live stats with sparklines, multi-container logs, Compose project controls and a full-screen terminal UI to the docker CLI. Commands it does not enhance are passed through to docker, which must be installed.
