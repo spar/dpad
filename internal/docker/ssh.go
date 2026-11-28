@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -19,6 +20,11 @@ import (
 
 // DefaultRemoteSocket is the daemon socket of an ssh:// endpoint that names none.
 const DefaultRemoteSocket = "/var/run/docker.sock"
+
+// forwardTCP forwards a loopback TCP port instead of a Unix socket. OpenSSH's
+// -L parser splits a Windows path like C:\Users\... at the drive letter's
+// colon and has no escape for it.
+var forwardTCP = runtime.GOOS == "windows"
 
 // sshCommand builds the ssh process; tests replace it with a fake.
 var sshCommand = func(args ...string) *exec.Cmd { return exec.Command("ssh", args...) }
@@ -64,13 +70,15 @@ func ParseSSHHost(raw string) (SSHTarget, error) {
 	return t, nil
 }
 
-// sshTunnel forwards a private local socket to the remote daemon socket over
-// one ssh connection. Every API request is a channel on that connection, so
-// per-container stats streams don't each start an ssh process.
+// sshTunnel forwards a private local socket (a loopback port on Windows) to
+// the remote daemon socket over one ssh connection. Every API request is a
+// channel on that connection, so per-container stats streams don't each start
+// an ssh process.
 type sshTunnel struct {
-	target SSHTarget
-	dir    string
-	socket string
+	target  SSHTarget
+	network string // "unix" or "tcp"
+	local   string // the socket path, or 127.0.0.1:port
+	dir     string // holds the socket; empty for tcp
 
 	mu       sync.Mutex
 	proc     *sshProcess
@@ -104,20 +112,49 @@ func startSSHTunnelContext(ctx context.Context, host string) (*sshTunnel, error)
 	if err != nil {
 		return nil, err
 	}
-	// The socket grants root-equivalent access to the server, so it lives in a
-	// directory only this user can enter.
-	dir, err := os.MkdirTemp("", "dp-ssh-")
-	if err != nil {
-		return nil, err
+	t := &sshTunnel{target: target}
+	if forwardTCP {
+		// Unlike the Unix socket, a loopback port is open to every user on
+		// this machine, as Docker's own tcp://localhost endpoints are.
+		if t.local, err = freeLoopbackPort(); err != nil {
+			return nil, err
+		}
+		t.network = "tcp"
+	} else {
+		// The socket grants root-equivalent access to the server, so it lives
+		// in a directory only this user can enter.
+		if t.dir, err = os.MkdirTemp("", "dp-ssh-"); err != nil {
+			return nil, err
+		}
+		t.network, t.local = "unix", filepath.Join(t.dir, "docker.sock")
 	}
-	t := &sshTunnel{target: target, dir: dir, socket: filepath.Join(dir, "docker.sock")}
 	// The first start may prompt for a password or host key, which ssh does on
 	// the terminal; the TUI hasn't taken it over yet.
 	if t.proc, err = t.start(ctx, false); err != nil {
-		_ = os.RemoveAll(dir)
+		_ = t.removeDir()
 		return nil, err
 	}
 	return t, nil
+}
+
+func freeLoopbackPort() (string, error) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return "", err
+	}
+	addr := l.Addr().String()
+	return addr, l.Close()
+}
+
+// host is the endpoint the API client is configured with. Requests go
+// through dial, which this only labels.
+func (t *sshTunnel) host() string { return t.network + "://" + t.local }
+
+func (t *sshTunnel) removeDir() error {
+	if t.dir == "" {
+		return nil
+	}
+	return os.RemoveAll(t.dir)
 }
 
 // Options are the ssh options every connection dpad makes uses: the login,
@@ -143,19 +180,39 @@ func (t SSHTarget) Options(batch bool) []string {
 }
 
 func (t *sshTunnel) args(batch bool) []string {
-	args := append([]string{"-n", "-N", "-T",
-		"-o", "ExitOnForwardFailure=yes",
-		"-o", "StreamLocalBindUnlink=yes",
-	}, t.target.Options(batch)...)
+	args := []string{"-n", "-N", "-T", "-o", "ExitOnForwardFailure=yes"}
 	// OpenSSH uses colons as field separators and backslashes as escapes.
 	escape := strings.NewReplacer("\\", "\\\\", ":", "\\:")
-	return append(args, "-L", escape.Replace(t.socket)+":"+escape.Replace(t.target.Socket), "--", t.target.Host)
+	local := t.local
+	if t.network == "unix" {
+		args = append(args, "-o", "StreamLocalBindUnlink=yes")
+		local = escape.Replace(local)
+	}
+	args = append(args, t.target.Options(batch)...)
+	return append(args, "-L", local+":"+escape.Replace(t.target.Socket), "--", t.target.Host)
+}
+
+// listening reports whether ssh has bound the local end.
+func (t *sshTunnel) listening() bool {
+	if t.network == "unix" {
+		_, err := os.Stat(t.local)
+		return err == nil
+	}
+	// The probe opens and closes one channel to the daemon socket.
+	c, err := net.DialTimeout("tcp", t.local, 200*time.Millisecond)
+	if err != nil {
+		return false
+	}
+	_ = c.Close()
+	return true
 }
 
 // start runs ssh and waits until it listens on the local socket or exits.
 func (t *sshTunnel) start(ctx context.Context, batch bool) (*sshProcess, error) {
-	// A socket left by a dead ssh would look ready before the new one binds.
-	_ = os.Remove(t.socket)
+	if t.network == "unix" {
+		// A socket left by a dead ssh would look ready before the new one binds.
+		_ = os.Remove(t.local)
+	}
 	p := &sshProcess{cmd: sshCommand(t.args(batch)...), done: make(chan struct{})}
 	p.cmd.Stderr = &p.stderr
 	began := time.Now()
@@ -171,7 +228,7 @@ func (t *sshTunnel) start(ctx context.Context, batch bool) (*sshProcess, error) 
 	tick := time.NewTicker(20 * time.Millisecond)
 	defer tick.Stop()
 	for {
-		if _, err := os.Stat(t.socket); err == nil {
+		if t.listening() {
 			debuglog.Info("ssh tunnel ready", "host", t.target.Host, "ms", time.Since(began).Milliseconds())
 			return p, nil
 		}
@@ -249,7 +306,7 @@ func (t *sshTunnel) dial(ctx context.Context, _, _ string) (net.Conn, error) {
 		return nil, err
 	}
 	var d net.Dialer
-	return d.DialContext(ctx, "unix", t.socket)
+	return d.DialContext(ctx, t.network, t.local)
 }
 
 func (t *sshTunnel) Close() error {
@@ -264,5 +321,5 @@ func (t *sshTunnel) Close() error {
 		_ = p.cmd.Process.Kill()
 		<-p.done
 	}
-	return os.RemoveAll(t.dir)
+	return t.removeDir()
 }

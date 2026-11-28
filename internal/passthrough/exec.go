@@ -7,13 +7,15 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 )
 
 // Run executes `docker args...` with inherited stdio and returns its exit code.
 func Run(args []string) int {
 	path, err := exec.LookPath("docker")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "dp: docker CLI not found in PATH")
+		fmt.Fprintf(os.Stderr, "dp: 'docker %s' needs the docker CLI, which is not installed or not in PATH.\n"+
+			"dp's own ps, images, stats and logs, and the TUI, work without it.\n", strings.Join(args, " "))
 		return 127
 	}
 	cmd := exec.Command(path, args...)

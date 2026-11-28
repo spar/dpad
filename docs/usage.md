@@ -193,7 +193,9 @@ press `v`. Press `y` to run it. dpad runs
 machine against the current daemon, from an empty folder, so it needs no
 Compose files. That makes it the way to clear out a project whose folder you
 moved or deleted. On an SSH daemon Compose reaches the host through
-`DOCKER_HOST`; no shell on the server is needed. Afterwards each row says
+`DOCKER_HOST`; no shell on the server is needed. If this machine has no Compose
+CLI, dpad runs the same command on the SSH host instead, which then needs a
+POSIX shell and Compose there. Afterwards each row says
 whether the resource is gone, kept, or still there. Compose files are never
 touched. `D` on a container row still removes just that container.
 
@@ -778,6 +780,11 @@ rejected because OpenSSH interprets environment expansions locally.
 Passthrough commands and the `e` shell run the local `docker` CLI, which
 handles `ssh://` endpoints itself; on macOS `brew install docker` is enough
 (no Docker Desktop needed).
+
+On Windows, where OpenSSH can't take a `C:\...` socket path, `dp` forwards a
+random port on `127.0.0.1` instead. Other users signed in to the
+same Windows machine could connect to that port while `dp` runs. Set the
+endpoint in PowerShell with `$env:DOCKER_HOST = "ssh://me@server"`.
 
 ### Connection status
 

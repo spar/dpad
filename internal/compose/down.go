@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"dpad/internal/debuglog"
+	"dpad/internal/docker"
 )
 
 // DownArgs is the Compose command Down runs, for showing in a preview.
@@ -24,6 +25,8 @@ func DownArgs(name string, volumes bool) []string {
 // after the project's folder is gone. It runs on this machine against the
 // daemon in env (SSH endpoints included), from an empty folder and without
 // COMPOSE_FILE, so Compose can't pick up an unrelated project's files.
+// When this machine has no Compose CLI but the endpoint is ssh://, it runs
+// on the SSH host instead, as remote projects do.
 func Down(ctx context.Context, env []string, name string, volumes bool) (string, error) {
 	dir, err := os.MkdirTemp("", "dpad-down-")
 	if err != nil {
@@ -35,12 +38,14 @@ func Down(ctx context.Context, env []string, name string, volumes bool) (string,
 		return strings.EqualFold(key, "COMPOSE_FILE") || strings.EqualFold(key, "COMPOSE_PROJECT_NAME")
 	})
 	var errs []error
+	installed := false
 	for _, cli := range composeCLIs {
 		executable, err := exec.LookPath(cli[0])
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
+		installed = true
 		run := func(args ...string) *exec.Cmd {
 			cmd := exec.CommandContext(ctx, executable, append(slices.Clone(cli[1:]), args...)...)
 			cmd.Env, cmd.Dir = env, dir
@@ -56,7 +61,30 @@ func Down(ctx context.Context, env []string, name string, volumes bool) (string,
 		out := &limitedOutput{limit: 32 << 10}
 		cmd := run(DownArgs(name, volumes)...)
 		cmd.Stdout, cmd.Stderr = out, out
-		return out.String(), cmd.Run()
+		err = cmd.Run()
+		return out.String(), err
+	}
+	if target, err := docker.ParseSSHHost(envValue(env, "DOCKER_HOST")); err == nil && !installed {
+		return downRemote(ctx, env, target, name, volumes)
 	}
 	return "", errors.Join(errs...)
+}
+
+func downRemote(ctx context.Context, env []string, target docker.SSHTarget, name string, volumes bool) (string, error) {
+	args := make([]string, 0, 8)
+	for _, arg := range DownArgs(name, volumes) {
+		args = append(args, quote(arg))
+	}
+	down := strings.Join(args, " ")
+	script := "cd / && unset COMPOSE_FILE COMPOSE_PROJECT_NAME && " +
+		"export DOCKER_HOST=" + quote("unix://"+target.Socket) + " DOCKER_CONTEXT= DOCKER_TLS= DOCKER_TLS_VERIFY= DOCKER_CERT_PATH= && " +
+		"if docker compose version >/dev/null 2>&1; then exec docker compose " + down + "; else exec docker-compose " + down + "; fi"
+	cmd, err := sshScript(ctx, env, script, false)
+	if err != nil {
+		return "", err
+	}
+	out := &limitedOutput{limit: 32 << 10}
+	cmd.Stdout, cmd.Stderr = out, out
+	err = cmd.Run()
+	return out.String(), err
 }

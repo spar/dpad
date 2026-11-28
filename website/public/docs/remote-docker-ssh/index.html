@@ -144,6 +144,7 @@
   <li><b>Key or agent authentication</b> if you want dp to reconnect by itself after a dropped connection. It never prompts again once the UI is open.</li>
   <li><b>The <code>docker</code> CLI on your laptop</b> for shells (<kbd>e</kbd>) and passthrough commands such as <code>dp exec</code>. On macOS, <code>brew install docker</code> is enough; you don't need Docker Desktop for a remote daemon.</li>
 </ul>
+<p>On Windows, set the endpoint in PowerShell with <code>$env:DOCKER_HOST = "ssh://me@server"</code> and then run <code>dp</code>.</p>
 
 <h2>Save the server as a Docker context</h2>
 <p>Typing <code>DOCKER_HOST</code> every time gets old. A Docker context remembers the endpoint for both <code>docker</code> and <code>dp</code>:</p>
@@ -158,7 +159,7 @@
 <p>Replace <code>1000</code> with the remote user's UID (<code>ssh me@server id -u</code>) and make sure their rootless daemon is running. Rootless Docker doesn't need the <code>docker</code> group. Use the real path: <code>~</code> and shell variables are not expanded on the remote side. The same address works in <code>docker context create</code>.</p>
 
 <h2>What happens on the wire</h2>
-<p>dp starts one <code>ssh</code> process that forwards a private local socket to the server's Docker socket, then talks to the Docker Engine API through it. Nothing is installed on the server. If the connection drops, dp starts a new tunnel in the background and the UI shows the connection state below the tabs; lists and open details refresh when it comes back, without losing your filters or selection.</p>
+<p>dp starts one <code>ssh</code> process that forwards a private local socket to the server's Docker socket, then talks to the Docker Engine API through it. On Windows, where OpenSSH can't take a <code>C:\...</code> socket path, dp forwards a random port on <code>127.0.0.1</code> instead; other users signed in to the same Windows machine could reach it while dp runs. Nothing is installed on the server. If the connection drops, dp starts a new tunnel in the background and the UI shows the connection state below the tabs; lists and open details refresh when it comes back, without losing your filters or selection.</p>
 
 <h2>What works over SSH</h2>
 <table>
