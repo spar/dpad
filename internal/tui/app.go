@@ -200,7 +200,9 @@ func (a *App) Init() tea.Cmd {
 	return tea.Batch(append(cmds, a.tabs[a.active].Focus())...)
 }
 
-func (a *App) bodyHeight() int { return max(a.height-5, 1) }
+// bodyHeight leaves rows for the tab bar, its rule, the daemon line, the rule
+// above the status line, the status line and the footer.
+func (a *App) bodyHeight() int { return max(a.height-6, 1) }
 
 func (a *App) resize(width, height int) {
 	a.width, a.height = width, height
@@ -600,7 +602,8 @@ func (a *App) render() string {
 		body += strings.Repeat("\n", n)
 	}
 	bar, rule := a.tabLines()
-	return strings.Join([]string{bar, rule, header, body, render.DimLine(status), ansi.Truncate(a.footer(), a.width, "…")}, "\n")
+	statusRule := render.Dim.Render(strings.Repeat("─", a.width))
+	return strings.Join([]string{bar, rule, header, body, statusRule, render.StatusLine(status), ansi.Truncate(a.footer(), a.width, "…")}, "\n")
 }
 
 // tabBarCache holds the tab bar and the rule under it, which only change
