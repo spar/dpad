@@ -13,7 +13,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 
-	"dpad/internal/compose"
+	"github.com/spar/dpad/internal/compose"
 )
 
 func composeUIFixture(t *testing.T) (*App, string, string) {

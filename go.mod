@@ -1,4 +1,4 @@
-module dpad
+module github.com/spar/dpad
 
 go 1.26.7
 

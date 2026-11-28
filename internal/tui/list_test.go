@@ -10,9 +10,9 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
 
-	"dpad/internal/docker"
-	"dpad/internal/render"
-	"dpad/internal/sortx"
+	"github.com/spar/dpad/internal/docker"
+	"github.com/spar/dpad/internal/render"
+	"github.com/spar/dpad/internal/sortx"
 )
 
 func TestContainersNavigateAndSelect(t *testing.T) {

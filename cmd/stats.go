@@ -9,10 +9,10 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"dpad/internal/docker"
-	"dpad/internal/render"
-	"dpad/internal/sortx"
-	"dpad/internal/tui"
+	"github.com/spar/dpad/internal/docker"
+	"github.com/spar/dpad/internal/render"
+	"github.com/spar/dpad/internal/sortx"
+	"github.com/spar/dpad/internal/tui"
 )
 
 func newStatsCmd() *cobra.Command {

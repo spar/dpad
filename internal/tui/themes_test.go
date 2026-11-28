@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"dpad/internal/render"
-	"dpad/internal/theme"
+	"github.com/spar/dpad/internal/render"
+	"github.com/spar/dpad/internal/theme"
 )
 
 func TestThemePickerPreviewsKeepsAndCancels(t *testing.T) {

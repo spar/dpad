@@ -9,7 +9,7 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 
-	"dpad/internal/docker"
+	"github.com/spar/dpad/internal/docker"
 )
 
 const projectLogBackoff = time.Second

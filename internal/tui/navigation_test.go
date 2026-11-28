@@ -10,7 +10,7 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/volume"
 
-	"dpad/internal/render"
+	"github.com/spar/dpad/internal/render"
 )
 
 func TestNavigationKeepsViewportUntilSelectionLeavesIt(t *testing.T) {

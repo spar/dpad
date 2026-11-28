@@ -169,7 +169,7 @@ dp --version
 
 **Other ways to install:**
 - System-wide (no PATH changes needed): `sudo make install PREFIX=/usr/local`
-- With `go install .`: this puts `dpad` in `$(go env GOPATH)/bin`. Add `alias dp=dpad` to your shell rc file.
+- With `go install github.com/spar/dpad@latest` (or `go install .` in a clone): this puts `dpad` in `$(go env GOPATH)/bin`. Add `alias dp=dpad` to your shell rc file.
 - **Shell completion:** for example, `dp completion zsh > "${fpath[1]}/_dp"`. See `dp completion --help`.
 
 To remove it, run `make uninstall` (use the same `PREFIX` you installed with).

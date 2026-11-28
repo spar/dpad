@@ -16,13 +16,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"dpad/internal/config"
-	"dpad/internal/debuglog"
-	"dpad/internal/docker"
-	"dpad/internal/passthrough"
-	"dpad/internal/render"
-	"dpad/internal/sortx"
-	"dpad/internal/tui"
+	"github.com/spar/dpad/internal/config"
+	"github.com/spar/dpad/internal/debuglog"
+	"github.com/spar/dpad/internal/docker"
+	"github.com/spar/dpad/internal/passthrough"
+	"github.com/spar/dpad/internal/render"
+	"github.com/spar/dpad/internal/sortx"
+	"github.com/spar/dpad/internal/tui"
 )
 
 // version is stamped by `make build`; see buildVersion for other builds.

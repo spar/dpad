@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"dpad/internal/debuglog"
+	"github.com/spar/dpad/internal/debuglog"
 )
 
 // DefaultRemoteSocket is the daemon socket of an ssh:// endpoint that names none.

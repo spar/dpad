@@ -13,7 +13,7 @@ import (
 	"github.com/moby/moby/api/types/image"
 	"github.com/moby/moby/client"
 
-	"dpad/internal/debuglog"
+	"github.com/spar/dpad/internal/debuglog"
 )
 
 // Client is a thin wrapper around the Engine API client.

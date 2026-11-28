@@ -14,10 +14,10 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/moby/moby/api/types/container"
 
-	"dpad/internal/compose"
-	"dpad/internal/config"
-	"dpad/internal/render"
-	"dpad/internal/sortx"
+	"github.com/spar/dpad/internal/compose"
+	"github.com/spar/dpad/internal/config"
+	"github.com/spar/dpad/internal/render"
+	"github.com/spar/dpad/internal/sortx"
 )
 
 // composeDiscoveredMsg lists projects from container labels so the preview can

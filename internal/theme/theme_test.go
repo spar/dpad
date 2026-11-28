@@ -15,7 +15,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 
-	"dpad/themes"
+	"github.com/spar/dpad/themes"
 )
 
 // TestBuiltinThemes checks every file in themes/, so a new theme only needs

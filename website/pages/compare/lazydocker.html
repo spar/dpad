@@ -17,7 +17,7 @@ related: /alternatives/lazydocker/, /docs/compose-logs/, /docs/remote-docker-ssh
   <li><b>You want to look inside images.</b> It shows the ancestor layers of an image.</li>
   <li><b>You attach to containers often.</b> It has attach (<kbd>a</kbd>) next to exec (<kbd>E</kbd>), bulk commands (<kbd>b</kbd>) on each panel, and opens a container's first port in the browser (<kbd>w</kbd>).</li>
   <li><b>You want to change how Compose is run.</b> Its <code>commandTemplates</code> let you replace the command behind each Compose action, and its stats graphs can chart any metric you point them at.</li>
-  <li><b>You install through Chocolatey, AUR, asdf or <code>go install</code>.</b> lazydocker is in all of them, plus Homebrew and Scoop. dpad has Homebrew, Scoop and install scripts today.</li>
+  <li><b>You install through Chocolatey, AUR or asdf.</b> lazydocker is in all of them, plus Homebrew, Scoop and <code>go install</code>. dpad has Homebrew, Scoop, <code>go install</code> and install scripts today.</li>
 </ul>
 
 <h2>Pick dpad if</h2>
@@ -52,7 +52,7 @@ related: /alternatives/lazydocker/, /docs/compose-logs/, /docs/remote-docker-ssh
     <tr><td>Themes</td><td>eleven built in, live picker, theme files</td><td>border, selection and option colors in the config</td></tr>
     <tr><td>Docker contexts</td><td>follows the current context; switch inside the UI with <kbd>c</kbd></td><td>follows the current context (since v0.23.0)</td></tr>
     <tr><td>Remote daemon over SSH</td><td>yes, with automatic reconnects and rootless socket paths</td><td>yes (fixed in v0.24.0)</td></tr>
-    <tr><td>Install</td><td>Homebrew, Scoop, install scripts, release archives</td><td>Homebrew, Scoop, Chocolatey, AUR, asdf, <code>go install</code>, Docker image, release archives</td></tr>
+    <tr><td>Install</td><td>Homebrew, Scoop, install scripts, <code>go install</code>, release archives</td><td>Homebrew, Scoop, Chocolatey, AUR, asdf, <code>go install</code>, Docker image, release archives</td></tr>
   </tbody>
 </table>
 <p>We haven't compared speed or memory, because we haven't run the same test on both. dpad's <a href="https://github.com/spar/dpad#performance">published numbers</a> compare <code>dp</code> with <code>docker</code>, not with lazydocker.</p>

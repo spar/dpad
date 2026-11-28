@@ -16,7 +16,7 @@ import (
 	"github.com/moby/moby/api/types/system"
 	"github.com/moby/moby/client"
 
-	"dpad/internal/debuglog"
+	"github.com/spar/dpad/internal/debuglog"
 )
 
 // SystemInfo describes the daemon and the machine it runs on, from /info and

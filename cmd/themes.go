@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"dpad/internal/render"
-	"dpad/internal/theme"
+	"github.com/spar/dpad/internal/render"
+	"github.com/spar/dpad/internal/theme"
 )
 
 // setupTheme applies the theme named by the --theme flag, else $DPAD_THEME,

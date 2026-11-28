@@ -6,7 +6,7 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 
-	"dpad/internal/sortx"
+	"github.com/spar/dpad/internal/sortx"
 )
 
 // loader keeps a list to one request at a time. A reload asked for while one

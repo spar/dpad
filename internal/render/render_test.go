@@ -13,8 +13,8 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/image"
 
-	"dpad/internal/docker"
-	"dpad/internal/theme"
+	"github.com/spar/dpad/internal/docker"
+	"github.com/spar/dpad/internal/theme"
 )
 
 func TestPorts(t *testing.T) {

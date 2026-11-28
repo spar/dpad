@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"dpad/internal/docker"
+	"github.com/spar/dpad/internal/docker"
 )
 
 func TestLogScrollWrapsAndPans(t *testing.T) {

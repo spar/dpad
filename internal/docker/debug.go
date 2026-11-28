@@ -7,7 +7,7 @@ import (
 
 	"github.com/moby/moby/client"
 
-	"dpad/internal/debuglog"
+	"github.com/spar/dpad/internal/debuglog"
 )
 
 // logRequests records each Engine API request in the debug log with its

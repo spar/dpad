@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"dpad/internal/render"
+	"github.com/spar/dpad/internal/render"
 )
 
 // maxDiffCells bounds the LCS table for the changed middle of a file. Compose

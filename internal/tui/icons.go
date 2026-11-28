@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"dpad/internal/config"
-	"dpad/internal/render"
+	"github.com/spar/dpad/internal/config"
+	"github.com/spar/dpad/internal/render"
 )
 
 // applyIcons turns container icons on for icons: nerd, or for auto when the
