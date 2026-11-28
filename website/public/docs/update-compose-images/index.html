@@ -11,17 +11,17 @@
 <meta property="og:url" content="https://dpad.sh/docs/update-compose-images/">
 <meta property="og:title" content="Update Docker Compose containers to the latest images · dpad">
 <meta property="og:description" content="Pull new images and recreate Docker Compose services for one project or every project on a host, with a preview first and live progress, using dpad.">
-<meta property="og:image" content="https://dpad.sh/assets/og-image.png?v=f5d4e20613">
+<meta property="og:image" content="https://dpad.sh/assets/og-image.png?v=b0fd7168eb">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="dpad, a colorful terminal UI for the docker CLI">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0a0e1f">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self' 'sha256-F3PTjDnyzEQ3PAtS&#43;GmScgTuEbTqUU2yriLJBfgp12o='; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<link rel="icon" href="/assets/logo.svg?v=f5d4e20613" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=f5d4e20613">
+<link rel="icon" href="/assets/logo.svg?v=b0fd7168eb" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=b0fd7168eb">
 <link rel="preload" href="/assets/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css?v=f5d4e20613">
+<link rel="stylesheet" href="/assets/site.css?v=b0fd7168eb">
 
 <script>(function () {
   var root = document.documentElement;
@@ -30,7 +30,7 @@
     if (localStorage.getItem('dpad-theme') === 'light') root.setAttribute('data-theme', 'light');
   } catch (e) {}
 })();</script>
-<script src="/assets/site.js?v=f5d4e20613" defer></script>
+<script src="/assets/site.js?v=b0fd7168eb" defer></script>
 <script type="application/ld+json">
 [
   {
@@ -49,7 +49,7 @@
     "dateModified": "2026-11-28",
     "description": "Pull new images and recreate Docker Compose services for one project or every project on a host, with a preview first and live progress, using dpad.",
     "headline": "Update Compose images safely",
-    "image": "https://dpad.sh/assets/og-image.png?v=f5d4e20613",
+    "image": "https://dpad.sh/assets/og-image.png?v=b0fd7168eb",
     "inLanguage": "en",
     "isPartOf": {
       "@type": "WebSite",
@@ -89,7 +89,7 @@
 <body>
 
 <header class="wrap nav">
-  <a class="brand" href="/"><img src="/assets/logo.svg?v=f5d4e20613" alt="" width="34" height="34">dpad</a>
+  <a class="brand" href="/"><img src="/assets/logo.svg?v=b0fd7168eb" alt="" width="34" height="34">dpad</a>
   <ul>
     <li><a href="/#install">Install</a></li>
     <li><a href="/#features">Features</a></li>
@@ -152,7 +152,7 @@
   <li>Read the preview. Each project says <code>ready</code> or why it is blocked. <kbd>enter</kbd> on a row shows the host it will run on, the working directory, Compose files, env files, services and image tags.</li>
   <li>Press <kbd>y</kbd>.</li>
 </ol>
-<figure><img src="/assets/shots/projects.svg?v=f5d4e20613" width="1348" height="634" loading="lazy" alt="Projects tab grouping containers by Compose project and service with running and unhealthy counts"><figcaption>The Projects tab, where <kbd>u</kbd> and <kbd>U</kbd> start an update.</figcaption></figure>
+<figure><img src="/assets/shots/projects.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="Projects tab grouping containers by Compose project and service with running and unhealthy counts"><figcaption>The Projects tab, where <kbd>u</kbd> and <kbd>U</kbd> start an update.</figcaption></figure>
 
 <p>Each project runs <code>docker compose pull --include-deps</code>, then <code>up -d --no-build --pull never</code> only if the pull worked. Projects run one at a time, and dpad reads each project's configuration again before every step: if it no longer matches the preview, that project stops with a message and nothing is pulled or recreated for it. A failed project doesn't stop the others.</p>
 

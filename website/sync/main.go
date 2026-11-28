@@ -90,6 +90,15 @@ func outputs(root string) (map[string][]byte, error) {
 		}
 		out[dst("shots/"+name)] = b
 		out[dst("shots-light/"+name)] = light
+		if name == "demo.svg" {
+			for dir, svg := range map[string][]byte{"shots/": b, "shots-light/": light} {
+				still, err := firstFrame(svg)
+				if err != nil {
+					return nil, fmt.Errorf("%s%s: %w", dir, name, err)
+				}
+				out[dst(dir+"demo-still.svg")] = still
+			}
+		}
 	}
 
 	themes, err := filepath.Glob(filepath.Join(root, "docs/images/themes/*.svg"))
@@ -154,6 +163,32 @@ func assetVersion(dir string, out map[string][]byte) (string, error) {
 		h.Write(files[path])
 	}
 	return hex.EncodeToString(h.Sum(nil))[:10], nil
+}
+
+var (
+	stripAnimation = regexp.MustCompile(`#strip\{animation:[^}]*\}@keyframes play\{.*?\}\}`)
+	nextFrame      = regexp.MustCompile(`<g transform="translate\(0 [1-9]\d*\)">`)
+	rowDef         = regexp.MustCompile(`<g id="(r\w+)">.*?</g>\n?`)
+)
+
+// firstFrame turns the animated demo into a still of its first frame for
+// phones, where the animation's thousands of rows cost seconds of main-thread
+// work for text too small to read.
+func firstFrame(svg []byte) ([]byte, error) {
+	anim := stripAnimation.FindIndex(svg)
+	next := nextFrame.FindIndex(svg)
+	end := bytes.LastIndex(svg, []byte("</g></g></g>\n</g></svg>"))
+	if anim == nil || next == nil || end < next[0] {
+		return nil, fmt.Errorf("not an animated screenshot from svg.js")
+	}
+	s := slices.Concat(svg[:anim[0]], svg[anim[1]:next[0]], svg[end+len("</g>"):])
+	return rowDef.ReplaceAllFunc(s, func(def []byte) []byte {
+		id := rowDef.FindSubmatch(def)[1]
+		if bytes.Contains(s, []byte(`href="#`+string(id)+`"`)) {
+			return def
+		}
+		return nil
+	}), nil
 }
 
 func lightCopy(root, name string, dark []byte) ([]byte, error) {

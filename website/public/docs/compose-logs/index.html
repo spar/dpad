@@ -11,17 +11,17 @@
 <meta property="og:url" content="https://dpad.sh/docs/compose-logs/">
 <meta property="og:title" content="Follow logs from several Docker Compose services at once · dpad">
 <meta property="og:description" content="Stream logs from several containers, Compose services or whole projects in one view, with stable colors, log level highlighting and a live regex filter.">
-<meta property="og:image" content="https://dpad.sh/assets/og-image.png?v=f5d4e20613">
+<meta property="og:image" content="https://dpad.sh/assets/og-image.png?v=b0fd7168eb">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="dpad, a colorful terminal UI for the docker CLI">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0a0e1f">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self' 'sha256-F3PTjDnyzEQ3PAtS&#43;GmScgTuEbTqUU2yriLJBfgp12o='; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<link rel="icon" href="/assets/logo.svg?v=f5d4e20613" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=f5d4e20613">
+<link rel="icon" href="/assets/logo.svg?v=b0fd7168eb" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=b0fd7168eb">
 <link rel="preload" href="/assets/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css?v=f5d4e20613">
+<link rel="stylesheet" href="/assets/site.css?v=b0fd7168eb">
 
 <script>(function () {
   var root = document.documentElement;
@@ -30,7 +30,7 @@
     if (localStorage.getItem('dpad-theme') === 'light') root.setAttribute('data-theme', 'light');
   } catch (e) {}
 })();</script>
-<script src="/assets/site.js?v=f5d4e20613" defer></script>
+<script src="/assets/site.js?v=b0fd7168eb" defer></script>
 <script type="application/ld+json">
 [
   {
@@ -49,7 +49,7 @@
     "dateModified": "2026-11-28",
     "description": "Stream logs from several containers, Compose services or whole projects in one view, with stable colors, log level highlighting and a live regex filter.",
     "headline": "Follow logs from several Compose services",
-    "image": "https://dpad.sh/assets/og-image.png?v=f5d4e20613",
+    "image": "https://dpad.sh/assets/og-image.png?v=b0fd7168eb",
     "inLanguage": "en",
     "isPartOf": {
       "@type": "WebSite",
@@ -89,7 +89,7 @@
 <body>
 
 <header class="wrap nav">
-  <a class="brand" href="/"><img src="/assets/logo.svg?v=f5d4e20613" alt="" width="34" height="34">dpad</a>
+  <a class="brand" href="/"><img src="/assets/logo.svg?v=b0fd7168eb" alt="" width="34" height="34">dpad</a>
   <ul>
     <li><a href="/#install">Install</a></li>
     <li><a href="/#features">Features</a></li>
@@ -155,11 +155,11 @@
 <span class="p">$</span> dp logs --since 15m -t api worker     <span class="c"># last 15 minutes, with timestamps</span>
 <span class="p">$</span> dp logs -f --grep '(?i)error|timeout' shop</pre>
 <p>With several containers, every line starts with the container name in a stable color, and stderr lines are marked with <code>┃</code>. <code>--grep</code> keeps only matching lines and highlights the match. Log levels are colored in plain text, JSON (<code>"level"</code> fields), logfmt (<code>level=</code>) and nginx formats.</p>
-<figure><img src="/assets/cli.svg?v=f5d4e20613" width="1348" height="634" loading="lazy" alt="dp ps -a sorted by status, and dp logs interleaving three containers with highlighted log levels"><figcaption><code>dp logs</code> interleaving three containers.</figcaption></figure>
+<figure><img src="/assets/cli.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="dp ps -a sorted by status, and dp logs interleaving three containers with highlighted log levels"><figcaption><code>dp logs</code> interleaving three containers.</figcaption></figure>
 
 <h2>In the TUI</h2>
 <p>Open <code>dp</code>, go to the Projects tab with <kbd>4</kbd>, select a project row and press <kbd>enter</kbd>. You get every container in the project in one viewer, each with its last 500 lines to start. <kbd>enter</kbd> on a single container, in any tab, follows just that one.</p>
-<figure><img src="/assets/shots/logs.svg?v=f5d4e20613" width="1348" height="634" loading="lazy" alt="Project log viewer following many containers, filtered by a regex with the matches highlighted"><figcaption>A project's logs filtered with <code>(?i)error|warn</code>.</figcaption></figure>
+<figure><img src="/assets/shots/logs.svg?v=b0fd7168eb" width="1348" height="634" loading="lazy" alt="Project log viewer following many containers, filtered by a regex with the matches highlighted"><figcaption>A project's logs filtered with <code>(?i)error|warn</code>.</figcaption></figure>
 
 <h3>Filter with a regular expression</h3>
 <p>Press <kbd>/</kbd> and type a pattern. Only matching lines stay on screen, matches are highlighted, and new lines are filtered as they arrive.</p>

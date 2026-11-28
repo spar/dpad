@@ -13,9 +13,10 @@
   // Screenshots have a light copy in shots-light/, written by `make website`.
   function swapShots() {
     var dir = isLight() ? '/assets/shots-light/' : '/assets/shots/';
-    document.querySelectorAll('img[src*="/assets/shots"]').forEach(function (img) {
-      var src = img.getAttribute('src').replace(/\/assets\/shots(-light)?\//, dir);
-      if (src !== img.getAttribute('src')) img.setAttribute('src', src);
+    document.querySelectorAll('img[src*="/assets/shots"], source[srcset*="/assets/shots"]').forEach(function (el) {
+      var attr = el.tagName === 'IMG' ? 'src' : 'srcset';
+      var src = el.getAttribute(attr).replace(/\/assets\/shots(-light)?\//, dir);
+      if (src !== el.getAttribute(attr)) el.setAttribute(attr, src);
     });
   }
 
