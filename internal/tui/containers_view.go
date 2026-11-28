@@ -109,6 +109,10 @@ func (v *ContainersView) watchUsage() tea.Cmd {
 
 func (v *ContainersView) Title() string { return "Containers" }
 
+func (v *ContainersView) Help() [][2]string {
+	return append(v.list.Help(), [2]string{"t", "show or hide the host panel: the host's and the containers' CPU and memory"})
+}
+
 func (v *ContainersView) load() tea.Cmd {
 	v.eventPending = false
 	v.eventGeneration++

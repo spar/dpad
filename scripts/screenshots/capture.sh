@@ -46,7 +46,7 @@ echo "capture: recording CLI commands"
 python3 "$here/drive.py" "$work/raw" 160 39 "$here/cli.json" -- bash "$here/cli.sh" "$dp"
 
 echo "capture: rendering"
-for name in containers stats projects compose-edit logs details events prune; do
+for name in containers stats projects compose-edit logs details events prune system; do
 	node "$here/svg.js" 150 30 dp "$out/$name.svg" "$work/raw/$name.bin"
 done
 node "$here/svg.js" 120 14 dp "$out/settings.svg" "$work/raw/settings.bin"
@@ -58,7 +58,7 @@ done
 node "$here/svg.js" 160 39 '~/app' "$out/cli.svg" "$work/raw/cli.bin"
 node "$here/svg.js" --anim 10 150 30 dp "$out/demo.svg" "$work"/raw/tour-*.bin
 mkdir -p "$out/light"
-for name in containers stats projects compose-edit logs details events prune; do
+for name in containers stats projects compose-edit logs details events prune system; do
 	node "$here/svg.js" 150 30 dp "$out/light/$name.svg" "$work/ink/$name.bin"
 done
 node "$here/svg.js" 120 14 dp "$out/light/settings.svg" "$work/ink/settings.bin"

@@ -34,6 +34,9 @@ type Config struct {
 	// Icons puts a Nerd Font icon before container names: auto (only in
 	// terminals that ship the glyphs), nerd, or off. Empty means auto.
 	Icons string `yaml:"icons"`
+	// HostPanel is off to hide the host and Docker usage rows on the
+	// Containers tab. Empty means on.
+	HostPanel string `yaml:"hostPanel"`
 }
 
 // ComposeProject holds per-project settings for Compose updates, keyed by
@@ -70,7 +73,7 @@ const (
 var ReservedKeys = []string{
 	"q", "ctrl+c", "tab", "shift+tab", "left", "right", "up", "down", "h", "j", "k", "l",
 	"/", "esc", "?", "ctrl+r", "enter", "space", "pgup", "pgdown", "ctrl+u", "ctrl+d", "home", "end", "g", "G",
-	"d", "e", "S", "x", "X", "R", "P", "K", "D", "u", "U", "c", "C", "o",
+	"d", "e", "S", "x", "X", "R", "P", "K", "D", "u", "U", "c", "C", "o", "I",
 	"s", "r", "t", "v", "m", "n", "i", "p", "a",
 	"1", "2", "3", "4", "5", "6", "7", "8", "9",
 }
@@ -266,6 +269,10 @@ func SaveEditor(command string) error { return save("editor", command) }
 
 // SaveCPUGraph sets cpuGraph: in the config file.
 func SaveCPUGraph(style string) error { return save("cpuGraph", style) }
+
+// SaveHostPanel sets hostPanel: in the config file, or removes it when mode
+// is empty.
+func SaveHostPanel(mode string) error { return save("hostPanel", mode) }
 
 // SaveIcons sets icons: in the config file.
 func SaveIcons(mode string) error { return save("icons", mode) }

@@ -54,6 +54,9 @@ type dockerClient interface {
 	PruneTargets(ctx context.Context, kind docker.PruneKind, all bool) ([]docker.PruneTarget, error)
 	PruneOne(ctx context.Context, kind docker.PruneKind, t docker.PruneTarget) error
 	PruneBuildCache(ctx context.Context) ([]string, uint64, error)
+	SystemInfo(ctx context.Context) (docker.SystemInfo, error)
+	DiskUsage(ctx context.Context) (docker.DiskUsage, error)
+	WatchHost(ctx context.Context, daemonName, root string) (<-chan docker.HostUpdate, error)
 }
 
 var _ dockerClient = (*docker.Client)(nil)

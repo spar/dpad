@@ -19,7 +19,7 @@ import (
 // shots are the docs/images screenshots the site shows.
 var shots = []string{
 	"compose-edit.svg", "containers.svg", "demo.svg", "details.svg", "events.svg",
-	"logs.svg", "projects.svg", "prune.svg", "settings.svg", "stats.svg",
+	"logs.svg", "projects.svg", "prune.svg", "settings.svg", "stats.svg", "system.svg",
 }
 
 // lightShots picks the light copies of the screenshots. Keep it in step with

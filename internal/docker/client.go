@@ -51,6 +51,9 @@ type engine interface {
 	VolumeRemove(context.Context, string, client.VolumeRemoveOptions) (client.VolumeRemoveResult, error)
 	NetworkRemove(context.Context, string, client.NetworkRemoveOptions) (client.NetworkRemoveResult, error)
 	DiskUsage(context.Context, client.DiskUsageOptions) (client.DiskUsageResult, error)
+	Info(context.Context, client.InfoOptions) (client.SystemInfoResult, error)
+	ServerVersion(context.Context, client.ServerVersionOptions) (client.ServerVersionResult, error)
+	DaemonHost() string
 	BuildCachePrune(context.Context, client.BuildCachePruneOptions) (client.BuildCachePruneResult, error)
 }
 

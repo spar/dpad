@@ -35,7 +35,7 @@ func TestFooterKeepsHelpAndQuitAtAnyWidth(t *testing.T) {
 	}
 	a.active = 0
 	a.resize(200, 30)
-	if !strings.Contains(ansi.Strip(a.footer()), "tab switch · o settings · / filter · s/r sort: status · d details") {
+	if !strings.Contains(ansi.Strip(a.footer()), "tab switch · o settings · / filter · s/r sort: status · I system · d details") {
 		t.Errorf("a wide footer lost hints: %q", ansi.Strip(a.footer()))
 	}
 	a.resize(110, 30)

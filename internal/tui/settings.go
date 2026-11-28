@@ -43,6 +43,7 @@ func (a *App) openSettings() {
 		{name: "CPU graph", value: func() string {
 			return a.containers().graph + " " + render.Dim.Render("· Containers tab; enter cycles "+strings.Join(render.GraphStyles, "/"))
 		}, open: a.cycleCPUGraph},
+		{name: "Host panel", key: "t", value: a.hostPanelValue, open: a.toggleHostPanel},
 		{name: "Icons", value: a.iconsValue, open: func() tea.Cmd { a.cycleIcons(); return nil }},
 		{name: "Mouse", value: func() string {
 			if a.mouse {

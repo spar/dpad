@@ -54,7 +54,9 @@ overview, installation and screenshots, see the [README](../README.md).
 | `ctrl+r` | refresh |
 | `c` (list tabs) | choose a Docker context for this session |
 | `C` | choose a color theme; the screen previews each one (`enter` keeps it and saves it to `config.yaml`, `esc` cancels) |
-| `o` | settings: shows the theme, Docker context, editor, CPU graph, icons, mouse setting and config file location; `enter` on a row opens its picker, or cycles the CPU graph style or icon mode |
+| `o` | settings: shows the theme, Docker context, editor, CPU graph, host panel, icons, mouse setting and config file location; `enter` on a row opens its picker, or cycles the CPU graph style, host panel or icon mode |
+| `t` (Containers) | show or hide the [host panel](#host-panel-and-system-screen) |
+| `I` | the [System screen](#host-panel-and-system-screen): the daemon's host, engine versions, usage and `docker system df` |
 | `?` | help |
 | `q` | quit |
 
@@ -104,6 +106,40 @@ The graph uses a square-root scale, so 2% is visible next to 40%. Under 0.5% a
 second draws as idle (a dim baseline or dot), and anything above 100% (more
 than one core) fills the cell. Colors follow the theme's usage roles, like the
 Stats bars.
+
+### Host panel and System screen
+
+Above the list, the Containers tab shows three rows about the machine Docker
+runs on:
+
+| Row | Shows |
+|---|---|
+| System | the host's name, its CPU use across all cores and its memory use |
+| Docker | the Docker version, and the CPU and memory all containers use together |
+| Host | the OS, the load average and the uptime |
+
+Over `ssh://` this is the remote server. Its name, cores, memory, OS and Docker
+version come from the daemon's `/info`. The host's own CPU, memory, load and
+uptime are read from `/proc` every two seconds by one long-running command: run
+locally for a local Linux daemon, and over a single `ssh` connection for an
+`ssh://` daemon. Docker Desktop runs Docker in a VM, and `tcp://` daemons give no
+shell, so there the System row says host usage isn't available and the Docker
+row still shows the containers. The Docker row comes from the same stats stream
+as the CPU graph, so it needs a CPU graph style other than `off`. Wider
+terminals add network rates, swap, the running count, the kernel and the
+architecture. Below 80 columns or 20 rows, or when the daemon is unreachable,
+the panel makes way for the usual daemon line.
+
+`t` hides the panel and shows it again; the choice is saved as
+`hostPanel: off` in the [config file](#custom-commands).
+
+`I` opens the System screen from any tab: the host and engine details (OS,
+kernel, hardware, uptime, load, Docker and API version, runtime, containerd,
+storage driver, cgroup and logging driver), CPU, memory and disk usage for the
+host and its containers, what `docker system df` reports for images,
+containers, volumes and build cache, and any warnings the daemon gives. Disk
+usage is read when the screen opens and with `r`, since it can take a while on
+a busy host.
 
 ### Icons
 
@@ -655,6 +691,7 @@ customCommands:
 # editor: nano    # for Compose edits, or builtin; see "Edit a Compose file"
 # cpuGraph: bars  # braille, bars, meter or off; see "Live CPU and memory"
 # icons: nerd     # auto, nerd or off; see "Icons"
+# hostPanel: off  # hide the host panel; see "Host panel and System screen"
 ```
 
 | Field | Meaning |
@@ -758,6 +795,12 @@ Your user on the server needs access to the socket (typically through the
 connection drops, `dp` starts a new one without prompting, so key-based or
 agent authentication is needed for automatic recovery.
 
+The [host panel](#host-panel-and-system-screen) and System screen read the
+server's `/proc` through a second `ssh` connection that runs a small shell loop
+(`head`, `grep`, `cat`, `df` and `sleep`) until `dp` exits. It starts only when
+one of them is shown, uses `BatchMode` so it never prompts, and if it fails the
+panel says so and it is retried every 15 seconds.
+
 For rootless Docker or another socket location, append the absolute remote
 socket path to the SSH endpoint:
 
@@ -788,7 +831,9 @@ endpoint in PowerShell with `$env:DOCKER_HOST = "ssh://me@server"`.
 
 ### Connection status
 
-The TUI shows its bound context/endpoint and connection state below the tabs.
+The TUI shows its bound context/endpoint and connection state below the tabs;
+on the Containers tab the [host panel](#host-panel-and-system-screen) takes
+that row while the daemon is reachable.
 A single daemon ping runs every two seconds with a two-second timeout. Failed
 probes retry with backoff from one to five seconds; recovery refreshes lists and
 open details without resetting filters or selection. In list tabs, `ctrl+r` refreshes and
