@@ -7,13 +7,17 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 // shots are the docs/images screenshots the site shows.
@@ -22,8 +26,8 @@ var shots = []string{
 	"logs.svg", "projects.svg", "prune.svg", "settings.svg", "stats.svg", "system.svg",
 }
 
-// lightShots picks the light copies of the screenshots. Keep it in step with
-// `light` in public/assets/site.js.
+// lightShots picks the light look: the copies of the screenshots, and the
+// data-light attribute the pages' <html> carries for site.css.
 //
 //	ink:   docs/images/light, captured with the ink theme
 //	paper: the dark screenshots recolored with the paper palette
@@ -108,7 +112,11 @@ func outputs(root string) (map[string][]byte, error) {
 		out[dst(name)] = b
 	}
 
-	pages, err := renderPages(filepath.Join(root, "website/pages"))
+	version, err := assetVersion(filepath.Join(root, "website/public/assets"), out)
+	if err != nil {
+		return nil, err
+	}
+	pages, err := renderPages(filepath.Join(root, "website/pages"), version)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +124,36 @@ func outputs(root string) (map[string][]byte, error) {
 		out[filepath.Join(root, "website/public", name)] = b
 	}
 	return out, nil
+}
+
+// assetVersion hashes every file under dir, taking new content from out, so
+// that the ?v= the pages add to asset addresses changes whenever any asset
+// does. _headers lets browsers cache /assets/ for a year.
+func assetVersion(dir string, out map[string][]byte) (string, error) {
+	files := map[string][]byte{}
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		b, err := os.ReadFile(path)
+		files[path] = b
+		return err
+	})
+	if err != nil {
+		return "", err
+	}
+	for path, b := range out {
+		if strings.HasPrefix(path, dir+string(filepath.Separator)) {
+			files[path] = b
+		}
+	}
+	h := sha256.New()
+	for _, path := range slices.Sorted(maps.Keys(files)) {
+		rel, _ := filepath.Rel(dir, path)
+		fmt.Fprintf(h, "%s %d\n", filepath.ToSlash(rel), len(files[path]))
+		h.Write(files[path])
+	}
+	return hex.EncodeToString(h.Sum(nil))[:10], nil
 }
 
 func lightCopy(root, name string, dark []byte) ([]byte, error) {

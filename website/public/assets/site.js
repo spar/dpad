@@ -2,16 +2,9 @@
 // browser only. Without JavaScript the page shows dark mode and the Homebrew tab.
 (function () {
   var root = document.documentElement;
+  // website/pages/_boot.js sets the js class and a saved light choice before
+  // the page paints; this file loads deferred.
   var key = 'dpad-theme';
-  // The light look: 'ink', 'paper' or 'white' (site.css). Change lightShots in
-  // website/sync/main.go to match and run `make website`.
-  var light = 'ink';
-  root.classList.add('js');
-  root.setAttribute('data-light', light);
-
-  try {
-    if (localStorage.getItem(key) === 'light') root.setAttribute('data-theme', 'light');
-  } catch (e) {}
 
   function isLight() {
     return root.getAttribute('data-theme') === 'light';

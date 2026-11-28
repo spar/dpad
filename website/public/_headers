@@ -9,8 +9,12 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 
+# `make website` adds ?v=<hash of the assets> to every asset address in the
+# pages, so a changed file gets a new address and browsers can keep these for a
+# year. The fonts have no ?v= (site.css asks for them by name): give a changed
+# font a new file name.
 /assets/*
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=31536000, immutable
 
 # Keep preview builds out of search results: pull request previews on
 # <branch>.dpad.sh or <version>.dpad.sh, and every workers.dev address.

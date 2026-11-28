@@ -34,11 +34,11 @@ func TestPageFields(t *testing.T) {
 	}
 }
 
-var localRef = regexp.MustCompile(`(?:href|src)="(/[^"#]*)`)
+var localRef = regexp.MustCompile(`(?:href|src)="(/[^"#?]*)`)
 
 // Every address a page links to on the site must be a page or a file.
 func TestInternalLinks(t *testing.T) {
-	out, err := renderPages("../pages")
+	out, err := renderPages("../pages", "test")
 	if err != nil {
 		t.Fatal(err)
 	}

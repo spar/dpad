@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-light="ink">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,18 +11,26 @@
 <meta property="og:url" content="https://dpad.sh/docs/contexts/">
 <meta property="og:title" content="Docker contexts in dpad: Desktop, colima and remote hosts · dpad">
 <meta property="og:description" content="dpad follows DOCKER_HOST, DOCKER_CONTEXT and your current Docker context, so it works with Docker Desktop, colima and remote servers, and switches in the UI.">
-<meta property="og:image" content="https://dpad.sh/assets/og-image.png">
+<meta property="og:image" content="https://dpad.sh/assets/og-image.png?v=f5d4e20613">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="dpad, a colorful terminal UI for the docker CLI">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0a0e1f">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self' 'sha256-F3PTjDnyzEQ3PAtS&#43;GmScgTuEbTqUU2yriLJBfgp12o='; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="/assets/logo.svg?v=f5d4e20613" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=f5d4e20613">
 <link rel="preload" href="/assets/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/site.css">
-<script src="/assets/site.js"></script>
+<link rel="stylesheet" href="/assets/site.css?v=f5d4e20613">
+
+<script>(function () {
+  var root = document.documentElement;
+  root.classList.add('js');
+  try {
+    if (localStorage.getItem('dpad-theme') === 'light') root.setAttribute('data-theme', 'light');
+  } catch (e) {}
+})();</script>
+<script src="/assets/site.js?v=f5d4e20613" defer></script>
 <script type="application/ld+json">
 [
   {
@@ -41,7 +49,7 @@
     "dateModified": "2026-11-28",
     "description": "dpad follows DOCKER_HOST, DOCKER_CONTEXT and your current Docker context, so it works with Docker Desktop, colima and remote servers, and switches in the UI.",
     "headline": "Docker contexts",
-    "image": "https://dpad.sh/assets/og-image.png",
+    "image": "https://dpad.sh/assets/og-image.png?v=f5d4e20613",
     "inLanguage": "en",
     "isPartOf": {
       "@type": "WebSite",
@@ -81,7 +89,7 @@
 <body>
 
 <header class="wrap nav">
-  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="34" height="34">dpad</a>
+  <a class="brand" href="/"><img src="/assets/logo.svg?v=f5d4e20613" alt="" width="34" height="34">dpad</a>
   <ul>
     <li><a href="/#install">Install</a></li>
     <li><a href="/#features">Features</a></li>
@@ -143,7 +151,7 @@
 
 <h2>Switch inside dp</h2>
 <p>Press <kbd>c</kbd> on any list tab, or open settings with <kbd>o</kbd> and choose Docker context. Type <kbd>/</kbd> to filter by name or endpoint and <kbd>enter</kbd> to switch.</p>
-<figure><img src="/assets/shots/settings.svg" width="1348" height="634" loading="lazy" alt="Settings screen listing the theme, Docker context, editor, CPU graph style, host panel, icons, mouse setting and config file"><figcaption>Settings, where Docker context is one of the rows.</figcaption></figure>
+<figure><img src="/assets/shots/settings.svg?v=f5d4e20613" width="1348" height="634" loading="lazy" alt="Settings screen listing the theme, Docker context, editor, CPU graph style, host panel, icons, mouse setting and config file"><figcaption>Settings, where Docker context is one of the rows.</figcaption></figure>
 <ul>
   <li>The choice lasts for this dp session. It overrides <code>DOCKER_HOST</code> and <code>DOCKER_CONTEXT</code> and does not change the Docker CLI's saved current context.</li>
   <li>dp keeps the tab you are on. Filters, selections, stats history and the event timeline start fresh, because they belong to the old daemon.</li>

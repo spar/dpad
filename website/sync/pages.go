@@ -3,12 +3,15 @@ package main
 import (
 	"bytes"
 	"cmp"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -163,12 +166,21 @@ func section(p page) string {
 
 // renderPages returns each page's HTML and the sitemap, keyed by path
 // relative to website/public.
-func renderPages(dir string) (map[string][]byte, error) {
+func renderPages(dir, version string) (map[string][]byte, error) {
 	pages, err := readPages(dir)
 	if err != nil {
 		return nil, err
 	}
+	boot, err := os.ReadFile(filepath.Join(dir, "_boot.js"))
+	if err != nil {
+		return nil, err
+	}
+	boot = bytes.TrimSpace(boot)
+	sum := sha256.Sum256(boot)
 	layout, err := template.New("_layout.html").Funcs(template.FuncMap{
+		"boot":     func() template.JS { return template.JS(boot) },
+		"bootHash": func() string { return "sha256-" + base64.StdEncoding.EncodeToString(sum[:]) },
+		"light":    func() string { return lightShots },
 		"date": func(s string) string {
 			t, _ := time.Parse(time.DateOnly, s)
 			return t.Format("2 January 2006")
@@ -221,11 +233,16 @@ func renderPages(dir string) (map[string][]byte, error) {
 		if err := layout.Execute(&b, d); err != nil {
 			return nil, fmt.Errorf("%s: %w", p.Src, err)
 		}
-		out[outFile(p)] = b.Bytes()
+		out[outFile(p)] = versioned.ReplaceAll(b.Bytes(), []byte("$1?v="+version))
 	}
 	out["sitemap.xml"] = sitemap(pages)
 	return out, nil
 }
+
+// versioned matches the assets a page loads by address, so each can carry ?v=
+// and be cached for a year. Fonts are left out: site.css asks for them without
+// a query, and the preload has to use the same address.
+var versioned = regexp.MustCompile(`(/assets/[\w./-]+\.(?:css|js|svg|png))\b`)
 
 func hubPath(p page) string {
 	switch section(p) {
