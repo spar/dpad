@@ -3,6 +3,7 @@ package tui
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -73,7 +74,7 @@ func (a *App) updateShell(msg tea.KeyPressMsg) tea.Cmd {
 func prepareShell(ctx context.Context, c dockerClient, id, executable string) (*shellProcess, error) {
 	path, err := exec.LookPath("docker")
 	if err != nil {
-		return nil, fmt.Errorf("docker CLI not found in PATH: %w", err)
+		return nil, errors.New("opening a shell runs docker exec, which needs the docker CLI installed on this machine and in PATH")
 	}
 	info, err := c.Inspect(ctx, id)
 	if err != nil {

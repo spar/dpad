@@ -63,7 +63,7 @@ func TestPrepareShellChecksStateAndPassesLiteralArguments(t *testing.T) {
 		t.Fatal("inspect error was lost")
 	}
 	t.Setenv("PATH", t.TempDir())
-	if _, err := prepareShell(context.Background(), f, "id", "/bin/sh"); err == nil || !strings.Contains(err.Error(), "docker CLI not found") {
+	if _, err := prepareShell(context.Background(), f, "id", "/bin/sh"); err == nil || !strings.Contains(err.Error(), "needs the docker CLI") {
 		t.Fatal("missing Docker CLI was not reported")
 	}
 }
