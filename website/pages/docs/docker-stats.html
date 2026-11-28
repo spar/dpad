@@ -1,0 +1,60 @@
+<!--
+title: docker stats, sorted and readable: per-second rates and history
+heading: Readable docker stats
+nav: Docker stats
+description: Sort docker stats by CPU or memory, see network and disk as per-second rates, and get two-minute sparklines and Compose project totals with dpad.
+updated: 2026-11-28
+order: 4
+related: /docs/compose-logs/, /docs/events/, /docs/remote-docker-ssh/
+-->
+<p class="lead"><code>docker stats</code> can't sort, and it shows network and disk I/O as totals since each container started. <code>dp stats</code> keeps the same idea and fixes both, and the Stats tab in the TUI adds history and Compose grouping.</p>
+
+<h2>From the shell</h2>
+<div class="install"><div class="cmd"><code><span class="p">$</span>dp stats --sort mem</code><button type="button" class="copy">copy</button></div></div>
+<pre><span class="p">$</span> dp stats                   <span class="c"># live, sorted by CPU</span>
+<span class="p">$</span> dp stats --sort net -r     <span class="c"># network throughput, smallest first</span>
+<span class="p">$</span> dp stats --totals          <span class="c"># cumulative bytes instead of rates</span>
+<span class="p">$</span> dp stats --no-stream       <span class="c"># one snapshot, then exit</span></pre>
+<p>Sort keys are <code>cpu</code>, <code>mem</code>, <code>net</code>, <code>io</code>, <code>pids</code> and <code>name</code>. Numbers sort biggest first and names A to Z; <code>-r</code> reverses. While it runs, press <kbd>c</kbd>, <kbd>m</kbd>, <kbd>n</kbd>, <kbd>i</kbd>, <kbd>p</kbd> or <kbd>a</kbd> to sort by cpu, mem, net, io, pids or name, <kbd>r</kbd> to reverse, and <kbd>t</kbd> to switch between rates and totals. Snapshots and piped output always show totals, because a rate needs two samples. <code>dp stats web db</code> with container names goes straight to <code>docker stats</code>, since Docker already handles picking containers.</p>
+
+<h2>What's different from docker stats</h2>
+<table>
+  <thead><tr><th></th><th><code>docker stats</code></th><th><code>dp stats</code> and the Stats tab</th></tr></thead>
+  <tbody>
+    <tr><td>Sorting</td><td>none</td><td>any column, live</td></tr>
+    <tr><td>Network and disk</td><td>totals since start</td><td>bytes per second, or totals with <kbd>t</kbd></td></tr>
+    <tr><td>CPU and memory</td><td>percentages</td><td>percentages with bars that turn yellow, then red, as usage climbs</td></tr>
+    <tr><td>History</td><td>none</td><td>two-minute sparklines with average and peak (TUI)</td></tr>
+    <tr><td>Compose projects</td><td>one row per container</td><td>one summary row per project, expandable (TUI)</td></tr>
+  </tbody>
+</table>
+<p>Sources: Docker's <a href="https://docs.docker.com/reference/cli/docker/container/stats/">docker stats reference</a>, and dpad's <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#stats">Stats reference</a>.</p>
+
+<h2>The Stats tab</h2>
+<p>Open <code>dp</code> and press <kbd>3</kbd>.</p>
+<figure><img src="/assets/shots/stats.svg" width="1348" height="634" loading="lazy" alt="Stats tab: containers sorted by CPU with usage bars, network rates, PIDs and a CPU and memory history panel"><figcaption>Sorted by CPU, with history for the selected container.</figcaption></figure>
+<table>
+  <thead><tr><th>Key</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>s</kbd> / <kbd>r</kbd></td><td>Next sort key / reverse</td></tr>
+    <tr><td><kbd>t</kbd></td><td>Rates or cumulative totals</td></tr>
+    <tr><td><kbd>v</kbd></td><td>Compose projects or a flat list of containers</td></tr>
+    <tr><td><kbd>space</kbd> or <kbd>enter</kbd></td><td>Expand or collapse a project</td></tr>
+    <tr><td><kbd>/</kbd></td><td>Filter by project, service, container name or ID</td></tr>
+    <tr><td><kbd>enter</kbd> on a container</td><td>Follow its logs</td></tr>
+  </tbody>
+</table>
+
+<h3>Compose projects as one row</h3>
+<p>The tab opens with each Compose project collapsed into one row that sums CPU, memory, I/O and PIDs across its containers. Expand it to see services and containers. Project memory is a sum only, without a limit or percentage, because containers can share one host limit. If any member's sample is missing, the project shows <code>—</code> rather than a partial total.</p>
+
+<h3>Sparklines</h3>
+<p>The panel under the table shows CPU and memory for the selected container over the last two minutes, with average and peak. Short spikes stay visible when the chart is compressed. History starts when you first open the tab and stays in memory for the session; the panel hides below 80 columns.</p>
+
+<h3>How rates are measured</h3>
+<p>Rates come from the daemon's own timestamps and counter differences between samples, not totals divided by uptime. The first sample of a container, a counter reset, or a gap of more than ten seconds shows <code>—</code> until there is a new baseline. An idle container shows <code>0B/s</code>.</p>
+
+<h2>The Containers tab shows CPU too</h2>
+<p>You don't need the Stats tab for a quick look: every running container on the Containers tab has a small CPU graph and its memory, from the same stream. Press <kbd>o</kbd> and choose CPU graph to switch between a braille graph, bars, a single meter, or off.</p>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#stats">Stats</a> and <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#live-cpu-and-memory">Live CPU and memory</a>.</p>

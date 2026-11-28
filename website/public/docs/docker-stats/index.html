@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>docker stats, sorted and readable: per-second rates and history · dpad</title>
+<meta name="description" content="Sort docker stats by CPU or memory, see network and disk as per-second rates, and get two-minute sparklines and Compose project totals with dpad.">
+<link rel="canonical" href="https://dpad.sh/docs/docker-stats/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="dpad">
+<meta property="og:url" content="https://dpad.sh/docs/docker-stats/">
+<meta property="og:title" content="docker stats, sorted and readable: per-second rates and history · dpad">
+<meta property="og:description" content="Sort docker stats by CPU or memory, see network and disk as per-second rates, and get two-minute sparklines and Compose project totals with dpad.">
+<meta property="og:image" content="https://dpad.sh/assets/og-image.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="dpad, a colorful terminal UI for the docker CLI">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0a0e1f">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/site.css">
+<script src="/assets/site.js"></script>
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "about": {
+      "@type": "SoftwareApplication",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "dateModified": "2026-11-28",
+    "description": "Sort docker stats by CPU or memory, see network and disk as per-second rates, and get two-minute sparklines and Compose project totals with dpad.",
+    "headline": "Readable docker stats",
+    "image": "https://dpad.sh/assets/og-image.png",
+    "inLanguage": "en",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "mainEntityOfPage": "https://dpad.sh/docs/docker-stats/",
+    "url": "https://dpad.sh/docs/docker-stats/"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/",
+        "name": "dpad",
+        "position": 1
+      },
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/docs/",
+        "name": "Docs",
+        "position": 2
+      },
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/docs/docker-stats/",
+        "name": "Readable docker stats",
+        "position": 3
+      }
+    ]
+  }
+]
+</script>
+</head>
+<body>
+
+<header class="wrap nav">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="34" height="34">dpad</a>
+  <ul>
+    <li><a href="/#install">Install</a></li>
+    <li><a href="/#features">Features</a></li>
+    <li><a href="/docs/">Docs</a></li>
+    <li><a href="/compare/">Compare</a></li>
+    <li><a href="https://github.com/spar/dpad/releases">Releases</a></li>
+  </ul>
+  <div class="right">
+    <button class="mode" type="button" aria-label="Switch between dark and light" title="Switch between dark and light">
+      <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+    <a class="gh" href="https://github.com/spar/dpad"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+  </div>
+</header>
+
+<main class="wrap docs">
+<nav class="side" aria-label="Guides">
+  <p>Guides</p>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/getting-started/">Getting started</a></li>
+    <li><a href="/docs/remote-docker-ssh/">Remote Docker over SSH</a></li>
+    <li><a href="/docs/compose-logs/">Compose logs</a></li>
+    <li><a href="/docs/docker-stats/" aria-current="page">Docker stats</a></li>
+    <li><a href="/docs/update-compose-images/">Update Compose images</a></li>
+    <li><a href="/docs/edit-compose-file/">Edit Compose files</a></li>
+    <li><a href="/docs/prune-preview/">Prune with a preview</a></li>
+    <li><a href="/docs/events/">Events</a></li>
+    <li><a href="/docs/contexts/">Docker contexts</a></li>
+    <li><a href="/docs/themes/">Themes</a></li>
+    <li><a href="/docs/config/">Config and custom commands</a></li>
+    <li><a href="/docs/keys/">Keyboard shortcuts</a></li>
+  </ul>
+  <p>Compare</p>
+  <ul>
+    <li><a href="/compare/">Overview</a></li>
+    <li><a href="/compare/lazydocker/">dpad vs lazydocker</a></li>
+    <li><a href="/alternatives/lazydocker/">lazydocker alternatives</a></li>
+    <li><a href="/compare/ctop/">ctop alternative</a></li>
+  </ul>
+</nav>
+<article class="prose">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/docs/">Docs</a> <span>›</span> Docker stats</nav>
+  <h1>Readable docker stats</h1>
+  <p class="updated">Updated 28 November 2026</p>
+<p class="lead"><code>docker stats</code> can't sort, and it shows network and disk I/O as totals since each container started. <code>dp stats</code> keeps the same idea and fixes both, and the Stats tab in the TUI adds history and Compose grouping.</p>
+
+<h2>From the shell</h2>
+<div class="install"><div class="cmd"><code><span class="p">$</span>dp stats --sort mem</code><button type="button" class="copy">copy</button></div></div>
+<pre><span class="p">$</span> dp stats                   <span class="c"># live, sorted by CPU</span>
+<span class="p">$</span> dp stats --sort net -r     <span class="c"># network throughput, smallest first</span>
+<span class="p">$</span> dp stats --totals          <span class="c"># cumulative bytes instead of rates</span>
+<span class="p">$</span> dp stats --no-stream       <span class="c"># one snapshot, then exit</span></pre>
+<p>Sort keys are <code>cpu</code>, <code>mem</code>, <code>net</code>, <code>io</code>, <code>pids</code> and <code>name</code>. Numbers sort biggest first and names A to Z; <code>-r</code> reverses. While it runs, press <kbd>c</kbd>, <kbd>m</kbd>, <kbd>n</kbd>, <kbd>i</kbd>, <kbd>p</kbd> or <kbd>a</kbd> to sort by cpu, mem, net, io, pids or name, <kbd>r</kbd> to reverse, and <kbd>t</kbd> to switch between rates and totals. Snapshots and piped output always show totals, because a rate needs two samples. <code>dp stats web db</code> with container names goes straight to <code>docker stats</code>, since Docker already handles picking containers.</p>
+
+<h2>What's different from docker stats</h2>
+<table>
+  <thead><tr><th></th><th><code>docker stats</code></th><th><code>dp stats</code> and the Stats tab</th></tr></thead>
+  <tbody>
+    <tr><td>Sorting</td><td>none</td><td>any column, live</td></tr>
+    <tr><td>Network and disk</td><td>totals since start</td><td>bytes per second, or totals with <kbd>t</kbd></td></tr>
+    <tr><td>CPU and memory</td><td>percentages</td><td>percentages with bars that turn yellow, then red, as usage climbs</td></tr>
+    <tr><td>History</td><td>none</td><td>two-minute sparklines with average and peak (TUI)</td></tr>
+    <tr><td>Compose projects</td><td>one row per container</td><td>one summary row per project, expandable (TUI)</td></tr>
+  </tbody>
+</table>
+<p>Sources: Docker's <a href="https://docs.docker.com/reference/cli/docker/container/stats/">docker stats reference</a>, and dpad's <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#stats">Stats reference</a>.</p>
+
+<h2>The Stats tab</h2>
+<p>Open <code>dp</code> and press <kbd>3</kbd>.</p>
+<figure><img src="/assets/shots/stats.svg" width="1348" height="634" loading="lazy" alt="Stats tab: containers sorted by CPU with usage bars, network rates, PIDs and a CPU and memory history panel"><figcaption>Sorted by CPU, with history for the selected container.</figcaption></figure>
+<table>
+  <thead><tr><th>Key</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>s</kbd> / <kbd>r</kbd></td><td>Next sort key / reverse</td></tr>
+    <tr><td><kbd>t</kbd></td><td>Rates or cumulative totals</td></tr>
+    <tr><td><kbd>v</kbd></td><td>Compose projects or a flat list of containers</td></tr>
+    <tr><td><kbd>space</kbd> or <kbd>enter</kbd></td><td>Expand or collapse a project</td></tr>
+    <tr><td><kbd>/</kbd></td><td>Filter by project, service, container name or ID</td></tr>
+    <tr><td><kbd>enter</kbd> on a container</td><td>Follow its logs</td></tr>
+  </tbody>
+</table>
+
+<h3>Compose projects as one row</h3>
+<p>The tab opens with each Compose project collapsed into one row that sums CPU, memory, I/O and PIDs across its containers. Expand it to see services and containers. Project memory is a sum only, without a limit or percentage, because containers can share one host limit. If any member's sample is missing, the project shows <code>—</code> rather than a partial total.</p>
+
+<h3>Sparklines</h3>
+<p>The panel under the table shows CPU and memory for the selected container over the last two minutes, with average and peak. Short spikes stay visible when the chart is compressed. History starts when you first open the tab and stays in memory for the session; the panel hides below 80 columns.</p>
+
+<h3>How rates are measured</h3>
+<p>Rates come from the daemon's own timestamps and counter differences between samples, not totals divided by uptime. The first sample of a container, a counter reset, or a gap of more than ten seconds shows <code>—</code> until there is a new baseline. An idle container shows <code>0B/s</code>.</p>
+
+<h2>The Containers tab shows CPU too</h2>
+<p>You don't need the Stats tab for a quick look: every running container on the Containers tab has a small CPU graph and its memory, from the same stream. Press <kbd>o</kbd> and choose CPU graph to switch between a braille graph, bars, a single meter, or off.</p>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#stats">Stats</a> and <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#live-cpu-and-memory">Live CPU and memory</a>.</p>
+
+  <aside class="related">
+    <h2>Related</h2>
+    <ul>
+      <li><a href="/docs/compose-logs/"><b>Follow logs from several Compose services</b><span>Stream logs from several containers, Compose services or whole projects in one view, with stable colors, log level highlighting and a live regex filter.</span></a></li>
+      <li><a href="/docs/events/"><b>Watch Docker events live</b><span>See container starts, stops, crashes, OOM kills and health changes as a live timeline in dpad, filtered by container, Compose project, service or event type.</span></a></li>
+      <li><a href="/docs/remote-docker-ssh/"><b>Monitor Docker on a remote server over SSH</b><span>Watch and manage containers on a remote Docker host from your laptop with dpad and DOCKER_HOST=ssh://, including rootless Docker, saved contexts and reconnects.</span></a></li>
+    </ul>
+  </aside>
+</article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>dpad is open source under the GPL-3.0 license.</span>
+    <span><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="https://github.com/spar/dpad/releases">Releases</a><a href="https://github.com/spar/dpad/issues">Issues</a><a href="https://github.com/sponsors/spar">Sponsor</a><a href="https://github.com/spar/dpad">GitHub</a></span>
+  </div>
+</footer>
+</body>
+</html>

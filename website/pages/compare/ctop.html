@@ -1,0 +1,51 @@
+<!--
+title: ctop alternative: live container metrics in the terminal
+heading: A ctop alternative
+nav: ctop alternative
+description: ctop's last release was in March 2022. dpad gives you the same live view of container CPU and memory, plus I/O rates, history, Compose grouping and logs.
+updated: 2026-11-28
+order: 3
+related: /docs/docker-stats/, /alternatives/lazydocker/, /docs/getting-started/
+-->
+<p class="lead"><a href="https://github.com/bcicen/ctop">ctop</a> made a <code>top</code> for containers popular, and it still works for many people. But its last release, v0.7.7, came out on 22 March 2022, and the last commit on its main branch was on 1 August 2022. If you want the same at-a-glance view from a tool that is still changing, here is how dpad lines up.</p>
+<p class="callout">ctop facts from its <a href="https://github.com/bcicen/ctop">README</a>, <a href="https://github.com/bcicen/ctop/releases">releases</a> and <a href="https://github.com/bcicen/ctop/commits">commit history</a>, checked on 28 November 2026.</p>
+
+<h2>The same idea: everything live, one screen</h2>
+<p>ctop's grid shows CPU, memory, network and disk I/O for every container, with a single-container view on <kbd>o</kbd>. In dpad, the closest match is the Stats tab, or the standalone command:</p>
+<div class="install"><div class="cmd"><code><span class="p">$</span>dp stats</code><button type="button" class="copy">copy</button></div></div>
+<figure><img src="/assets/shots/stats.svg" width="1348" height="634" loading="lazy" alt="Stats tab: containers sorted by CPU with usage bars, network rates, PIDs and a CPU and memory history panel"><figcaption>dpad's Stats tab, sorted by CPU, with history for the selected container.</figcaption></figure>
+
+<h2>Keys you know from ctop</h2>
+<table>
+  <thead><tr><th>To do this</th><th>ctop</th><th>dpad</th></tr></thead>
+  <tbody>
+    <tr><td>Filter containers</td><td><kbd>f</kbd></td><td><kbd>/</kbd></td></tr>
+    <tr><td>Sort</td><td><kbd>s</kbd>, reverse with <kbd>r</kbd></td><td><kbd>s</kbd>, reverse with <kbd>r</kbd></td></tr>
+    <tr><td>Show all containers</td><td><kbd>a</kbd></td><td>the Containers tab lists stopped ones too</td></tr>
+    <tr><td>Logs</td><td><kbd>l</kbd></td><td><kbd>enter</kbd></td></tr>
+    <tr><td>Shell into a container</td><td><kbd>e</kbd></td><td><kbd>e</kbd></td></tr>
+    <tr><td>Container actions</td><td><kbd>enter</kbd> opens a menu</td><td><kbd>S</kbd> start, <kbd>x</kbd> stop, <kbd>R</kbd> restart, <kbd>P</kbd> pause, <kbd>K</kbd> kill, <kbd>D</kbd> remove</td></tr>
+    <tr><td>Quit</td><td><kbd>q</kbd></td><td><kbd>q</kbd></td></tr>
+  </tbody>
+</table>
+
+<h2>What dpad adds</h2>
+<ul>
+  <li><b>Rates, not totals.</b> Network and disk show bytes per second; <kbd>t</kbd> switches to totals.</li>
+  <li><b>History.</b> Two-minute CPU and memory sparklines with average and peak for the selected container.</li>
+  <li><b>Compose grouping.</b> Each Compose project collapses into one row with summed CPU, memory and I/O.</li>
+  <li><b>Logs that follow a project</b>, with a live regex filter (<a href="/docs/compose-logs/">guide</a>).</li>
+  <li><b>Remote hosts over SSH</b> and Docker contexts (<a href="/docs/remote-docker-ssh/">guide</a>).</li>
+  <li><b>A CLI too.</b> <code>dp ps</code>, <code>dp images</code>, <code>dp stats</code> and <code>dp logs</code> work like Docker's with color and sorting.</li>
+</ul>
+
+<h2>What ctop has that dpad doesn't</h2>
+<ul>
+  <li>Support for runC containers as well as Docker.</li>
+  <li>A deliberately tiny scope. If all you want is the grid, ctop is simpler, and it is still packaged for Homebrew, MacPorts, Scoop and Arch.</li>
+  <li>Column choices saved to its own config file (<kbd>c</kbd>, then <kbd>S</kbd>).</li>
+</ul>
+
+<h2>Install dpad</h2>
+<div class="install"><div class="cmd"><code><span class="p">$</span>brew install spar/tap/dpad &amp;&amp; dp stats</code><button type="button" class="copy">copy</button></div></div>
+<p>Linux scripts, Windows and release archives: <a href="/docs/getting-started/">Getting started</a>. For more tools, see <a href="/alternatives/lazydocker/">Docker terminal UIs compared</a>.</p>

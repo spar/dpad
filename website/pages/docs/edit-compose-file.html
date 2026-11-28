@@ -1,0 +1,55 @@
+<!--
+title: Edit a Docker Compose file locally or over SSH, checked first
+heading: Edit a Compose file, locally or over SSH
+nav: Edit Compose files
+description: Edit a running project's Compose file from dpad, in the built-in editor or your own, with validation and a diff before saving, even on a remote host.
+updated: 2026-11-28
+order: 6
+related: /docs/update-compose-images/, /docs/remote-docker-ssh/, /docs/config/
+-->
+<p class="lead">Bumping an image tag usually means finding the project's folder, opening the file, and hoping the YAML is right. In dpad, press <kbd>e</kbd> on the project. dpad finds the file, checks your change with Compose, and shows what it changes before anything is saved.</p>
+
+<h2>Edit, check, save</h2>
+<ol>
+  <li>In <code>dp</code>, press <kbd>4</kbd> for Projects and select a project row. (On a container row, <kbd>e</kbd> opens a shell instead.)</li>
+  <li>Press <kbd>e</kbd>. If the project uses several Compose files, pick one.</li>
+  <li>Edit the copy that opens, then save it (<kbd>ctrl+s</kbd> in the built-in editor, or quit your own editor).</li>
+  <li>dpad runs <code>docker compose config</code> with your copy in place of the original, plus the project's other files and env files.</li>
+</ol>
+<figure><img src="/assets/shots/compose-edit.svg" width="1348" height="634" loading="lazy" alt="Reviewing an edit to a Compose file: valid, the image change it makes, and a diff"><figcaption>A valid edit: the image change it makes, and the diff.</figcaption></figure>
+<p>If Compose rejects the edit, you see its error, and <kbd>e</kbd> reopens the editor with your changes kept. If the edit is valid, dpad shows what it changes in the running project, such as <code>web: nginx:1.27 → nginx:1.28</code> or services added and removed, and a diff of the file. Then:</p>
+<table>
+  <thead><tr><th>Key</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>enter</kbd></td><td>Save, then open the <a href="/docs/update-compose-images/">update preview</a> for the project</td></tr>
+    <tr><td><kbd>s</kbd></td><td>Only save</td></tr>
+    <tr><td><kbd>e</kbd></td><td>Edit again</td></tr>
+    <tr><td><kbd>esc</kbd> twice</td><td>Discard the edit</td></tr>
+  </tbody>
+</table>
+<p>The original file isn't touched until you save. Saving writes a temporary file beside it and renames it over the original, keeping its permissions, so a failed write leaves the original as it was. If the file changed on disk while you were editing, dpad refuses to overwrite it. No backup is kept, so keep your Compose files in version control.</p>
+
+<h2>The built-in editor</h2>
+<p>You don't need an editor installed. The built-in one colors the YAML, checks it as you type and marks the line the YAML parser rejects. It has no modes:</p>
+<table>
+  <thead><tr><th>Key</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>ctrl+f</kbd>, then <kbd>ctrl+n</kbd> / <kbd>ctrl+p</kbd></td><td>Find, next, previous</td></tr>
+    <tr><td><kbd>ctrl+g</kbd></td><td>Go to a line (<code>$</code> is the last)</td></tr>
+    <tr><td><kbd>tab</kbd> / <kbd>shift+tab</kbd></td><td>Indent or outdent by 2 spaces</td></tr>
+    <tr><td><kbd>ctrl+k</kbd></td><td>Delete the line</td></tr>
+    <tr><td><kbd>ctrl+z</kbd> / <kbd>ctrl+y</kbd></td><td>Undo / redo</td></tr>
+    <tr><td><kbd>ctrl+s</kbd></td><td>Save the copy and check it</td></tr>
+    <tr><td><kbd>esc</kbd></td><td>Close (twice with unsaved changes)</td></tr>
+  </tbody>
+</table>
+
+<h2>Use your own editor</h2>
+<p>Press <kbd>o</kbd> for settings and <kbd>enter</kbd> on Editor. The picker lists the built-in editor and the editors it finds on your PATH: nano, vim, Neovim, vi, Emacs, micro, Helix, VS Code, Cursor, Zed, Sublime Text and Notepad. Your choice is saved as <code>editor:</code> in <a href="/docs/config/">config.yaml</a>; any other command works there too, for example <code>editor: code --wait</code>.</p>
+<p>Without an <code>editor:</code> setting, dpad uses <code>$VISUAL</code>, then <code>$EDITOR</code>, then the built-in editor. Editors that open a window need their wait flag, which the picker adds for you.</p>
+
+<h2>Files on a remote host</h2>
+<p>When dp is connected to an <code>ssh://</code> daemon and the project's files are on that server, editing works the same way over the same SSH connection. dpad reads the file with <code>cat</code>, you edit it locally, the check runs Compose on the server with your copy beside the original, and saving renames a temporary file over it there. The title says <code>SSH host</code> when this happens.</p>
+<p>It needs key or agent SSH authentication, <code>sha256sum</code> or <code>shasum</code> on the server, and write access to the file's folder for your SSH user. dpad never uses <code>sudo</code>. Daemons reached over <code>tcp://</code> or TLS give no way to reach files, so their projects can only be edited when the files are on your machine.</p>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#edit-a-compose-file">Edit a Compose file</a>.</p>

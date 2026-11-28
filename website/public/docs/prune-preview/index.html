@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docker prune dry run: see what will be removed first · dpad</title>
+<meta name="description" content="docker system prune has no dry-run flag. dpad lists the exact containers, images, volumes, networks and build cache a prune would remove, then removes those.">
+<link rel="canonical" href="https://dpad.sh/docs/prune-preview/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="dpad">
+<meta property="og:url" content="https://dpad.sh/docs/prune-preview/">
+<meta property="og:title" content="Docker prune dry run: see what will be removed first · dpad">
+<meta property="og:description" content="docker system prune has no dry-run flag. dpad lists the exact containers, images, volumes, networks and build cache a prune would remove, then removes those.">
+<meta property="og:image" content="https://dpad.sh/assets/og-image.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="dpad, a colorful terminal UI for the docker CLI">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0a0e1f">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/site.css">
+<script src="/assets/site.js"></script>
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "about": {
+      "@type": "SoftwareApplication",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "dateModified": "2026-11-28",
+    "description": "docker system prune has no dry-run flag. dpad lists the exact containers, images, volumes, networks and build cache a prune would remove, then removes those.",
+    "headline": "Preview a Docker prune before it deletes",
+    "image": "https://dpad.sh/assets/og-image.png",
+    "inLanguage": "en",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "mainEntityOfPage": "https://dpad.sh/docs/prune-preview/",
+    "url": "https://dpad.sh/docs/prune-preview/"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/",
+        "name": "dpad",
+        "position": 1
+      },
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/docs/",
+        "name": "Docs",
+        "position": 2
+      },
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/docs/prune-preview/",
+        "name": "Preview a Docker prune before it deletes",
+        "position": 3
+      }
+    ]
+  }
+]
+</script>
+</head>
+<body>
+
+<header class="wrap nav">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="34" height="34">dpad</a>
+  <ul>
+    <li><a href="/#install">Install</a></li>
+    <li><a href="/#features">Features</a></li>
+    <li><a href="/docs/">Docs</a></li>
+    <li><a href="/compare/">Compare</a></li>
+    <li><a href="https://github.com/spar/dpad/releases">Releases</a></li>
+  </ul>
+  <div class="right">
+    <button class="mode" type="button" aria-label="Switch between dark and light" title="Switch between dark and light">
+      <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+    <a class="gh" href="https://github.com/spar/dpad"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+  </div>
+</header>
+
+<main class="wrap docs">
+<nav class="side" aria-label="Guides">
+  <p>Guides</p>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/getting-started/">Getting started</a></li>
+    <li><a href="/docs/remote-docker-ssh/">Remote Docker over SSH</a></li>
+    <li><a href="/docs/compose-logs/">Compose logs</a></li>
+    <li><a href="/docs/docker-stats/">Docker stats</a></li>
+    <li><a href="/docs/update-compose-images/">Update Compose images</a></li>
+    <li><a href="/docs/edit-compose-file/">Edit Compose files</a></li>
+    <li><a href="/docs/prune-preview/" aria-current="page">Prune with a preview</a></li>
+    <li><a href="/docs/events/">Events</a></li>
+    <li><a href="/docs/contexts/">Docker contexts</a></li>
+    <li><a href="/docs/themes/">Themes</a></li>
+    <li><a href="/docs/config/">Config and custom commands</a></li>
+    <li><a href="/docs/keys/">Keyboard shortcuts</a></li>
+  </ul>
+  <p>Compare</p>
+  <ul>
+    <li><a href="/compare/">Overview</a></li>
+    <li><a href="/compare/lazydocker/">dpad vs lazydocker</a></li>
+    <li><a href="/alternatives/lazydocker/">lazydocker alternatives</a></li>
+    <li><a href="/compare/ctop/">ctop alternative</a></li>
+  </ul>
+</nav>
+<article class="prose">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/docs/">Docs</a> <span>›</span> Prune with a preview</nav>
+  <h1>Preview a Docker prune before it deletes</h1>
+  <p class="updated">Updated 28 November 2026</p>
+<p class="lead">Docker's prune commands have no dry-run option. <code>docker system prune</code> tells you which kinds of things it will remove, such as "all stopped containers", and asks <code>y/N</code>, but not which ones. dpad shows the list first.</p>
+<p class="callout">Source: Docker's <a href="https://docs.docker.com/reference/cli/docker/system/prune/">docker system prune reference</a> lists <code>--all</code>, <code>--filter</code>, <code>--force</code> and <code>--volumes</code>, and no dry-run flag.</p>
+
+<h2>How it works</h2>
+<ol>
+  <li>In <code>dp</code>, press <kbd>X</kbd>. The preview opens on the kind that matches your tab: images on Images, volumes on Volumes, networks on Networks, stopped containers anywhere else.</li>
+  <li><kbd>tab</kbd> and <kbd>shift+tab</kbd> move between kinds. <kbd>a</kbd> widens images and volumes, as below.</li>
+  <li>Read the list. Nothing is removed yet.</li>
+  <li>Press <kbd>y</kbd>.</li>
+</ol>
+<figure><img src="/assets/shots/prune.svg" width="1348" height="634" loading="lazy" alt="Prune preview listing the stopped containers that would be removed"><figcaption>The stopped containers a prune would remove.</figcaption></figure>
+
+<table>
+  <thead><tr><th>Kind</th><th>The preview lists</th><th>With <kbd>a</kbd></th><th>Matches</th></tr></thead>
+  <tbody>
+    <tr><td>Containers</td><td>exited, created and dead containers</td><td></td><td><code>docker container prune</code></td></tr>
+    <tr><td>Images</td><td>untagged images no container uses</td><td>also tagged images no container uses</td><td><code>docker image prune</code> (<code>--all</code>)</td></tr>
+    <tr><td>Volumes</td><td>anonymous volumes no container mounts</td><td>also named volumes no container mounts</td><td><code>docker volume prune</code> (<code>--all</code>)</td></tr>
+    <tr><td>Networks</td><td>user-defined networks no container uses</td><td></td><td><code>docker network prune</code></td></tr>
+    <tr><td>Build cache</td><td>build cache records not in use</td><td></td><td><code>docker builder prune --all</code></td></tr>
+  </tbody>
+</table>
+<p>"No container" includes stopped ones, so an image or volume that a stopped container still uses stays. Sizes are shown for images and build cache. Image sizes include layers shared with other images, so they are not a promise of disk space freed.</p>
+
+<h2>Only what you saw</h2>
+<p>After <kbd>y</kbd>, dpad reads the list again. If it changed since the preview, you get the new preview and need another <kbd>y</kbd>. Otherwise it removes exactly the resources you saw, one request each and never forced, so anything that started being used in the meantime fails with Docker's error instead of disappearing. Each row then says <code>removed</code>, <code>failed</code> or <code>unknown</code> (interrupted, may have applied); select a failed row to read the error. <kbd>esc</kbd> during removal cancels the rest.</p>
+<p>Build cache is the exception: Docker has no call to remove a single record, so it is pruned in one request, and the summary counts any records created after the preview that went too.</p>
+
+<h2>Without dpad</h2>
+<p>To get close with the Docker CLI alone, list before you prune:</p>
+<pre><span class="p">$</span> docker ps -a --filter status=exited --filter status=created --filter status=dead
+<span class="p">$</span> docker images --filter dangling=true
+<span class="p">$</span> docker volume ls --filter dangling=true
+<span class="p">$</span> docker network ls --filter type=custom</pre>
+<p>These show candidates, but the prune that follows is a separate command and removes whatever matches at that moment.</p>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#prune">Prune</a>.</p>
+
+  <aside class="related">
+    <h2>Related</h2>
+    <ul>
+      <li><a href="/docs/update-compose-images/"><b>Update Compose images safely</b><span>Pull new images and recreate Docker Compose services for one project or every project on a host, with a preview first and live progress, using dpad.</span></a></li>
+      <li><a href="/docs/events/"><b>Watch Docker events live</b><span>See container starts, stops, crashes, OOM kills and health changes as a live timeline in dpad, filtered by container, Compose project, service or event type.</span></a></li>
+      <li><a href="/docs/keys/"><b>Keyboard shortcuts</b><span>Every key in the dpad Docker terminal UI: navigation, container actions, logs, stats, Compose projects, prune, contexts, themes and settings.</span></a></li>
+    </ul>
+  </aside>
+</article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>dpad is open source under the GPL-3.0 license.</span>
+    <span><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="https://github.com/spar/dpad/releases">Releases</a><a href="https://github.com/spar/dpad/issues">Issues</a><a href="https://github.com/sponsors/spar">Sponsor</a><a href="https://github.com/spar/dpad">GitHub</a></span>
+  </div>
+</footer>
+</body>
+</html>

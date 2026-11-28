@@ -1,0 +1,39 @@
+<!--
+title: Watch Docker events live, filtered by project or service
+heading: Watch Docker events live
+nav: Events
+description: See container starts, stops, crashes, OOM kills and health changes as a live timeline in dpad, filtered by container, Compose project, service or event type.
+updated: 2026-11-28
+order: 8
+related: /docs/compose-logs/, /docs/docker-stats/, /docs/keys/
+-->
+<p class="lead"><code>docker events</code> prints a raw stream that is gone once it scrolls past. The Events tab in dpad keeps a timeline you can filter and scroll, with Compose project and service names on every row.</p>
+
+<h2>Open the timeline</h2>
+<p>In <code>dp</code>, press <kbd>5</kbd>. Recording starts when dp opens, so the tab fills as things happen.</p>
+<figure><img src="/assets/shots/events.svg" width="1348" height="634" loading="lazy" alt="Events tab showing kill, stop, start, pause and restart events"><figcaption>Kill, stop, start, pause and restart events, newest first.</figcaption></figure>
+<p>It records container lifecycle and health events: create, start, stop, restart, die, destroy, pause and unpause, rename, update, kill, OOM and health changes. Each row has the local time, the container, its Compose project and service, and the exit code, signal or image when Docker sends one. Noisy exec events are left out.</p>
+
+<h2>Find what happened</h2>
+<table>
+  <thead><tr><th>Key</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>/</kbd></td><td>Filter by container name or ID, project, service, event type or image (any case)</td></tr>
+    <tr><td><kbd>r</kbd></td><td>Reverse the order</td></tr>
+    <tr><td><kbd>g</kbd></td><td>Back to the newest event, and follow new ones</td></tr>
+    <tr><td><kbd>d</kbd> or <kbd>enter</kbd></td><td>Open the container's details</td></tr>
+  </tbody>
+</table>
+<p>Some useful filters:</p>
+<ul>
+  <li><code>shop</code>: everything in the shop project.</li>
+  <li><code>die</code>: containers that exited, with their exit codes.</li>
+  <li><code>oom</code>: containers killed for running out of memory.</li>
+  <li><code>health</code>: health checks changing state.</li>
+</ul>
+<p>When you move through the list, the selected event stays put while new ones arrive above it.</p>
+
+<h2>Limits</h2>
+<p>This is a session timeline, not an audit log. It keeps the latest 1,000 events in memory and starts empty each time dp opens. If the connection to the daemon drops, a <code>stream gap</code> row marks where events may be missing, since Docker doesn't replay them. Destroyed containers keep their events, but their details are gone.</p>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#events">Events</a>.</p>

@@ -1,0 +1,49 @@
+<!--
+title: Update Docker Compose containers to the latest images
+heading: Update Compose images safely
+nav: Update Compose images
+description: Pull new images and recreate Docker Compose services for one project or every project on a host, with a preview first and live progress, using dpad.
+updated: 2026-11-28
+order: 5
+related: /docs/edit-compose-file/, /docs/remote-docker-ssh/, /docs/prune-preview/
+-->
+<p class="lead">The usual way to update a Compose project is two commands in its folder. dpad runs the same two commands for one project or all of them, shows you what it will do first, and tells you what changed.</p>
+
+<h2>The manual way</h2>
+<pre><span class="p">$</span> cd ~/stacks/shop
+<span class="p">$</span> docker compose pull
+<span class="p">$</span> docker compose up -d</pre>
+<p><code>pull</code> downloads newer images for the tags in your Compose file. <code>up -d</code> then recreates only the services whose image changed and leaves the rest running. Repeat for every project, and read the output to see which ones actually changed.</p>
+
+<h2>With dpad</h2>
+<ol>
+  <li>Open <code>dp</code> and press <kbd>4</kbd> for Projects.</li>
+  <li>Press <kbd>u</kbd> on a project to update it, or <kbd>U</kbd> to update every project on this daemon, including stopped ones and ones hidden by your filter.</li>
+  <li>Read the preview. Each project says <code>ready</code> or why it is blocked. <kbd>enter</kbd> on a row shows the host it will run on, the working directory, Compose files, env files, services and image tags.</li>
+  <li>Press <kbd>y</kbd>.</li>
+</ol>
+<figure><img src="/assets/shots/projects.svg" width="1348" height="634" loading="lazy" alt="Projects tab grouping containers by Compose project and service with running and unhealthy counts"><figcaption>The Projects tab, where <kbd>u</kbd> and <kbd>U</kbd> start an update.</figcaption></figure>
+
+<p>Each project runs <code>docker compose pull --include-deps</code>, then <code>up -d --no-build --pull never</code> only if the pull worked. Projects run one at a time, and dpad reads each project's configuration again before every step: if it no longer matches the preview, that project stops with a message and nothing is pulled or recreated for it. A failed project doesn't stop the others.</p>
+
+<h2>Watching it run</h2>
+<p>Progress opens straight away. With several projects, the top half lists each one with its step and elapsed time, and the bottom half shows the active project like <code>docker compose pull</code> does: one row per image with its layers and bytes. <kbd>l</kbd> switches to the raw log, <kbd>[</kbd> and <kbd>]</kbd> look at another project, and <kbd>tab</kbd> shows the summary.</p>
+<p>When it finishes, every project has a result: <code>updated, N recreated</code>, <code>already up to date</code>, or <code>failed:</code> with Compose's error. <kbd>esc</kbd> during the run cancels the remaining work.</p>
+
+<h2>What it doesn't do</h2>
+<ul>
+  <li>It uses the tags already in your Compose files. To move from <code>postgres:16</code> to <code>postgres:17</code>, <a href="/docs/edit-compose-file/">edit the file</a> first; <kbd>enter</kbd> after an edit goes straight to this preview.</li>
+  <li>It doesn't build images, run <code>down</code>, remove volumes or prune old images. Use <a href="/docs/prune-preview/">prune</a> afterwards to clean up.</li>
+</ul>
+
+<h2>Where Compose runs</h2>
+<p>dpad finds each project's folder and files from the labels Compose puts on its containers, so a project needs at least one container, running or stopped. When the files are on this machine, Compose runs here against the current daemon. On an <code>ssh://</code> daemon whose files are on the server, Compose runs on the server in the project's folder; the preview says which, and <kbd>h</kbd> switches when both machines have the files. Remote runs need a POSIX shell, Compose v2 and key or agent SSH authentication.</p>
+
+<h3>Projects started by a wrapper script</h3>
+<p>If a project's Compose file needs a variable that a script exported when it first ran Compose, Docker didn't record it. dpad looks for the value in the project's containers and uses it when they all agree, and the preview says so. When it can't, the project is blocked with Compose's hint, and you can set the value in <code>config.yaml</code>:</p>
+<pre>composeProjects:
+  my-project:          <span class="c"># Compose project name</span>
+    env:
+      STACK_NAME: production</pre>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#update-compose-projects">Update Compose projects</a>.</p>

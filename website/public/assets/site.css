@@ -173,6 +173,9 @@ h2 { font: 700 38px/1.15 var(--sans); letter-spacing: -0.02em; margin: 10px 0 14
 .feature li { position: relative; padding-left: 22px; margin: 9px 0; color: var(--muted); font-size: 16px; }
 .feature li::before { content: "›"; position: absolute; left: 4px; color: var(--k); font-family: var(--mono); font-weight: 700; }
 .feature li b { color: var(--text); font-weight: 600; }
+.more { display: inline-block; margin: 6px 18px 0 0; font: 14px var(--mono); color: var(--k); border-bottom: 1px solid color-mix(in srgb, var(--k) 40%, transparent); }
+.more::after { content: " ›"; }
+.more:hover { color: var(--text); }
 kbd { font-size: 0.82em; background: var(--surface-2); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; color: var(--text); }
 .shot { position: relative; margin: -2%; }
 .shot::before { content: ""; position: absolute; inset: 15%; background: var(--k); opacity: .16; filter: blur(60px); z-index: -1; }
@@ -215,6 +218,7 @@ kbd { font-size: 0.82em; background: var(--surface-2); border: 1px solid var(--l
 footer { margin-top: 80px; border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--dim); font-size: 14px; }
 footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
 footer a { color: var(--muted); margin-left: 20px; }
+footer .wrap > span:last-child { display: flex; flex-wrap: wrap; row-gap: 6px; }
 
 @media (max-width: 860px) {
   body { font-size: 16px; }
@@ -276,6 +280,62 @@ html:has(.zoom[open]) { overflow: hidden; }
   .zoom { font-size: 13px; }
   .zoom figcaption { justify-content: flex-start; padding-left: 10px; gap: 8px; }
   .zoom figcaption span { min-width: 0; }
+}
+
+/* guides and comparison pages (website/pages) */
+.docs { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 56px; padding-top: 40px; }
+.side { position: sticky; top: 24px; align-self: start; font-size: 14px; max-height: calc(100vh - 48px); overflow-y: auto; }
+.side p { margin: 0 0 8px; font: 12px var(--mono); text-transform: lowercase; letter-spacing: 0.04em; color: var(--dim); }
+.side ul { list-style: none; margin: 0 0 24px; padding: 0; }
+.side a { display: block; padding: 5px 10px; border-left: 2px solid var(--line); color: var(--muted); }
+.side a:hover { color: var(--text); }
+.side a[aria-current] { color: var(--text); border-left-color: var(--brand); }
+.prose { max-width: 760px; min-width: 0; }
+.crumbs { font-size: 14px; color: var(--dim); }
+.crumbs a { color: var(--muted); border-bottom: 1px solid var(--line); }
+.crumbs span { margin: 0 6px; }
+.prose h1 { font-size: 44px; margin: 14px 0 6px; max-width: none; }
+.updated { margin: 0 0 28px; font: 13px var(--mono); color: var(--dim); }
+.prose .lead { font-size: 19px; color: var(--muted); }
+.prose h2 { font-size: 28px; margin: 48px 0 12px; scroll-margin-top: 16px; }
+.prose h3 { font-size: 19px; margin: 32px 0 8px; scroll-margin-top: 16px; }
+.prose p, .prose li { color: var(--muted); }
+.prose p b, .prose li b, .prose strong { color: var(--text); font-weight: 600; }
+.prose ul, .prose ol { padding-left: 22px; }
+.prose li { margin: 6px 0; }
+.prose a:not(.btn) { color: var(--text); border-bottom: 1px solid var(--brand); }
+.prose a:not(.btn):hover { color: var(--brand); }
+.prose :not(pre, .cmd) > code { font-size: 0.86em; background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; color: var(--text); overflow-wrap: anywhere; }
+.prose pre { margin: 16px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; font: 14px/1.55 var(--mono); overflow-x: auto; color: var(--text); }
+.prose pre .c { color: var(--dim); }
+.prose pre .p { color: var(--brand); user-select: none; }
+.prose .install { display: block; margin: 16px 0; }
+.prose figure { margin: 24px 0; }
+.prose figure img { display: block; width: 100%; border-radius: 8px; }
+.prose figcaption { margin-top: 8px; font-size: 14px; color: var(--dim); }
+.prose table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 15px; display: block; overflow-x: auto; }
+.prose th, .prose td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); color: var(--muted); }
+.prose th { color: var(--text); font-weight: 600; border-bottom-color: var(--dim); white-space: nowrap; }
+.prose td:first-child { color: var(--text); }
+.callout { margin: 20px 0; padding: 14px 18px; border: 1px solid var(--line); border-left: 3px solid var(--k, var(--brand)); border-radius: 8px; background: var(--bg-2); }
+.callout p { margin: 0; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; list-style: none; padding: 0 !important; margin: 16px 0 8px; }
+.cards li { margin: 0; }
+.cards a, .related a { display: block; height: 100%; padding: 14px 16px; background: var(--bg-2); border: 1px solid var(--line) !important; border-radius: 10px; color: var(--muted) !important; }
+.cards a:hover, .related a:hover { border-color: var(--brand) !important; }
+.cards b, .related b { display: block; color: var(--text); margin-bottom: 2px; }
+.cards span, .related span { display: block; font-size: 14px; line-height: 1.5; }
+.related { margin-top: 64px; padding-top: 8px; border-top: 1px solid var(--line); }
+.related h2 { font-size: 20px; margin: 24px 0 12px; }
+.related ul { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.related li { margin: 0; }
+@media (max-width: 860px) {
+  .docs { grid-template-columns: 1fr; gap: 0; padding-top: 20px; }
+  .side { display: none; }
+  .prose h1 { font-size: 32px; }
+  .prose h2 { font-size: 23px; margin-top: 40px; }
+  .prose pre { font-size: 13px; padding: 12px; }
+  .cards { grid-template-columns: 1fr; }
 }
 
 /* Large screens: the layout is sized in px, so scale the whole page up (the

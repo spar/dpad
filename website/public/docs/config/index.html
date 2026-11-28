@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dpad config file and custom commands · dpad</title>
+<meta name="description" content="Bind your own commands to keys in dpad&#39;s config.yaml, run them on the selected container or Compose project, and set the theme, editor, mouse and icons.">
+<link rel="canonical" href="https://dpad.sh/docs/config/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="dpad">
+<meta property="og:url" content="https://dpad.sh/docs/config/">
+<meta property="og:title" content="dpad config file and custom commands · dpad">
+<meta property="og:description" content="Bind your own commands to keys in dpad&#39;s config.yaml, run them on the selected container or Compose project, and set the theme, editor, mouse and icons.">
+<meta property="og:image" content="https://dpad.sh/assets/og-image.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="dpad, a colorful terminal UI for the docker CLI">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0a0e1f">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/site.css">
+<script src="/assets/site.js"></script>
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "about": {
+      "@type": "SoftwareApplication",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "dateModified": "2026-11-28",
+    "description": "Bind your own commands to keys in dpad's config.yaml, run them on the selected container or Compose project, and set the theme, editor, mouse and icons.",
+    "headline": "Config file and custom commands",
+    "image": "https://dpad.sh/assets/og-image.png",
+    "inLanguage": "en",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "dpad",
+      "url": "https://dpad.sh/"
+    },
+    "mainEntityOfPage": "https://dpad.sh/docs/config/",
+    "url": "https://dpad.sh/docs/config/"
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/",
+        "name": "dpad",
+        "position": 1
+      },
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/docs/",
+        "name": "Docs",
+        "position": 2
+      },
+      {
+        "@type": "ListItem",
+        "item": "https://dpad.sh/docs/config/",
+        "name": "Config file and custom commands",
+        "position": 3
+      }
+    ]
+  }
+]
+</script>
+</head>
+<body>
+
+<header class="wrap nav">
+  <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="34" height="34">dpad</a>
+  <ul>
+    <li><a href="/#install">Install</a></li>
+    <li><a href="/#features">Features</a></li>
+    <li><a href="/docs/">Docs</a></li>
+    <li><a href="/compare/">Compare</a></li>
+    <li><a href="https://github.com/spar/dpad/releases">Releases</a></li>
+  </ul>
+  <div class="right">
+    <button class="mode" type="button" aria-label="Switch between dark and light" title="Switch between dark and light">
+      <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+    <a class="gh" href="https://github.com/spar/dpad"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+  </div>
+</header>
+
+<main class="wrap docs">
+<nav class="side" aria-label="Guides">
+  <p>Guides</p>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/getting-started/">Getting started</a></li>
+    <li><a href="/docs/remote-docker-ssh/">Remote Docker over SSH</a></li>
+    <li><a href="/docs/compose-logs/">Compose logs</a></li>
+    <li><a href="/docs/docker-stats/">Docker stats</a></li>
+    <li><a href="/docs/update-compose-images/">Update Compose images</a></li>
+    <li><a href="/docs/edit-compose-file/">Edit Compose files</a></li>
+    <li><a href="/docs/prune-preview/">Prune with a preview</a></li>
+    <li><a href="/docs/events/">Events</a></li>
+    <li><a href="/docs/contexts/">Docker contexts</a></li>
+    <li><a href="/docs/themes/">Themes</a></li>
+    <li><a href="/docs/config/" aria-current="page">Config and custom commands</a></li>
+    <li><a href="/docs/keys/">Keyboard shortcuts</a></li>
+  </ul>
+  <p>Compare</p>
+  <ul>
+    <li><a href="/compare/">Overview</a></li>
+    <li><a href="/compare/lazydocker/">dpad vs lazydocker</a></li>
+    <li><a href="/alternatives/lazydocker/">lazydocker alternatives</a></li>
+    <li><a href="/compare/ctop/">ctop alternative</a></li>
+  </ul>
+</nav>
+<article class="prose">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="/docs/">Docs</a> <span>›</span> Config and custom commands</nav>
+  <h1>Config file and custom commands</h1>
+  <p class="updated">Updated 28 November 2026</p>
+<p class="lead">dpad works without a config file. Add one when you want your own commands on a key, or to keep settings such as the theme and editor.</p>
+
+<h2>Where it lives</h2>
+<table>
+  <thead><tr><th>System</th><th>Path</th></tr></thead>
+  <tbody>
+    <tr><td>macOS and Linux</td><td><code>~/.config/dpad/config.yaml</code>, or <code>$XDG_CONFIG_HOME/dpad/config.yaml</code> when that is set</td></tr>
+    <tr><td>Windows</td><td><code>%AppData%\dpad\config.yaml</code></td></tr>
+    <tr><td>Anywhere</td><td>the path in <code>DPAD_CONFIG</code></td></tr>
+  </tbody>
+</table>
+<p>The settings screen (<kbd>o</kbd>) shows which file dp is using. dp reads it at startup.</p>
+
+<h2>Settings</h2>
+<pre>theme: matrix      <span class="c"># see Themes</span>
+editor: nano       <span class="c"># for Compose edits; builtin for the built-in editor</span>
+cpuGraph: bars     <span class="c"># braille (default), bars, meter or off</span>
+icons: nerd        <span class="c"># auto (default), nerd or off</span>
+mouse: false       <span class="c"># leave the mouse to the terminal</span></pre>
+<p>You rarely need to type these. The theme picker (<kbd>C</kbd>) and the settings screen (<kbd>o</kbd>) write <code>theme</code>, <code>editor</code>, <code>cpuGraph</code> and <code>icons</code> for you, changing only that line and leaving the rest of the file as you wrote it.</p>
+<p><code>icons</code> puts a <a href="https://www.nerdfonts.com/">Nerd Font</a> logo for the image before each container name, such as the PostgreSQL elephant. <code>auto</code> turns them on in terminals that ship the symbols themselves (Ghostty, WezTerm and kitty 0.36 or later); choose <code>nerd</code> if your terminal font is a Nerd Font.</p>
+
+<h2>Custom commands</h2>
+<pre>customCommands:
+  - name: top
+    key: T
+    command: docker top {{.ID}}
+  - name: bash
+    key: b
+    attach: true
+    command: docker exec -it {{.ID}} bash
+  - name: compose down
+    key: O
+    scope: project
+    confirm: true
+    command: docker compose -p {{.Project}} down</pre>
+<table>
+  <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>name</code></td><td>shown in help, confirmations and the status line</td></tr>
+    <tr><td><code>key</code></td><td>a key dp doesn't already use, such as <code>b</code>, <code>T</code> or <code>ctrl+o</code></td></tr>
+    <tr><td><code>scope</code></td><td><code>container</code> (default): a container row in Containers, Stats, Projects or Events. <code>project</code>: a project row in Projects</td></tr>
+    <tr><td><code>command</code></td><td>run by <code>/bin/sh -c</code>, or PowerShell on Windows</td></tr>
+    <tr><td><code>attach</code></td><td><code>true</code> hands the terminal to the command, for interactive commands; dp comes back when it exits</td></tr>
+    <tr><td><code>confirm</code></td><td><code>true</code> asks <code>y/N</code> first</td></tr>
+  </tbody>
+</table>
+
+<h3>Placeholders</h3>
+<p>Container commands can use <code>{{.ID}}</code>, <code>{{.Name}}</code>, <code>{{.Image}}</code>, <code>{{.Project}}</code>, <code>{{.Service}}</code> and <code>{{.WorkingDir}}</code> (the Compose project folder). Project commands can use <code>{{.Project}}</code> and <code>{{.WorkingDir}}</code>. Values are inserted already quoted as single words, so don't add quotes around them. Only placeholders are allowed between <code>{{ }}</code>; Go template actions such as <code>{{if}}</code> are not.</p>
+
+<h3>How they run</h3>
+<ul>
+  <li>Commands talk to the same daemon as the dashboard: dp sets <code>DOCKER_HOST</code> to its endpoint, so they work on an SSH context too.</li>
+  <li>Without <code>attach</code>, a command runs in the background and its last line of output, or its error, appears in the status line. Use <code>attach</code> to read all of it, for example <code>docker logs {{.ID}} | less</code>.</li>
+  <li>Your keys appear in <kbd>?</kbd> help on the tabs they apply to.</li>
+  <li>A problem in the file, such as a key dp already uses, a duplicate key or an unknown placeholder, shows in the status line at startup. The other commands still load.</li>
+</ul>
+
+<h2>Compose project variables</h2>
+<p><code>composeProjects</code> supplies variables a project's Compose files need when dpad <a href="/docs/update-compose-images/">updates</a> it and can't recover them from the containers:</p>
+<pre>composeProjects:
+  my-project:
+    env:
+      STACK_NAME: production</pre>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#custom-commands">Custom commands</a>.</p>
+
+  <aside class="related">
+    <h2>Related</h2>
+    <ul>
+      <li><a href="/docs/themes/"><b>Themes</b><span>dpad ships eleven color themes, including Catppuccin Mocha, Dracula, Nord, gruvbox and two light themes, with a live picker and your own as one YAML file.</span></a></li>
+      <li><a href="/docs/edit-compose-file/"><b>Edit a Compose file, locally or over SSH</b><span>Edit a running project&#39;s Compose file from dpad, in the built-in editor or your own, with validation and a diff before saving, even on a remote host.</span></a></li>
+      <li><a href="/docs/keys/"><b>Keyboard shortcuts</b><span>Every key in the dpad Docker terminal UI: navigation, container actions, logs, stats, Compose projects, prune, contexts, themes and settings.</span></a></li>
+    </ul>
+  </aside>
+</article>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>dpad is open source under the GPL-3.0 license.</span>
+    <span><a href="/docs/">Docs</a><a href="/compare/">Compare</a><a href="https://github.com/spar/dpad/releases">Releases</a><a href="https://github.com/spar/dpad/issues">Issues</a><a href="https://github.com/sponsors/spar">Sponsor</a><a href="https://github.com/spar/dpad">GitHub</a></span>
+  </div>
+</footer>
+</body>
+</html>

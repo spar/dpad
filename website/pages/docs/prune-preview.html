@@ -1,0 +1,46 @@
+<!--
+title: Docker prune dry run: see what will be removed first
+heading: Preview a Docker prune before it deletes
+nav: Prune with a preview
+description: docker system prune has no dry-run flag. dpad lists the exact containers, images, volumes, networks and build cache a prune would remove, then removes those.
+updated: 2026-11-28
+order: 7
+related: /docs/update-compose-images/, /docs/events/, /docs/keys/
+-->
+<p class="lead">Docker's prune commands have no dry-run option. <code>docker system prune</code> tells you which kinds of things it will remove, such as "all stopped containers", and asks <code>y/N</code>, but not which ones. dpad shows the list first.</p>
+<p class="callout">Source: Docker's <a href="https://docs.docker.com/reference/cli/docker/system/prune/">docker system prune reference</a> lists <code>--all</code>, <code>--filter</code>, <code>--force</code> and <code>--volumes</code>, and no dry-run flag.</p>
+
+<h2>How it works</h2>
+<ol>
+  <li>In <code>dp</code>, press <kbd>X</kbd>. The preview opens on the kind that matches your tab: images on Images, volumes on Volumes, networks on Networks, stopped containers anywhere else.</li>
+  <li><kbd>tab</kbd> and <kbd>shift+tab</kbd> move between kinds. <kbd>a</kbd> widens images and volumes, as below.</li>
+  <li>Read the list. Nothing is removed yet.</li>
+  <li>Press <kbd>y</kbd>.</li>
+</ol>
+<figure><img src="/assets/shots/prune.svg" width="1348" height="634" loading="lazy" alt="Prune preview listing the stopped containers that would be removed"><figcaption>The stopped containers a prune would remove.</figcaption></figure>
+
+<table>
+  <thead><tr><th>Kind</th><th>The preview lists</th><th>With <kbd>a</kbd></th><th>Matches</th></tr></thead>
+  <tbody>
+    <tr><td>Containers</td><td>exited, created and dead containers</td><td></td><td><code>docker container prune</code></td></tr>
+    <tr><td>Images</td><td>untagged images no container uses</td><td>also tagged images no container uses</td><td><code>docker image prune</code> (<code>--all</code>)</td></tr>
+    <tr><td>Volumes</td><td>anonymous volumes no container mounts</td><td>also named volumes no container mounts</td><td><code>docker volume prune</code> (<code>--all</code>)</td></tr>
+    <tr><td>Networks</td><td>user-defined networks no container uses</td><td></td><td><code>docker network prune</code></td></tr>
+    <tr><td>Build cache</td><td>build cache records not in use</td><td></td><td><code>docker builder prune --all</code></td></tr>
+  </tbody>
+</table>
+<p>"No container" includes stopped ones, so an image or volume that a stopped container still uses stays. Sizes are shown for images and build cache. Image sizes include layers shared with other images, so they are not a promise of disk space freed.</p>
+
+<h2>Only what you saw</h2>
+<p>After <kbd>y</kbd>, dpad reads the list again. If it changed since the preview, you get the new preview and need another <kbd>y</kbd>. Otherwise it removes exactly the resources you saw, one request each and never forced, so anything that started being used in the meantime fails with Docker's error instead of disappearing. Each row then says <code>removed</code>, <code>failed</code> or <code>unknown</code> (interrupted, may have applied); select a failed row to read the error. <kbd>esc</kbd> during removal cancels the rest.</p>
+<p>Build cache is the exception: Docker has no call to remove a single record, so it is pruned in one request, and the summary counts any records created after the preview that went too.</p>
+
+<h2>Without dpad</h2>
+<p>To get close with the Docker CLI alone, list before you prune:</p>
+<pre><span class="p">$</span> docker ps -a --filter status=exited --filter status=created --filter status=dead
+<span class="p">$</span> docker images --filter dangling=true
+<span class="p">$</span> docker volume ls --filter dangling=true
+<span class="p">$</span> docker network ls --filter type=custom</pre>
+<p>These show candidates, but the prune that follows is a separate command and removes whatever matches at that moment.</p>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/usage.md#prune">Prune</a>.</p>

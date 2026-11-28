@@ -1,0 +1,59 @@
+<!--
+title: dpad themes: Catppuccin, Dracula, Nord and more
+heading: Themes
+nav: Themes
+description: dpad ships eleven color themes, including Catppuccin Mocha, Dracula, Nord, gruvbox and two light themes, with a live picker and your own as one YAML file.
+updated: 2026-11-28
+order: 10
+related: /docs/config/, /docs/keys/, /docs/getting-started/
+-->
+<p class="lead">A theme sets every color dpad draws: tab accents, container states, health badges, usage bars, sparklines, log levels and the selected row. Eleven ship with dpad, and your own is one YAML file.</p>
+
+<h2>Pick one</h2>
+<p>Press <kbd>C</kbd> in the TUI, or open settings with <kbd>o</kbd> and choose Theme. Moving through the list previews each theme on the whole screen. <kbd>enter</kbd> keeps it and saves it to <code>config.yaml</code>; <kbd>esc</kbd> goes back to the one you had.</p>
+<figure><img src="/assets/themes/picker.svg" width="1348" height="634" loading="lazy" alt="The theme picker listing the built-in themes with color swatches, previewing amber on the Containers tab"><figcaption>The picker, previewing amber.</figcaption></figure>
+<p>Or set it yourself:</p>
+<pre><span class="c"># ~/.config/dpad/config.yaml</span>
+theme: matrix</pre>
+<pre><span class="p">$</span> dp --theme amber          <span class="c"># one run</span>
+<span class="p">$</span> DPAD_THEME=nord dp ps     <span class="c"># one shell</span>
+<span class="p">$</span> dp themes                 <span class="c"># list them, with swatches</span></pre>
+<p>Themes apply to <code>dp ps</code>, <code>dp images</code>, <code>dp stats</code> and <code>dp logs</code> as well as the TUI. The CLI changes text colors only, so your terminal keeps its background.</p>
+
+<h2>The built-in themes</h2>
+<table>
+  <thead><tr><th>Theme</th><th>Look</th></tr></thead>
+  <tbody>
+    <tr><td><code>default</code></td><td>your terminal's own palette, with an accent color per tab</td></tr>
+    <tr><td><code>catppuccin-mocha</code></td><td>the <a href="https://catppuccin.com">Catppuccin</a> Mocha palette</td></tr>
+    <tr><td><code>dracula</code></td><td>the <a href="https://draculatheme.com">Dracula</a> palette</td></tr>
+    <tr><td><code>nord</code></td><td>the <a href="https://www.nordtheme.com">Nord</a> palette</td></tr>
+    <tr><td><code>gruvbox</code></td><td>the <a href="https://github.com/morhetz/gruvbox">gruvbox</a> dark palette</td></tr>
+    <tr><td><code>matrix</code></td><td>green phosphor on black</td></tr>
+    <tr><td><code>amber</code></td><td>an amber monochrome CRT</td></tr>
+    <tr><td><code>mono</code></td><td>black and white, no hue at all</td></tr>
+    <tr><td><code>high-contrast</code></td><td>saturated colors on pure black</td></tr>
+    <tr><td><code>paper</code></td><td>dark ink on off-white, for light terminals</td></tr>
+    <tr><td><code>ink</code></td><td>black ink on white, like an e-ink screen</td></tr>
+  </tbody>
+</table>
+<p>See them all on the <a href="/#themes">home page gallery</a>.</p>
+
+<h2>Write your own</h2>
+<p>Put a <code>.yaml</code> file in <code>~/.config/dpad/themes/</code>, next to <code>config.yaml</code>. The file name is the theme's name, so <code>midnight.yaml</code> is chosen with <code>theme: midnight</code>, and it shows up in the picker and in <code>dp themes</code>. A theme only needs the colors it changes; the rest come from the theme it <code>extends</code>, or from <code>default</code>.</p>
+<pre><span class="c"># ~/.config/dpad/themes/midnight.yaml</span>
+description: Nord, with a darker background and red tabs for production
+extends: nord
+
+terminal:
+  background: "#1b1f27"
+
+tabs:
+  containers: "#d57780"</pre>
+<p>Quote hex colors, since YAML reads an unquoted <code>#</code> as a comment. To try a file without installing it, pass its path: <code>dp --theme ./midnight.yaml</code>.</p>
+<p>The <a href="https://github.com/spar/dpad/blob/main/docs/themes.md#theme-file-reference">theme file reference</a> lists every color role, and <a href="https://github.com/spar/dpad/blob/main/docs/themes.md#adding-a-theme-to-dpad">Adding a theme to dpad</a> explains how to contribute one.</p>
+
+<h2>Fewer colors, or none</h2>
+<p>On terminals with 256 or 16 colors, dpad maps each color to the nearest one the terminal has. Output is plain when piped, when <code>NO_COLOR</code> is set, or with <code>--no-color</code>.</p>
+
+<p>Full reference: <a href="https://github.com/spar/dpad/blob/main/docs/themes.md">Themes</a>.</p>

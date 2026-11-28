@@ -1,0 +1,29 @@
+<!--
+title: Compare dpad with other Docker terminal tools
+heading: Compare dpad
+nav: Overview
+description: How dpad compares with lazydocker, ctop, dry, oxker and dtop, with facts checked against each project's own docs.
+updated: 2026-11-28
+order: 0
+-->
+<p class="lead">There are several good terminal tools for Docker. These pages say where dpad differs, and where another tool is the better choice. Claims about other projects link to their own docs, with the date we checked.</p>
+<ul class="cards">
+  <li><a href="/compare/lazydocker/"><b>dpad vs lazydocker</b><span>The most popular Docker TUI, side by side with dpad, and when to pick each.</span></a></li>
+  <li><a href="/alternatives/lazydocker/"><b>lazydocker alternatives</b><span>dpad, dry, oxker, dtop and ctop compared on Compose, logs, stats and remote hosts.</span></a></li>
+  <li><a href="/compare/ctop/"><b>A ctop alternative</b><span>ctop's last release was in March 2022. Where dpad lines up with it, and what it adds.</span></a></li>
+</ul>
+
+<h2>dpad compared with plain docker</h2>
+<table>
+  <thead><tr><th></th><th><code>docker</code></th><th><code>dp</code></th></tr></thead>
+  <tbody>
+    <tr><td>Colored container states and a health column</td><td></td><td>✓</td></tr>
+    <tr><td>Sort <code>ps</code>, <code>images</code> and <code>stats</code> by any column</td><td></td><td>✓</td></tr>
+    <tr><td>Network and disk throughput per second</td><td>totals only</td><td>✓</td></tr>
+    <tr><td>Logs from several containers interleaved, with level highlighting</td><td>one container, or one Compose project</td><td>✓</td></tr>
+    <tr><td>Regex filter over live logs</td><td></td><td>✓</td></tr>
+    <tr><td>Prune with a list of exactly what will be removed</td><td></td><td>✓</td></tr>
+    <tr><td>Every other command and flag</td><td>✓</td><td>✓ passed through</td></tr>
+  </tbody>
+</table>
+<p>Corrections are welcome: <a href="https://github.com/spar/dpad/issues">open an issue</a>.</p>

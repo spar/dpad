@@ -376,10 +376,12 @@ This table covers where they differ from `dp`:
 Each of them also does things `dp` doesn't. lazydocker has the largest community
 and shows image layer history. dry manages Swarm and detects Compose drift. dtop
 watches several hosts in one table. ctop is a minimal `top` for containers, though
-it hasn't had a commit since July 2024. More tools are listed in
+its last release was v0.7.7 in March 2022. More tools are listed in
 [Awesome Docker](https://github.com/veggiemonk/awesome-docker#terminal).
 
 ## Documentation
+
+Task guides and comparisons are on the website: [dpad.sh/docs](https://dpad.sh/docs/) and [dpad.sh/compare](https://dpad.sh/compare/). The reference lives here:
 
 - **[Using dpad](docs/usage.md):** every tab, key and action, Compose updates, stats details, contexts and SSH.
 - **[Themes](docs/themes.md):** the built-in themes, choosing one, writing your own, and the theme file format.
