@@ -33,6 +33,19 @@ jobs:
       - run: go vet ./...
       - run: go test -race ./...
 
+  # Windows always runs on GitHub's runners; the self-hosted ones are Linux.
+  test-windows:
+    name: test (windows-latest, Go stable)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version: stable
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test ./...
+
   lint:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
