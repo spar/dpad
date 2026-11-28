@@ -98,7 +98,7 @@ func newClient(ctx context.Context, name, host string, opts []client.Opt) (*Clie
 		if tunnel, err = startSSHTunnelContext(ctx, host); err != nil {
 			return nil, err
 		}
-		opts = append(opts, client.WithHost("unix://"+tunnel.socket), client.WithDialContext(tunnel.dial))
+		opts = append(opts, client.WithHost(tunnel.host()), client.WithDialContext(tunnel.dial))
 	}
 	if debuglog.On() {
 		opts = append(opts, logRequests()...)
