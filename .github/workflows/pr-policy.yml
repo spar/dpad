@@ -1,0 +1,68 @@
+name: PR policy
+
+# Checks that a pull request links an issue the maintainer approved and has a
+# Conventional Commit title (the squash commit decides the release). Reads only
+# the PR's metadata and never checks out its code, so it is safe on fork PRs
+# and stays on GitHub-hosted runners.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, labeled, unlabeled]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  linked-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const exempt = ['spar', 'dependabot[bot]'];
+            if (exempt.includes(pr.user.login)) {
+              core.info(`${pr.user.login} is exempt.`);
+              return;
+            }
+            if (pr.labels.some(l => l.name === 'trivial')) {
+              core.info('Labelled trivial, no issue needed.');
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+            const ref = new RegExp(
+              `\\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\\b:?\\s+(?:https://github\\.com/${owner}/${repo}/issues/|#)(\\d+)`,
+              'gi');
+            const numbers = [...new Set([...(pr.body || '').matchAll(ref)].map(m => Number(m[1])))];
+            const help = 'See https://github.com/spar/dpad/blob/main/CONTRIBUTING.md#issue-first.';
+            if (numbers.length === 0) {
+              core.setFailed(`Link an approved issue in the description, for example "Closes #123". ${help}`);
+              return;
+            }
+
+            for (const n of numbers) {
+              try {
+                const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number: n });
+                if (!issue.pull_request && issue.labels.some(l => (l.name ?? l) === 'approved')) {
+                  core.info(`#${n} is approved.`);
+                  return;
+                }
+              } catch (err) {
+                if (err.status !== 404) throw err;
+              }
+            }
+            core.setFailed(`None of the linked issues (${numbers.map(n => '#' + n).join(', ')}) is labelled approved yet. ${help}`);
+
+  pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const title = context.payload.pull_request.title;
+            const re = /^(feat|fix|refactor|perf|test|docs|build|ci|chore)(\([a-z0-9][a-z0-9,./ -]*\))?!?: \S/;
+            if (!re.test(title)) {
+              core.setFailed(`"${title}" is not a Conventional Commit title, for example "fix(stats): show 0% CPU for the first sample". See AGENTS.md#commits.`);
+            }

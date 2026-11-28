@@ -82,6 +82,11 @@ docs: add Linux and Windows setup steps
 
 Keep each commit to one logical change.
 
+Every pull request links an issue labelled `approved` (`Closes #123` in the
+description) unless it is labelled `trivial`; see
+[CONTRIBUTING.md](CONTRIBUTING.md#issue-first). The `PR policy` workflow checks
+this and the Conventional Commit title.
+
 Do not add `Co-Authored-By`, `Claude-Session` or other attribution trailers to
 commit messages, and do not add attribution lines to pull request descriptions.
 
